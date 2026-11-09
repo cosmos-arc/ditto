@@ -176,8 +176,11 @@ class AShareFillModel:
         if reason := order_rule_rejection(order, trading_rule):
             return NoFill(reason=reason, can_retry=False)
         # 停牌
-        if market.is_suspended:
-            return NoFill(reason="suspended", can_retry=True)
+        if market.is_suspended or market.volume <= 0:
+            return NoFill(
+                reason="suspended" if market.is_suspended else "zero_volume",
+                can_retry=True,
+            )
 
         # 涨跌停判断
         at_limit_up = market.limit_up is not None and market.close >= market.limit_up

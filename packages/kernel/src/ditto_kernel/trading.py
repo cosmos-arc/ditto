@@ -98,6 +98,7 @@ class TradingRuleSet:
     max_limit_order_quantity: int | None = None
     max_market_order_quantity: int | None = None
     min_order_quantity: int = 1
+    max_daily_buy_quantity: int | None = None
 
 
 @dataclass(frozen=True)

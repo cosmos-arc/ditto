@@ -16,7 +16,9 @@ const participationReasons: Readonly<Record<string, string>> = {
 	outside_universe: "当日不在证券池",
 	not_listed: "尚未上市",
 	delisted: "已退出上市",
-	warmup: "交易日预热不足",
+	warmup: "有效行情预热不足",
+	suspended: "已确认停牌；保留估值、不成交",
+	zero_volume: "零成交；保留报价、不成交",
 	listing_rule_unavailable: "上市初期规则未覆盖",
 };
 const statuses: Readonly<Record<string, string>> = {

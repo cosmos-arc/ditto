@@ -309,3 +309,55 @@ def test_dated_minimum_is_rechecked_after_risk_resizes_an_order() -> None:
     assert ctx.step_orders == []
     assert ctx.pre_trade_decisions[0].reason == "order_quantity_below_dated_minimum"
     assert ctx.pre_trade_decisions[0].final_quantity == 0
+
+
+def test_st_submission_cap_includes_unfilled_orders_and_releases_cancellations():
+    from dataclasses import replace
+
+    from ditto_execution.orders.book import OrderBook
+    from ditto_execution.orders.journal import InMemoryOrderEventJournal
+    from ditto_execution.reality.ordinary_equity import (
+        CashEquityListing,
+        ordinary_equity_rules,
+    )
+    from ditto_kernel.identity import InstrumentId
+    from ditto_portfolio.accounting import CashAccountBuyingPower
+    from ditto_risk.pre_trade import PreTradeContext
+
+    iid = InstrumentId(1)
+    definition, rule, fee = ordinary_equity_rules(
+        CashEquityListing(iid, "000001", "stock", "SZSE", "1991-04-03", None),
+        commission_rate=0.0003,
+        start="2026-10-08",
+        end="2026-10-09",
+    )
+    book = OrderBook(InMemoryOrderEventJournal())
+    pending = _make_order(order_id="pending", instrument_id=iid, quantity=400_000)
+    book.submit(pending)
+    context = PreTradeContext(
+        account_view=_make_account_view(),
+        rules={iid: (definition, replace(rule, max_daily_buy_quantity=500_000), fee)},
+        market_snapshots={},
+        buying_power_model=CashAccountBuyingPower(),
+        pending_tickets=book.get_pending(),
+    )
+    order = _make_order(order_id="new", instrument_id=iid, quantity=100_100)
+    rejection = PreTradeStep._dated_order_check(order, context)
+    assert rejection is not None
+    assert rejection.reason == "daily_buy_quantity_exceeds_dated_maximum"
+    assert (
+        PreTradeStep._dated_order_check(order.with_quantity(100_000), context) is None
+    )
+    book.cancel(pending.client_id)
+    assert (
+        PreTradeStep._dated_order_check(
+            order, replace(context, pending_tickets=book.get_pending())
+        )
+        is None
+    )
+    assert (
+        PreTradeStep._dated_order_check(
+            order, replace(context, accepted_orders=(pending,), pending_tickets=())
+        )
+        is not None
+    )

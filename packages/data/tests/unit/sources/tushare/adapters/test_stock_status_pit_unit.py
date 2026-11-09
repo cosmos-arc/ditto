@@ -142,14 +142,62 @@ def test_suspend_foreign_dates_fail_closed() -> None:
     assert cause.details["foreign_trade_dates"] == ["19990504"]
 
 
-def test_pre_2016_stock_status_fails_closed() -> None:
+@pytest.mark.parametrize("day", ["2014-01-02", "2015-07-08", "2016-01-04"])
+def test_early_status_uses_dated_trades_and_halts_without_current_universe(day) -> None:
     client = MagicMock()
-    adapter = StockTushareAdapter(_client=client)
+    ts_day = day.replace("-", "")
 
-    with pytest.raises(SourceFetchError, match="2016-01-01"):
-        adapter.fetch_stock_status("2015-12-31")
+    def query(**params):
+        assert params["trade_date"] == ts_day
+        match params["api_name"]:
+            case "bak_basic":
+                return pl.DataFrame(
+                    schema={
+                        "ts_code": pl.String,
+                        "name": pl.String,
+                        "trade_date": pl.String,
+                    }
+                )
+            case "daily":
+                return pl.DataFrame({"ts_code": ["600000.SH"], "trade_date": [ts_day]})
+            case "suspend_d":
+                return pl.DataFrame(
+                    {
+                        "ts_code": ["000001.SZ"],
+                        "trade_date": [ts_day],
+                        "suspend_timing": [None],
+                    }
+                )
+            case "stock_st":
+                return pl.DataFrame(
+                    {
+                        "ts_code": ["000001.SZ"],
+                        "trade_date": [ts_day],
+                        "name": ["*ST示例"],
+                    }
+                )
+            case unexpected:
+                pytest.fail(f"unexpected provider API: {unexpected}")
 
-    client.query.assert_not_called()
+    client.query.side_effect = query
+    rows = (
+        StockTushareAdapter(_client=client)
+        .fetch_stock_status(day)
+        .sort("source_ticker")
+    )
+    assert rows["source_ticker"].to_list() == ["000001.SZ", "600000.SH"]
+    assert rows["is_suspended"].to_list() == [True, False]
+    assert rows["is_st"].to_list() == [True, False]
+
+
+def test_early_status_rejects_wrong_date_market_list() -> None:
+    client = MagicMock()
+    client.query.side_effect = [
+        pl.DataFrame(schema={"ts_code": pl.String, "trade_date": pl.String}),
+        pl.DataFrame({"ts_code": ["600000.SH"], "trade_date": ["20261109"]}),
+    ]
+    with pytest.raises(SourceFetchError, match="stock_status"):
+        StockTushareAdapter(_client=client).fetch_stock_status("2014-01-02")
 
 
 def test_component_fetch_error_does_not_turn_into_false_statuses() -> None:

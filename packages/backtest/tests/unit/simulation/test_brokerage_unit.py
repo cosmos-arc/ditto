@@ -1407,3 +1407,60 @@ def test_star_submission_minimum_does_not_block_partial_fill_remainder(
         assert [fill.filled_quantity for fill in fills] == [100, 100, 1]
         assert ticket.status is OrderStatus.FILLED
         assert account.positions[InstrumentId(1)].quantity == 201
+
+
+def test_daily_st_buy_cap_counts_prior_fills_without_resetting_for_another_order():
+    definition, rule, fee = ordinary_equity_rules(
+        CashEquityListing(
+            InstrumentId(1), "000001", "stock", "SZSE", "1991-04-03", None
+        ),
+        commission_rate=0.0003,
+        start="2026-10-08",
+        end="2026-10-09",
+    )
+    rules = definition, replace(rule, max_daily_buy_quantity=500_000), fee
+    account, book = _account(10_000_000), _order_book()
+    broker = BacktestBrokerage(
+        account=account,
+        order_book=book,
+        model=BrokerageModel(
+            fill_model=AShareFillModel(),
+            settlement_model=AShareSettlementModel(
+                trading_calendar=("2026-10-08", "2026-10-09")
+            ),
+            slippage_model=FixedBpsSlippage(bps=0),
+        ),
+        rules_getter=lambda _iid, _day: rules,
+    )
+    for index, quantity in enumerate((300_000, 200_000, 100)):
+        broker.place_order(_order(order_id=str(index), quantity=quantity))
+    inputs = ProcessInput(
+        step_time=datetime(2026, 10, 8, 15),
+        trade_date="2026-10-08",
+        bars={
+            InstrumentId(1): replace(
+                _market_snapshot(volume=10_000_000), trade_date="2026-10-08"
+            )
+        },
+    )
+    fills = broker.process_pending(inputs)
+    assert [fill.filled_quantity for fill in fills] == [300_000, 200_000]
+    assert account.positions[InstrumentId(1)].quantity == 500_000
+    blocked = book.get(ClientOrderId("2"))
+    assert blocked is not None
+    assert (
+        blocked.order_events[-1].message == "daily_buy_quantity_exceeds_dated_maximum"
+    )
+
+    broker.place_order(_order(order_id="next-day", quantity=100))
+    following = replace(
+        inputs,
+        trade_date="2026-10-09",
+        step_time=datetime(2026, 10, 9, 15),
+        bars={
+            InstrumentId(1): replace(
+                inputs.bars[InstrumentId(1)], trade_date="2026-10-09"
+            )
+        },
+    )
+    assert [fill.filled_quantity for fill in broker.process_pending(following)] == [100]

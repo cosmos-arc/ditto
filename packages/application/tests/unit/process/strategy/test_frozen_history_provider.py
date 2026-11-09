@@ -27,7 +27,11 @@ _IID = InstrumentId(2_000_001)
 
 
 def _provider(
-    *, future_close: float = 999.0, newer: str | None = None, stock: bool = False
+    *,
+    future_close: float = 999.0,
+    newer: str | None = None,
+    stock: bool = False,
+    halted: bool = False,
 ):
     days = [date(2014, 10, 13) + timedelta(days=i) for i in range(5)]
     bars = pl.DataFrame(
@@ -74,13 +78,21 @@ def _provider(
         frames["adj_factor"] = frames.pop("fund_adj")
         execution = bars.select("source_ticker", "trade_date")
         frames["stock_status"] = execution.with_columns(
-            pl.lit(False).alias("is_suspended"),
+            pl.col("trade_date").is_in(days[1:3]).alias("is_suspended")
+            if halted
+            else pl.lit(False).alias("is_suspended"),
+            pl.lit("").alias("suspend_timing"),
             pl.lit(False).alias("is_st"),
             pl.lit("L").alias("list_status"),
         )
         frames["stock_limit"] = execution.with_columns(
             pl.lit(11.0).alias("up_limit"), pl.lit(9.0).alias("down_limit")
         )
+        if halted:
+            for dataset in ("stock_daily", "stock_limit"):
+                frames[dataset] = frames[dataset].filter(
+                    ~pl.col("trade_date").is_in(days[1:3])
+                )
         frames = {
             dataset: frame.with_columns(pl.lit("000001.SZ").alias("source_ticker"))
             if "source_ticker" in frame.columns
@@ -268,3 +280,47 @@ def test_actual_stock_execution_schema_does_not_require_invented_knowledge_dates
     assert bars["is_st"].to_list() == [False] * 4
     assert bars["status_source_snapshot_id"].null_count() == 0
     assert bars["limit_source_snapshot_id"].null_count() == 0
+
+
+def test_confirmed_halts_keep_past_valuation_without_fabricating_signal_history():
+    provider, _, _ = _provider(stock=True, halted=True, future_close=999.0)
+    query = BarQuery(
+        instruments=("000001.SZ",),
+        start="2014-10-13",
+        end="2014-10-16",
+        with_execution_state=True,
+    )
+    bars = provider.get_bars(query)
+    assert bars["close"].to_list() == [10.0] * 4
+    assert bars["is_valuation_only"].to_list() == [False, True, True, False]
+    assert bars["is_suspended"].to_list() == [False, True, True, False]
+    assert bars["volume"].to_list() == [1000.0, 0.0, 0.0, 1000.0]
+    marks = bars.filter(pl.col("is_valuation_only"))
+    assert marks["valuation_date"].to_list() == [date(2014, 10, 13)] * 2
+    assert marks["status_source_snapshot_id"].null_count() == 0
+    assert marks["source_snapshot_id"].null_count() == 0
+    history = provider.get_bars(
+        BarQuery(
+            instruments=("000001.SZ",),
+            start="2014-10-13",
+            end="2014-10-15",
+            adj="qfq",
+            asof="2014-10-16",
+        )
+    )
+    assert history["trade_date"].cast(pl.String).to_list() == ["2014-10-13"]
+
+
+def test_halt_without_a_past_valuation_cannot_take_a_future_quote():
+    provider, _, _ = _provider(stock=True, halted=True)
+    with pytest.raises(
+        AppBuilderError, match=r"missing prior suspension valuation.*2014"
+    ):
+        provider.get_bars(
+            BarQuery(
+                instruments=("000001.SZ",),
+                start="2014-10-14",
+                end="2014-10-16",
+                with_execution_state=True,
+            )
+        )

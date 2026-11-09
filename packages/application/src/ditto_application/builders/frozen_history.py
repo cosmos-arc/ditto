@@ -11,6 +11,7 @@ from ditto_data.catalog.snapshot_reader import SnapshotReadService
 from ditto_data.catalog.source_snapshot import ProviderSnapshot
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_data.services.market_adjustment import adjust_retained_bars
+from ditto_data.services.market_status import stock_execution_bars
 from ditto_data.services.market_types import AdjType
 from ditto_kernel.identity import InstrumentId
 
@@ -301,6 +302,15 @@ class FrozenHistoryProvider:
         self, bars: pl.DataFrame, factors: pl.DataFrame, query: BarQuery
     ) -> pl.DataFrame:
         """Require exact daily execution factors, status and price limits."""
+        if self._asset_class == "stock":
+            try:
+                bars = stock_execution_bars(
+                    bars,
+                    self._range("stock_status", query),
+                    self._range("stock_limit", query),
+                )
+            except ValueError as error:
+                raise AppBuilderError(str(error)) from error
         keys = ["instrument_id", "trade_date"]
         bars = bars.join(
             factors.select(
@@ -314,42 +324,6 @@ class FrozenHistoryProvider:
         )
         if bars["adj_factor"].null_count():
             raise AppBuilderError("missing frozen execution adjustment factors")
-        if self._asset_class == "stock":
-            for dataset, columns in (
-                (
-                    "stock_status",
-                    {
-                        "is_suspended": "is_suspended",
-                        "is_st": "is_st",
-                        "list_status": "list_status",
-                        "source_snapshot_id": "status_source_snapshot_id",
-                    },
-                ),
-                (
-                    "stock_limit",
-                    {
-                        "up_limit": "limit_up",
-                        "down_limit": "limit_down",
-                        "source_snapshot_id": "limit_source_snapshot_id",
-                    },
-                ),
-            ):
-                bars = bars.join(
-                    self._range(dataset, query).select(
-                        *keys,
-                        *[pl.col(k).alias(v) for k, v in columns.items()],
-                    ),
-                    on=keys,
-                    how="left",
-                    validate="1:1",
-                )
-                if any(bars[name].null_count() for name in columns.values()):
-                    raise AppBuilderError(f"missing frozen {dataset} execution facts")
-        if (
-            self._asset_class == "stock"
-            and bars.filter(pl.col("list_status") != "L").height
-        ):
-            raise AppBuilderError("unsupported frozen stock lifecycle state")
         return bars
 
     def _range(self, dataset: str, query: BarQuery) -> pl.DataFrame:

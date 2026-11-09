@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: a43e90d1e8f42233911667bdda26786eea41f93c1f10290f710b38f2bae895f0
+ * Schema SHA-256: 43f0385e2858e0711a6423ac98209bf2563d6e58126adc5f76e4b75e9ea36f48
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -9322,7 +9322,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "eligible" | "outside_universe" | "not_listed" | "delisted" | "warmup" | "listing_rule_unavailable";
+            status: "eligible" | "outside_universe" | "not_listed" | "delisted" | "warmup" | "listing_rule_unavailable" | "suspended" | "zero_volume";
             /** Symbol */
             symbol: string;
             /** Trade Date */

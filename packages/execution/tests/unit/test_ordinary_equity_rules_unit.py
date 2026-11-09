@@ -253,6 +253,7 @@ def test_stock_band_has_at_least_one_tick_difference() -> None:
     row = {
         "trade_date": "2026-10-08",
         "is_st": False,
+        "is_suspended": False,
         "pre_close": 0.04,
         "limit_up": 0.05,
         "limit_down": 0.03,
@@ -278,3 +279,70 @@ def test_sse_ipo_market_order_scope_changes_with_registration_rules(
     )[-1]
     assert rule.price_limit_pct is None
     assert ("market" in rule.order_types_supported) is market_supported
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize(
+    ("exchange", "ticker"), [("SSE", "600000"), ("SZSE", "000001")]
+)
+def test_st_rules_follow_actual_status_and_dated_market_changes(exchange, ticker):
+    listing = CashEquityListing(
+        InstrumentId(1), ticker, "stock", exchange, "2000-01-01", None
+    )
+    statuses = {
+        "2014-01-02": False,
+        "2014-01-03": True,
+        "2014-01-06": False,
+        "2021-05-14": True,
+        "2021-05-17": True,
+        "2026-07-03": True,
+        "2026-07-06": True,
+    }
+    history = stock_rule_history(
+        listing,
+        commission_rate=0.0003,
+        start="2014-01-02",
+        end="2026-07-06",
+        trading_days=[
+            "2013-12-25",
+            "2013-12-26",
+            "2013-12-27",
+            "2013-12-30",
+            "2013-12-31",
+            *statuses,
+        ],
+        risk_warning=statuses,
+    )
+
+    def rule_on(day):
+        return max(
+            (row[1] for row in history if row[1].as_of_date <= day),
+            key=lambda rule: rule.as_of_date,
+        )
+
+    assert rule_on("2014-01-02").price_limit_pct == 0.1
+    assert rule_on("2014-01-03").price_limit_pct == 0.05
+    assert rule_on("2014-01-06").price_limit_pct == 0.1
+    assert rule_on("2026-07-03").price_limit_pct == 0.05
+    assert rule_on("2026-07-06").price_limit_pct == 0.1
+    assert rule_on("2021-05-14").max_daily_buy_quantity == (
+        500_000 if exchange == "SSE" else None
+    )
+    assert rule_on("2021-05-17").max_daily_buy_quantity == 500_000
+    if exchange == "SSE":
+        assert rule_on("2014-01-03").order_types_supported == ("limit",)
+        assert "market" in rule_on("2014-01-06").order_types_supported
+    rules = next(row for row in history if row[1].as_of_date == "2014-01-03")
+    row = {
+        "trade_date": "2014-01-03",
+        "is_st": True,
+        "is_suspended": False,
+        "pre_close": 10.0,
+        "limit_up": 10.5,
+        "limit_down": 9.5,
+    }
+    assert ordinary_execution_fields(row, rules, start_date="2014-01-02") == {}
+    with pytest.raises(ValueError, match="disagrees"):
+        ordinary_execution_fields(
+            {**row, "limit_up": 11.0}, rules, start_date="2014-01-02"
+        )
