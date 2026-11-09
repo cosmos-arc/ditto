@@ -19,6 +19,7 @@ from ditto_data.ingestion.partition_state import (
 )
 from ditto_data.ingestion.partition_state_store import SQLitePartitionLifecycleStore
 from ditto_data.models.metadata import InstrumentRegistration
+from ditto_data.sources.reference_config import EtfReferenceConfigSource
 from ditto_data.storage.metadata.instrument.instrument_writer import InstrumentWriter
 from ditto_data.storage.metadata.universe.universe_writer import UniverseWriter
 from ditto_platform.foundation import DataCache, SQLiteClient, SQLitePool
@@ -37,18 +38,19 @@ def retain_history_payload(
     frame: pl.DataFrame,
     *,
     period: tuple[str, str] = ("2014-01-01", "2014-12-31"),
+    source: str = "tushare",
 ) -> None:
     pool = SQLitePool(str(_state / "metadata/metadata.sqlite"))
     client = SQLiteClient(pool)
     try:
         now = datetime.now(UTC)
         payload = FilesystemProviderPayloadStore(_state).retain_payload(
-            dataset_id=dataset, source="tushare", payload=frame
+            dataset_id=dataset, source=source, payload=frame
         )
         snapshot = ProviderSnapshot.create(
             ProviderSnapshotDraft(
                 dataset_id=dataset,
-                source="tushare",
+                source=source,
                 request_start=period[0],
                 request_end=period[1],
                 schema_version=f"synthetic.{dataset}.v1",
@@ -72,7 +74,7 @@ def retain_history_payload(
             PartitionCheckpoint(
                 chunk_id=snapshot.snapshot_id,
                 dataset_id=dataset,
-                source="tushare",
+                source=source,
                 request_start=period[0],
                 request_end=period[1],
                 status=PartitionLifecycleStatus.PLANNED,
@@ -123,6 +125,15 @@ def _daily(tickers: tuple[str, ...]) -> pl.DataFrame:
 
 
 def _seed_history() -> None:
+    today = datetime.now(UTC).date().isoformat()
+    retain_history_payload(
+        "etf_reference",
+        EtfReferenceConfigSource(
+            Path(__file__).resolve().parents[3] / "config/default/etf_reference.json"
+        ).fetch_etf_reference(),
+        period=(today, today),
+        source="config",
+    )
     pool = SQLitePool(str(_state / "metadata/metadata.sqlite"))
     client = SQLiteClient(pool)
     try:

@@ -49,6 +49,72 @@ class FrozenHistoryProvider:
         self._frames: dict[str, pl.DataFrame] = {}
         self._ticker_ids: dict[str, InstrumentId] = {}
         self._asset_class = ""
+        self._etf_reference: pl.DataFrame | None = None
+
+    def freeze_etf_reference(self) -> pl.DataFrame:
+        """Freeze dated declarations by receipt, not by the historical bar window."""
+        if self._etf_reference is not None:
+            return self._etf_reference
+        candidates = [
+            replace(
+                s, observations=tuple(t for t in s.observations if t <= self.frozen_at)
+            )
+            for s in self._reader.list_snapshots(
+                dataset_id="etf_reference", source="config"
+            )
+            if s.created_at <= self.frozen_at
+        ]
+        selected: dict[str, list[str]] = {}
+        snapshots = {s.snapshot_id: s for s in candidates}
+        for ticker in self.members:
+            latest = max(
+                (
+                    s
+                    for s in candidates
+                    if not s.source_ticker_scope or ticker in s.source_ticker_scope
+                ),
+                key=lambda s: (observed_at(s), s.snapshot_id),
+                default=None,
+            )
+            if latest is None:
+                raise AppBuilderError(f"missing retained etf_reference: {ticker}")
+            selected.setdefault(latest.snapshot_id, []).append(ticker)
+        frames: list[pl.DataFrame] = []
+        for identity, tickers in selected.items():
+            frame = self._read_verified_snapshot(snapshots[identity])
+            required = {
+                "source_ticker",
+                "field",
+                "value",
+                "unit",
+                "effective_from",
+                "effective_to",
+                "basis",
+            }
+            if not required.issubset(frame.columns):
+                raise AppBuilderError(
+                    "etf_reference retained payload lacks "
+                    + str(sorted(required - set(frame.columns)))
+                )
+            frame = frame.filter(pl.col("source_ticker").is_in(tickers))
+            missing = set(tickers) - set(frame["source_ticker"])
+            if missing:
+                raise AppBuilderError(
+                    f"latest etf_reference lacks declarations: {sorted(missing)}"
+                )
+            frames.append(
+                frame.with_columns(
+                    pl.col("source_ticker")
+                    .replace_strict(
+                        {ticker: int(self._ticker_ids[ticker]) for ticker in tickers},
+                        return_dtype=pl.Int64,
+                    )
+                    .alias("instrument_id"),
+                    pl.lit(identity).alias("source_snapshot_id"),
+                )
+            )
+        self._etf_reference = pl.concat(frames, how="diagonal_relaxed")
+        return self._etf_reference
 
     def freeze(
         self,
@@ -251,38 +317,8 @@ class FrozenHistoryProvider:
         scope: dict[str, InstrumentId],
         date_column: str,
     ) -> pl.DataFrame:
+        frame = self._read_verified_snapshot(snapshot)
         dataset = snapshot.dataset_id
-        evidence: dict[str, object] = {
-            "dataset": dataset,
-            "source": snapshot.source,
-            "snapshot_id": snapshot.snapshot_id,
-            "checksum": snapshot.checksum,
-            "request_start": snapshot.request_start,
-            "request_end": snapshot.request_end,
-            "received_at": snapshot.created_at.isoformat(),
-            "observed_at": observed_at(snapshot).isoformat(),
-            "rows": snapshot.row_count,
-            "verified": False,
-        }
-        previous = next(
-            (
-                item
-                for item in self.sources
-                if item["snapshot_id"] == snapshot.snapshot_id
-            ),
-            None,
-        )
-        if previous is None:
-            self.sources.append(evidence)
-        else:
-            evidence = previous
-        try:
-            frame = self._reader.read(
-                snapshot.snapshot_id, completed_before=self.frozen_at
-            ).frame
-        except ValueError as exc:
-            raise AppBuilderError(f"{dataset} {snapshot.snapshot_id}: {exc}") from exc
-        evidence["verified"] = True
         if date_column not in frame.columns:
             raise AppBuilderError(f"{dataset} retained payload lacks {date_column}")
         if dataset == "calendar":
@@ -323,6 +359,42 @@ class FrozenHistoryProvider:
                 )
             # Daily status/limits are realized execution facts only. Do not invent
             # a publication/receipt timestamp for provider rows that lack one.
+        return frame
+
+    def _read_verified_snapshot(self, snapshot: ProviderSnapshot) -> pl.DataFrame:
+        """Share the completion/checksum gate and source record for retained inputs."""
+        dataset = snapshot.dataset_id
+        evidence: dict[str, object] = {
+            "dataset": dataset,
+            "source": snapshot.source,
+            "snapshot_id": snapshot.snapshot_id,
+            "checksum": snapshot.checksum,
+            "request_start": snapshot.request_start,
+            "request_end": snapshot.request_end,
+            "received_at": snapshot.created_at.isoformat(),
+            "observed_at": observed_at(snapshot).isoformat(),
+            "rows": snapshot.row_count,
+            "verified": False,
+        }
+        previous = next(
+            (
+                item
+                for item in self.sources
+                if item["snapshot_id"] == snapshot.snapshot_id
+            ),
+            None,
+        )
+        if previous is None:
+            self.sources.append(evidence)
+        else:
+            evidence = previous
+        try:
+            frame = self._reader.read(
+                snapshot.snapshot_id, completed_before=self.frozen_at
+            ).frame
+        except ValueError as exc:
+            raise AppBuilderError(f"{dataset} {snapshot.snapshot_id}: {exc}") from exc
+        evidence["verified"] = True
         return frame
 
     def get_bars(self, query: BarQuery) -> pl.DataFrame:

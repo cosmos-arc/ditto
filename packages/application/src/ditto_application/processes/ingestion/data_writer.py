@@ -938,6 +938,18 @@ class IngestionDataWriter:
             value = row.get("value")
             if value is None or str(value) == "":
                 continue  # 观察缺失不推断
+            effective_from = _normalize_iso_date(str(row["effective_from"]))
+            effective_to = (
+                _normalize_iso_date(str(row["effective_to"]))
+                if row.get("effective_to")
+                else None
+            )
+            # The current projection has one value per observation; the retained
+            # payload keeps every dated version for historical reconstruction.
+            if effective_from > observed_on or (
+                effective_to is not None and observed_on >= effective_to
+            ):
+                continue
             observations.append(
                 {
                     "source_ticker": str(row["source_ticker"]),
@@ -946,8 +958,8 @@ class IngestionDataWriter:
                     "unit": str(row["unit"]),
                     "observed_on": observed_on,
                     "published_at": published_at,
-                    "effective_from": _normalize_iso_date(str(row["effective_from"])),
-                    "effective_to": None,
+                    "effective_from": effective_from,
+                    "effective_to": effective_to,
                     "source": self._source_name,
                     "source_snapshot_id": snapshot.snapshot_id,
                 }

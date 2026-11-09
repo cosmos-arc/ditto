@@ -663,6 +663,22 @@ def main() -> int:
                 environment,
                 acceptance=_FixtureAcceptance(
                     command=_fixture_api_command(
+                        "tests.system.fixtures.etf_history_backtest_app:app", api_port
+                    ),
+                    prefix="ditto-system-etf-history-",
+                    spec="backtest-etf-history.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
                         "tests.system.fixtures.fees_backtest_app:app", api_port
                     ),
                     prefix="ditto-system-historical-fees-",

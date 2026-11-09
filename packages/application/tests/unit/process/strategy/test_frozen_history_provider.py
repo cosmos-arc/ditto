@@ -1,7 +1,8 @@
 """Recent receipts must reach the ordinary consumer without future disclosures."""
 
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import polars as pl
 import pytest
@@ -34,6 +35,7 @@ def _provider(
     halted: bool = False,
     start: str = "2014-10-13",
     prior_quote: bool = True,
+    etf_reference: pl.DataFrame | None = None,
 ):
     days = [date(2014, 10, 13) + timedelta(days=i) for i in range(5)]
     bars = pl.DataFrame(
@@ -105,15 +107,21 @@ def _provider(
             else frame
             for dataset, frame in frames.items()
         }
+    if etf_reference is not None:
+        frames["etf_reference"] = etf_reference
     snapshots = []
     contents = {}
     for index, (dataset, frame) in enumerate(frames.items()):
         snapshot = ProviderSnapshot.create(
             ProviderSnapshotDraft(
                 dataset_id=dataset,
-                source="tushare",
-                request_start="2014-10-13",
-                request_end="2014-10-17",
+                source="config" if dataset == "etf_reference" else "tushare",
+                request_start="2026-11-09"
+                if dataset == "etf_reference"
+                else "2014-10-13",
+                request_end="2026-11-09"
+                if dataset == "etf_reference"
+                else "2014-10-17",
                 schema_version=f"{dataset}.v1",
                 checksum=f"{index:032x}",
                 canonical_asset=DataAssetRef(dataset, "market"),
@@ -428,3 +436,80 @@ def test_long_halt_search_crosses_empty_snapshot_windows_but_not_invalid_evidenc
     )
     assert execution["valuation_date"].to_list() == [date(2014, 8, 1)] * 2
     assert execution["source_snapshot_id"].to_list() == [anchor_id] * 2
+
+
+def test_etf_rule_versions_freeze_from_current_receipt_without_backdating():
+    facts = pl.DataFrame(
+        {
+            "source_ticker": ["510300.SH"] * 2,
+            "field": ["settlement_cycle"] * 2,
+            "value": ["1", "0"],
+            "unit": ["days"] * 2,
+            "effective_from": ["2014-01-01", "2027-01-01"],
+            "effective_to": ["2027-01-01", None],
+            "basis": ["synthetic old rule", "future sentinel"],
+        }
+    )
+    provider, snapshots, contents = _provider(etf_reference=facts)
+    frozen = provider.freeze_etf_reference()
+    assert frozen["value"].to_list() == ["1", "0"]
+    assert frozen["instrument_id"].to_list() == [int(_IID)] * 2
+    reference = next(s for s in snapshots if s.dataset_id == "etf_reference")
+    assert frozen["source_snapshot_id"].to_list() == [reference.snapshot_id] * 2
+    assert provider.sources[-1]["received_at"] == _RECEIPT.isoformat()
+    assert provider.sources[-1]["request_start"] == "2026-11-09"
+    contents.clear()
+    assert provider.freeze_etf_reference().equals(frozen)
+
+
+def test_etf_missing_latest_reference_must_not_use_legacy_ticker_whitelist():
+    provider, _, _ = _provider()
+    with pytest.raises(AppBuilderError, match=r"etf_reference.*510300.SH"):
+        provider.freeze_etf_reference()
+
+
+@pytest.mark.parametrize("revision", ["empty", "incomplete", "future"])
+def test_etf_latest_receipt_must_be_complete_without_future_or_old_fallback(revision):
+    facts = pl.DataFrame(
+        {
+            "source_ticker": ["510300.SH"],
+            "field": ["settlement_cycle"],
+            "value": ["1"],
+            "unit": ["days"],
+            "effective_from": ["2014-01-01"],
+            "effective_to": [None],
+            "basis": ["synthetic historical declaration"],
+        }
+    )
+    provider, snapshots, contents = _provider(etf_reference=facts)
+    original = snapshots[-1]
+    provider.frozen_at = _RECEIPT + timedelta(seconds=1)
+    timestamp = _RECEIPT + timedelta(seconds=2 if revision == "future" else 1)
+    newer = replace(
+        original,
+        snapshot_id="f" * 64,
+        checksum="e" * 32,
+        created_at=timestamp,
+        row_count=0,
+    )
+    newer = replace(newer, snapshot_id=newer.expected_snapshot_id())
+    snapshots.append(newer)
+    contents[newer.snapshot_id] = SnapshotContents(
+        newer, original.snapshot_id, timestamp, facts.head(0)
+    )
+    if revision == "incomplete":
+        with (
+            patch.object(
+                provider._reader,
+                "read",
+                side_effect=ValueError("no COMPLETE checkpoint"),
+            ),
+            pytest.raises(AppBuilderError, match="COMPLETE"),
+        ):
+            provider.freeze_etf_reference()
+        return
+    if revision == "future":
+        assert provider.freeze_etf_reference()["value"].to_list() == ["1"]
+    else:
+        with pytest.raises(AppBuilderError, match="lacks declarations"):
+            provider.freeze_etf_reference()

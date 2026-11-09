@@ -1,0 +1,162 @@
+"""ETF history consumes dated declarations, never inferred categories."""
+
+from dataclasses import replace
+
+import pytest
+from ditto_execution.reality.ordinary_equity import CashEquityListing
+from ditto_execution.reality.ordinary_etf import etf_rule_history
+from ditto_kernel.identity import InstrumentId
+
+
+def _facts(category="cross_border", cycle="1", band="0.1"):
+    return [
+        {
+            "field": field,
+            "value": value,
+            "unit": unit,
+            "effective_from": "2014-01-01",
+            "effective_to": "2026-11-10",
+            "basis": "synthetic dated exchange declaration",
+        }
+        for field, value, unit in [
+            ("trading_category", category, "text"),
+            ("trading_currency", "CNY", "text"),
+            ("lot_size", "100", "count"),
+            ("tick_size", "0.001", "price"),
+            ("settlement_cycle", cycle, "days"),
+            ("price_limit_pct", band, "ratio"),
+        ]
+    ]
+
+
+def _listing(exchange="SSE"):
+    return CashEquityListing(
+        InstrumentId(2_000_001), "510900", "etf", exchange, "2012-10-22", None
+    )
+
+
+def _history(facts, days, listing=None):
+    return etf_rule_history(
+        listing or _listing(),
+        facts=facts,
+        commission_rate=0.0003,
+        start=days[0],
+        end=days[-1],
+        trading_days=days,
+    )
+
+
+@pytest.mark.pit
+def test_cross_border_t0_switch_and_future_rule_do_not_backfill():
+    facts = _facts()
+    cycle = next(row for row in facts if row["field"] == "settlement_cycle")
+    cycle["effective_to"] = "2015-01-19"
+    facts += [
+        {
+            **cycle,
+            "value": "0",
+            "effective_from": "2015-01-19",
+            "effective_to": "2027-01-01",
+        },
+        {**cycle, "value": "1", "effective_from": "2027-01-01", "effective_to": None},
+    ]
+    history = _history(facts, ["2015-01-16", "2015-01-19"])
+    assert [(row[1].as_of_date, row[1].settlement_cycle) for row in history] == [
+        ("2014-01-01", 1),
+        ("2015-01-19", 0),
+    ]
+    later = _history(facts, ["2020-08-21"])[0]
+    assert later[1].as_of_date == later[2].as_of_date == "2015-01-19"
+    assert all(row[0].board_segment == "cross_border_etf" for row in history)
+
+
+@pytest.mark.parametrize(
+    ("category", "cycle"),
+    [
+        ("equity", "1"),
+        ("bond", "0"),
+        ("gold", "0"),
+        ("cross_border", "0"),
+        ("money", "0"),
+        ("commodity_futures", "0"),
+    ],
+)
+def test_six_declared_categories_use_share_quotes_and_secondary_market_rules(
+    category, cycle
+):
+    definition, rule, fee = _history(_facts(category, cycle), ["2020-08-21"])[0]
+    assert (
+        definition.currency,
+        definition.lot_size,
+        definition.tick_size,
+        definition.multiplier,
+    ) == ("CNY", 100, 0.001, 1.0)
+    assert rule.settlement_cycle == int(cycle)
+    assert (rule.max_limit_order_quantity, rule.max_market_order_quantity) == (
+        1_000_000,
+        1_000_000,
+    )
+    assert (
+        fee.commission_rate,
+        fee.min_commission,
+        fee.stamp_duty_rate,
+        fee.transfer_fee_rate,
+    ) == (0.0003, 5.0, 0.0, 0.0)
+
+
+@pytest.mark.pit
+def test_chinext_band_switch_uses_membership_declaration_not_the_code():
+    facts = _facts("equity")
+    band = next(row for row in facts if row["field"] == "price_limit_pct")
+    band["effective_to"] = "2020-08-24"
+    facts.append(
+        {
+            **band,
+            "value": "0.2",
+            "effective_from": "2020-08-24",
+            "effective_to": "2026-11-10",
+        }
+    )
+    history = _history(
+        facts, ["2020-08-21", "2020-08-24"], replace(_listing("SZSE"), ticker="159915")
+    )
+    assert [row[1].price_limit_pct for row in history] == [0.1, 0.2]
+    assert all("market_on_close" in row[1].order_types_supported for row in history)
+
+
+def test_sse_etf_close_auction_begins_in_2026_not_the_2018_stock_change():
+    history = _history(_facts(), ["2018-08-20", "2026-07-03", "2026-07-06"])
+    assert [row[1].as_of_date for row in history] == ["2014-01-01", "2026-07-06"]
+    assert history[0][1].call_auction_sessions == ("09:15-09:25",)
+    assert "market_on_close" not in history[0][1].order_types_supported
+    assert history[-1][1].call_auction_sessions == ("09:15-09:25", "14:57-15:00")
+
+
+@pytest.mark.parametrize(
+    "problem",
+    ["missing", "gap", "overlap", "invalid_category", "invalid_unit", "expiry"],
+)
+def test_incomplete_or_ambiguous_rules_refuse_with_exact_instrument_and_date(problem):
+    facts = _facts()
+    if problem == "missing":
+        facts = [row for row in facts if row["field"] != "trading_category"]
+    elif problem == "gap":
+        facts[0]["effective_from"] = "2014-01-03"
+    elif problem == "overlap":
+        facts.append(dict(facts[0]))
+    elif problem == "invalid_category":
+        facts[0]["value"] = "today_inferred_category"
+    elif problem == "invalid_unit":
+        facts[2]["unit"] = "lots"
+    else:
+        facts[0]["effective_to"] = "2014-01-02"
+    with pytest.raises(ValueError, match=r"2000001.*2014-01-02"):
+        _history(facts, ["2014-01-02"])
+
+
+def test_verified_etf_listing_does_not_wait_thirty_calendar_days():
+    listing = replace(_listing("SZSE"), ticker="159985", list_date="2019-12-05")
+    history = _history(_facts("commodity_futures", "0"), ["2019-12-05"], listing)
+    assert history[0][0].ipo_date == "2019-12-05"
+    with pytest.raises(ValueError, match="exit"):
+        _history(_facts(), ["2019-12-05"], replace(listing, delist_date="2019-12-05"))

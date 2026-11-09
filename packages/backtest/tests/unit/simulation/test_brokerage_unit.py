@@ -28,6 +28,7 @@ from ditto_execution.reality.ordinary_equity import (
     CashEquityListing,
     ordinary_equity_rules,
 )
+from ditto_execution.reality.ordinary_etf import etf_rule_history
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
@@ -1100,6 +1101,62 @@ class TestT1FreezeMultiInstrument:
         view = brk.get_account()
         assert view.positions[InstrumentId(1)].available_quantity == 500
         assert view.positions[InstrumentId(2)].available_quantity == 300
+
+
+@pytest.mark.parametrize("day", ["2015-01-16", "2015-01-19"])
+def test_dated_cross_border_etf_rules_control_same_day_sell(day):
+    facts = [
+        {
+            "field": field,
+            "value": value,
+            "unit": unit,
+            "effective_from": "2014-01-01",
+            "effective_to": "2026-11-10",
+            "basis": "synthetic dated cross-border declaration",
+        }
+        for field, value, unit in [
+            ("trading_category", "cross_border", "text"),
+            ("trading_currency", "CNY", "text"),
+            ("lot_size", "100", "count"),
+            ("tick_size", "0.001", "price"),
+            ("settlement_cycle", "1", "days"),
+            ("price_limit_pct", "0.1", "ratio"),
+        ]
+    ]
+    facts[4]["effective_to"] = "2015-01-19"
+    facts.append(
+        {
+            **facts[4],
+            "value": "0",
+            "effective_from": "2015-01-19",
+            "effective_to": "2026-11-10",
+        }
+    )
+    calendar = ["2015-01-16", "2015-01-19", "2015-01-20"]
+    history = etf_rule_history(
+        CashEquityListing(InstrumentId(1), "510900", "etf", "SSE", "2012-10-22", None),
+        facts=facts,
+        commission_rate=0.0003,
+        start=calendar[0],
+        end=calendar[-1],
+        trading_days=calendar,
+    )
+    brokerage = BacktestBrokerage(
+        account=_account(),
+        order_book=_order_book(),
+        model=BrokerageModel(
+            slippage_model=FixedBpsSlippage(bps=0),
+            settlement_model=AShareSettlementModel(trading_calendar=tuple(calendar)),
+        ),
+        rules_getter=lambda _iid, date: next(
+            rules for rules in reversed(history) if rules[1].as_of_date <= date
+        ),
+    )
+    brokerage.place_order(_order(order_id="BUY-1"))
+    assert len(brokerage.process_pending(_t1_process_input(day))) == 1
+    brokerage.place_order(_order(order_id="SELL-1", direction=OrderSide.SELL))
+    fills = brokerage.process_pending(_t1_process_input(day))
+    assert len(fills) == (0 if day == "2015-01-16" else 1)
 
 
 class TestT1FreezeSettlementCycle0:

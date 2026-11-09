@@ -44,6 +44,7 @@ def test_valid_declaration_produces_deterministic_long_frame(tmp_path: Path) -> 
         "value",
         "unit",
         "effective_from",
+        "effective_to",
         "basis",
     ]
     assert frame.height == 1
@@ -54,6 +55,7 @@ def test_valid_declaration_produces_deterministic_long_frame(tmp_path: Path) -> 
         "value": "CNY",
         "unit": "text",
         "effective_from": "2026-09-01",
+        "effective_to": None,
         "basis": "recorded basis",
     }
 
@@ -144,3 +146,64 @@ def test_default_path_under_config_default(tmp_path: Path) -> None:
 def test_frame_is_stable_across_reads(tmp_path: Path) -> None:
     source = _source(tmp_path, _declaration())
     assert source.fetch_etf_reference().equals(source.fetch_etf_reference())
+
+
+def test_declaration_preserves_dated_rules_across_the_cross_border_switch(
+    tmp_path: Path,
+) -> None:
+    document = {
+        "confirmed_at": "2026-11-09",
+        "instruments": [
+            {
+                "source_ticker": "510900.SH",
+                "facts": {
+                    "settlement_cycle": {
+                        "value": value,
+                        "unit": "days",
+                        "effective_from": first,
+                        "effective_to": last,
+                        "basis": basis,
+                    }
+                },
+            }
+            for value, first, last, basis in [
+                ("1", "2012-08-09", "2015-01-19", "original listing rules"),
+                ("0", "2015-01-19", None, "SSE notice 2015-6"),
+            ]
+        ],
+    }
+    frame = _source(tmp_path, document).fetch_etf_reference()
+    assert frame.select("value", "effective_from", "effective_to").rows() == [
+        ("1", "2012-08-09", "2015-01-19"),
+        ("0", "2015-01-19", None),
+    ]
+    assert frame["basis"].to_list() == ["original listing rules", "SSE notice 2015-6"]
+
+
+@pytest.mark.parametrize(
+    "end", ["2026-08-31", "2026-09-01", "invalid", 1, "20260902", "2026-W37-1"]
+)
+def test_invalid_fact_interval_is_rejected(tmp_path: Path, end: object) -> None:
+    with pytest.raises(EtfReferenceConfigError):
+        _source(tmp_path, _declaration(effective_to=end)).fetch_etf_reference()
+
+
+def test_overlapping_fact_versions_are_rejected(tmp_path: Path) -> None:
+    document = _declaration()
+    instruments = document["instruments"]
+    assert isinstance(instruments, list)
+    instruments.append(
+        {
+            "source_ticker": "510300.SH",
+            "facts": {
+                "trading_currency": {
+                    "value": "USD",
+                    "unit": "text",
+                    "effective_from": "2026-09-02",
+                    "basis": "conflicting version",
+                }
+            },
+        }
+    )
+    with pytest.raises(EtfReferenceConfigError, match="overlapping"):
+        _source(tmp_path, document).fetch_etf_reference()
