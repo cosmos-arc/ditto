@@ -13,6 +13,7 @@ from ditto_backtest.data_feed import (
     ProviderBackedDataFeed,
     SnapshotProviders,
 )
+from ditto_backtest.participation import daily_participation
 from ditto_backtest.result import (
     BacktestAccountStateSnapshot,
     BacktestPendingOrderSnapshot,
@@ -74,7 +75,7 @@ from ditto_application.builders._resolution import (
 )
 from ditto_application.builders.frozen_history import FrozenHistoryProvider
 from ditto_application.builders.historical_members import (
-    daily_participation,
+    freeze_membership_intervals,
     freeze_roster,
 )
 from ditto_application.builders.ordinary_backtest import (
@@ -588,6 +589,7 @@ class BacktestRuntimeBuilder:
             if historical is not None and self._artifact_service is not None:
                 evidence["members"] = list(historical.members)
                 evidence["instrument_ids"] = list(historical.instrument_ids)
+                evidence["membership_intervals"] = historical.membership_intervals
                 evidence["roster"] = historical.roster
                 evidence["participation"] = historical.participation
                 self._artifact_service.save_artifact(
@@ -790,18 +792,29 @@ class BacktestRuntimeBuilder:
                 if config.parent_run_id and self._artifact_service is not None
                 else None
             )
-            historical_provider.roster = freeze_roster(
+            historical_provider.membership_intervals = freeze_membership_intervals(
                 self._metadata_service,
                 universe,
                 start=config.start_date,
                 end=config.end_date,
-                source=source,
                 original=previous.metadata if previous is not None else None,
             )
             universe_ids = sorted(
-                {int(str(row["instrument_id"])) for row in historical_provider.roster}
+                {
+                    int(str(row["instrument_id"]))
+                    for row in historical_provider.membership_intervals
+                }
             )
             historical_provider.instrument_ids = tuple(universe_ids)
+            historical_provider.roster.extend(
+                freeze_roster(
+                    self._metadata_service,
+                    historical_provider.membership_intervals,
+                    start=config.start_date,
+                    source=source,
+                    original=previous.metadata if previous is not None else None,
+                )
+            )
         else:
             universe_ids = self._metadata_service.get_universe(
                 universe, asof=config.start_date

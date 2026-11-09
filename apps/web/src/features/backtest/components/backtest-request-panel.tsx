@@ -130,7 +130,7 @@ export function BacktestRequestPanel({ run }: { readonly run: BacktestRun }) {
 													<td>
 														{row.warmupAvailable} / {row.warmupRequired} 交易日
 													</td>
-													<td>{row.evaluated ? "当日已执行" : "预检；当日未完成"}</td>
+													<td>{row.evaluated ? "当日已执行" : "预检；尚无执行证据"}</td>
 												</tr>
 											))}
 									</tbody>

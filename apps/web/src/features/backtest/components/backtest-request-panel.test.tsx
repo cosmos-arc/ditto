@@ -207,7 +207,7 @@ it("reads saved daily exclusions with keyboard selection and explicit trading-da
 	const select = await screen.findByLabelText("逐日参与日期");
 	expect(screen.getByText("交易日预热不足")).toBeVisible();
 	expect(screen.getByText("3 / 60 交易日")).toBeVisible();
-	expect(screen.getByText("预检；当日未完成")).toBeVisible();
+	expect(screen.getByText("预检；尚无执行证据")).toBeVisible();
 	select.focus();
 	await user.selectOptions(select, "2014-10-14");
 	expect(select).toHaveFocus();

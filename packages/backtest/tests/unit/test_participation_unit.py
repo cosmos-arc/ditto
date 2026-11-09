@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_application.builders.historical_members import daily_participation
+from ditto_backtest.participation import daily_participation
 
 
 @pytest.mark.pit

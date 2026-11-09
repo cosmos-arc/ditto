@@ -81,6 +81,12 @@ def _provider(
         frames["stock_limit"] = execution.with_columns(
             pl.lit(11.0).alias("up_limit"), pl.lit(9.0).alias("down_limit")
         )
+        frames = {
+            dataset: frame.with_columns(pl.lit("000001.SZ").alias("source_ticker"))
+            if "source_ticker" in frame.columns
+            else frame
+            for dataset, frame in frames.items()
+        }
     snapshots = []
     contents = {}
     for index, (dataset, frame) in enumerate(frames.items()):
@@ -143,7 +149,7 @@ def _provider(
         reader, frozen_at=_RECEIPT + timedelta(seconds=1) if newer else _RECEIPT
     )
     provider.freeze(
-        ticker_ids={"510300.SH": _IID},
+        ticker_ids={"000001.SZ" if stock else "510300.SH": _IID},
         asset_class="stock" if stock else "etf",
         start="2014-10-13",
         end="2014-10-17",
@@ -251,7 +257,7 @@ def test_actual_stock_execution_schema_does_not_require_invented_knowledge_dates
     provider, _, _ = _provider(stock=True)
     bars = provider.get_bars(
         BarQuery(
-            instruments=("510300.SH",),
+            instruments=("000001.SZ",),
             start="2014-10-13",
             end="2014-10-16",
             with_execution_state=True,

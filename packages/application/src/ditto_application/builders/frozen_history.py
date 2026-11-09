@@ -43,6 +43,7 @@ class FrozenHistoryProvider:
         self.frozen_at, self._source = frozen_at, source
         self.sources: list[dict[str, object]] = []
         self.roster: list[dict[str, object]] = []
+        self.membership_intervals: list[dict[str, object]] = []
         self.participation: list[dict[str, object]] = []
         self._frames: dict[str, pl.DataFrame] = {}
         self._ticker_ids: dict[str, InstrumentId] = {}

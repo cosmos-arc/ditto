@@ -740,3 +740,85 @@ def test_missing_benchmark_keeps_original_security_scope_when_pool_changes():
         == original.metadata["instrument_ids"]
     )
     assert "benchmark cannot be resolved" in str(original.metadata["reason"])
+
+
+@pytest.mark.parametrize("missing", ["listing", "provider_identity"])
+def test_identity_failure_preserves_all_member_intervals_before_repair(missing):
+    spec = _make_strategy_spec()
+    strategy_builder = MagicMock()
+    strategy_builder.build_published_runtime.return_value = (
+        _make_published_strategy_runtime(spec, version=1)
+    )
+    metadata = make_metadata()
+    intervals = [
+        {
+            "instrument_id": 2000001,
+            "effective_from": "2014-01-01",
+            "effective_to": None,
+        },
+        {
+            "instrument_id": 2000002,
+            "effective_from": "2014-10-20",
+            "effective_to": None,
+        },
+    ]
+    metadata.universe.get_constituent_history.return_value = intervals
+    if missing == "listing":
+        metadata.instrument.get_instrument.side_effect = lambda iid: (
+            None if iid == 2000002 else LISTINGS.get(iid)
+        )
+    else:
+        metadata.instrument.get_source_ticker.side_effect = lambda iid, *_: (
+            None if iid == 2000002 else "510300.SH"
+        )
+    saved: dict[str, StrategyArtifactRecord] = {}
+    artifacts = MagicMock(spec=StrategyArtifactService)
+    artifacts.get_artifact.side_effect = saved.get
+    artifacts.save_artifact.side_effect = lambda record: saved.setdefault(
+        record.artifact_id, record
+    )
+    builder = BacktestRuntimeBuilder(
+        strategy_runtime_builder=strategy_builder,
+        metadata_service=metadata,
+        data_provider=CatalogProvider(),
+        artifact_service=artifacts,
+        snapshot_read_service=MagicMock(spec=SnapshotReadService),
+    )
+    request = BacktestCatalogRequestConfig(
+        strategy_id=spec.strategy_id,
+        run_id="identity-failed",
+        start_date="2014-10-13",
+        end_date="2014-10-24",
+        historical_reconstruction=True,
+    )
+    with pytest.raises(AppBuilderError, match="missing historical"):
+        builder.build_published_runtime(config=request)
+    original = saved["identity-failed:historical_inputs"]
+    assert original.metadata["instrument_ids"] == [2000001, 2000002]
+    assert original.metadata["membership_intervals"] == intervals
+    metadata.universe.get_constituent_history.return_value = intervals[:1]
+    metadata.instrument.get_instrument.side_effect = lambda iid: (
+        {**LISTINGS[iid], "list_date": "2030-01-01"}
+        if iid == 2000001
+        else LISTINGS.get(iid)
+    )
+    metadata.instrument.get_source_ticker.side_effect = lambda iid, *_: {
+        2000001: "510300.SH",
+        2000002: "510500.SH",
+    }.get(iid)
+    metadata.resolve_instrument_id.return_value = None
+    with pytest.raises(AppBuilderError, match="benchmark cannot be resolved"):
+        builder.build_published_runtime(
+            config=replace(
+                request, run_id="identity-repaired", parent_run_id=request.run_id
+            )
+        )
+    repaired = saved["identity-repaired:historical_inputs"]
+    assert repaired.metadata["instrument_ids"] == original.metadata["instrument_ids"]
+    assert repaired.metadata["membership_intervals"] == intervals
+    assert repaired.metadata["members"] == ["510300.SH", "510500.SH"]
+    repaired_roster = repaired.metadata["roster"]
+    original_roster = original.metadata["roster"]
+    assert isinstance(repaired_roster, list)
+    assert isinstance(original_roster, list)
+    assert repaired_roster[0] == original_roster[0]
