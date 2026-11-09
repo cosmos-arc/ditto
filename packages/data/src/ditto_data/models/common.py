@@ -82,6 +82,7 @@ class Dataset(StrEnum):
     INCOME_STATEMENT = "income_statement"
     CASH_FLOW = "cash_flow"
     DIVIDEND = "dividend"
+    ETF_DIVIDEND = "etf_dividend"
 
     # Capital 域（估值/融资融券/质押）
     VALUATION_METRICS = "valuation_metrics"

@@ -1,4 +1,4 @@
-"""Stock distribution entitlements and daily-net FIFO tax, independent of prices."""
+"""Distribution entitlements and daily-net FIFO tax, independent of prices."""
 
 from __future__ import annotations
 
@@ -8,13 +8,14 @@ from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 from math import isfinite
+from typing import Literal
 
 from ditto_kernel.identity import InstrumentId
 
 
 @dataclass(frozen=True)
-class StockDistribution:
-    """An implemented cash/share distribution for unrestricted A shares."""
+class Distribution:
+    """Implemented A-share cash/stock or exchange-traded ETF cash distribution."""
 
     instrument_id: InstrumentId
     record_date: date
@@ -28,11 +29,14 @@ class StockDistribution:
     listing_date: date | None = None
     taxable_share_income: float = 0.0
     share_tax_basis: str = ""
+    asset_class: Literal["stock", "etf"] = "stock"
 
     def __post_init__(self) -> None:
         """Require complete dates, cash units and an applicable tax regime."""
         if not (
             self.instrument_id > 0
+            and self.asset_class in {"stock", "etf"}
+            and (self.asset_class == "stock" or self.share_ratio == 0)
             and date(2013, 1, 1) <= self.record_date
             and self.announcement_date < self.record_date < self.ex_date
             and isfinite(self.gross_per_share)
@@ -60,14 +64,18 @@ class StockDistribution:
             and (self.share_ratio > 0 or self.taxable_share_income == 0)
             and self.source_snapshot_id
         ):
-            raise ValueError("unknown/invalid stock distribution facts or tax regime")
+            raise ValueError("unknown/invalid distribution facts or tax regime")
         for field in ("gross_per_share", "share_ratio", "taxable_share_income"):
             object.__setattr__(self, field, float(getattr(self, field)))
 
     @property
     def taxable_per_share(self) -> float:
         """Cash plus source-proven taxable share income, per registered old share."""
-        return self.gross_per_share + self.taxable_share_income
+        return (
+            self.gross_per_share + self.taxable_share_income
+            if self.asset_class == "stock"
+            else 0.0
+        )
 
     def shares_for(self, registered: int) -> int:
         """An account cannot infer the market-wide lottery for fractional shares."""
@@ -87,7 +95,11 @@ class StockDistribution:
     @property
     def withholding_rate(self) -> float:
         """Initial individual-share withholding under the dated tax regime."""
-        return 0.05 if self.record_date < date(2015, 9, 8) else 0.0
+        return (
+            0.05
+            if self.asset_class == "stock" and self.record_date < date(2015, 9, 8)
+            else 0.0
+        )
 
 
 def _anniversary(acquired: date, months: int) -> date:
@@ -120,7 +132,7 @@ class DividendLot:
 class DividendRight:
     """Frozen record-date shares, including rights retained after disposal."""
 
-    event: StockDistribution
+    event: Distribution
     acquired: date
     quantity: int
     remaining: int
@@ -148,7 +160,7 @@ class DividendEntry:
 class DividendBook:
     """Immutable snapshot used by account views, checkpoints and reports."""
 
-    events: tuple[StockDistribution, ...] = ()
+    events: tuple[Distribution, ...] = ()
     lots: tuple[DividendLot, ...] = ()
     rights: tuple[DividendRight, ...] = ()
     entries: tuple[DividendEntry, ...] = ()
@@ -168,9 +180,9 @@ class DividendBook:
         )
 
     @classmethod
-    def start(cls, events: tuple[StockDistribution, ...]) -> DividendBook:
+    def start(cls, events: tuple[Distribution, ...]) -> DividendBook:
         """Collapse identical events and reject conflicting identities."""
-        unique: dict[str, StockDistribution] = {}
+        unique: dict[str, Distribution] = {}
         for event in events:
             previous = unique.setdefault(event.identity, event)
             if previous != event:
@@ -400,7 +412,7 @@ def _dispose_lots(
 
 
 def _record_rights(
-    event: StockDistribution, lots: list[DividendLot]
+    event: Distribution, lots: list[DividendLot]
 ) -> tuple[DividendRight, ...]:
     """One entitlement per acquisition date, regardless of independent listing locks."""
     registered: dict[date, int] = {}

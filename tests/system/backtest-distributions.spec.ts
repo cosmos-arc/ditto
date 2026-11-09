@@ -174,13 +174,13 @@ test("share distribution facts recover through the UI, reconcile, reopen and exp
 	await page.getByRole("tab", { name: "成交", exact: true }).click();
 	const disclosure = page
 		.locator("summary")
-		.filter({ hasText: "股票分红与送转账本" });
+		.filter({ hasText: "分红与送转账本" });
 	await disclosure.focus();
 	await page.keyboard.press("Enter");
 	await expect(disclosure).toBeFocused();
 	await expect(page.getByRole("table", { name: "分红每日对账" })).toBeVisible();
 	await expect(
-		page.getByRole("table", { name: "送转每日份额与成本" }),
+		page.getByRole("table", { name: "持仓每日份额与成本" }),
 	).toBeVisible();
 	await page.getByRole("region", { name: "分红每日对账滚动区域" }).focus();
 	await page.keyboard.press("ArrowRight");

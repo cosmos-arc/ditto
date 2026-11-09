@@ -36,6 +36,24 @@ VALUATION_METRICS_MAPPING = ColumnMapping(
 # Note: dividend_yield is not available from Tushare dividend API.
 # It's computed from valuation_metrics dv_ratio field separately.
 # We include it as null to satisfy the schema contract.
+_DIVIDEND_COLUMNS = (
+    "source_ticker",
+    "ex_dividend_date",
+    "knowledge_date",
+    "dividend_per_share",
+    "dividend_yield",
+    "div_proc",  # P015: 输出包含实施进度
+    "gross_dividend_per_share",
+    "record_date",
+    "pay_date",
+    "implementation_date",
+    "report_date",
+    "share_listing_date",
+    "stock_dividend_ratio",
+    "bonus_ratio",
+    "capitalization_ratio",
+)
+
 DIVIDEND_MAPPING = ColumnMapping(
     rename={
         "ts_code": "source_ticker",
@@ -73,22 +91,41 @@ DIVIDEND_MAPPING = ColumnMapping(
     computed_columns={
         "dividend_yield": pl.lit(None, dtype=pl.Float64),
     },
+    output_columns=_DIVIDEND_COLUMNS,
+)
+
+ETF_DIVIDEND_MAPPING = ColumnMapping(
+    rename={
+        "ts_code": "source_ticker",
+        "ann_date": "knowledge_date",
+        "imp_anndate": "implementation_date",
+        "ex_date": "ex_dividend_date",
+        "div_cash": "gross_dividend_per_share",
+    },
+    date_columns={
+        **DIVIDEND_MAPPING.date_columns,
+        "share_tax_knowledge_date": "%Y%m%d",
+    },
+    float_columns=[*DIVIDEND_MAPPING.float_columns, "taxable_share_income"],
+    computed_columns={
+        "knowledge_date": pl.when(
+            pl.col("knowledge_date").is_not_null()
+            & pl.col("implementation_date").is_not_null()
+        ).then(pl.max_horizontal("knowledge_date", "implementation_date")),
+        "dividend_per_share": pl.col("gross_dividend_per_share"),
+        "dividend_yield": pl.lit(None, dtype=pl.Float64),
+        # fund_div describes cash distributions, not separate fund conversions.
+        "stock_dividend_ratio": pl.lit(0.0),
+        "bonus_ratio": pl.lit(0.0),
+        "capitalization_ratio": pl.lit(0.0),
+        "taxable_share_income": pl.lit(0.0),
+        "share_tax_basis": pl.lit(None, dtype=pl.String),
+    },
     output_columns=(
-        "source_ticker",
-        "ex_dividend_date",
-        "knowledge_date",
-        "dividend_per_share",
-        "dividend_yield",
-        "div_proc",  # P015: 输出包含实施进度
-        "gross_dividend_per_share",
-        "record_date",
-        "pay_date",
-        "implementation_date",
-        "report_date",
-        "share_listing_date",
-        "stock_dividend_ratio",
-        "bonus_ratio",
-        "capitalization_ratio",
+        *_DIVIDEND_COLUMNS,
+        "taxable_share_income",
+        "share_tax_basis",
+        "share_tax_knowledge_date",
     ),
 )
 

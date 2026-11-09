@@ -18,7 +18,7 @@ from ditto_data.services.market_adjustment import adjust_retained_bars
 from ditto_data.services.market_status import stock_execution_bars
 from ditto_data.services.market_types import AdjType
 from ditto_kernel.identity import InstrumentId
-from ditto_portfolio.accounting.dividends import StockDistribution
+from ditto_portfolio.accounting.dividends import Distribution
 
 from ditto_application.builders.data_provider import resolve_frozen_snapshot_rows
 from ditto_application.catalog_freshness import observed_at
@@ -55,12 +55,13 @@ class FrozenHistoryProvider:
         self._ticker_ids: dict[str, InstrumentId] = {}
         self._asset_class = ""
         self._etf_reference: pl.DataFrame | None = None
-        self.cash_dividends: tuple[StockDistribution, ...] = ()
+        self.cash_dividends: tuple[Distribution, ...] = ()
 
     def freeze_cash_dividends(self, *, start: str, end: str) -> None:
         """Pin implementation facts selected by the raw announcement date."""
-        if not self._reader.list_snapshots(dataset_id="dividend", source=self._source):
-            raise AppBuilderError("missing retained dividend coverage")
+        dataset = "etf_dividend" if self._asset_class == "etf" else "dividend"
+        if not self._reader.list_snapshots(dataset_id=dataset, source=self._source):
+            raise AppBuilderError(f"missing retained {dataset} coverage")
         listed = {
             str(row["source_ticker"]): str(row["list_date"]) for row in self.roster
         }
@@ -70,7 +71,7 @@ class FrozenHistoryProvider:
         # their complete declared history rather than inventing a lookback window.
         coverage_start = min(listed[ticker] for ticker in self.members)
         frame = self._freeze_dataset(
-            "dividend",
+            dataset,
             {ticker: self._ticker_ids[ticker] for ticker in self.members},
             start=None,
             end=end,
@@ -80,17 +81,20 @@ class FrozenHistoryProvider:
         try:
             selected = implemented_cash_dividends(frame, start=start, end=end)
             self.cash_dividends = tuple(
-                StockDistribution(
+                Distribution(
                     instrument_id=InstrumentId(row["instrument_id"]),
                     record_date=row["record_date"],
                     ex_date=row["ex_dividend_date"],
                     pay_date=row["pay_date"],
                     gross_per_share=row["gross_dividend_per_share"],
                     announcement_date=max(
-                        row["implementation_date"], row["share_tax_knowledge_date"]
-                    )
-                    if row["stock_dividend_ratio"]
-                    else row["implementation_date"],
+                        row["knowledge_date"],
+                        row["implementation_date"],
+                        row["share_tax_knowledge_date"]
+                        if row["stock_dividend_ratio"]
+                        else row["implementation_date"],
+                    ),
+                    asset_class="etf" if self._asset_class == "etf" else "stock",
                     source_snapshot_id=row["source_snapshot_id"],
                     source_ticker=row["source_ticker"],
                     share_ratio=row["stock_dividend_ratio"],

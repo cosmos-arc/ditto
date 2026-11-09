@@ -16,7 +16,7 @@ from ditto_execution.reality.ordinary_etf import etf_rule_history
 from ditto_execution.rules import InMemoryRuleProvider
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import InstrumentRules
-from ditto_portfolio.accounting.dividends import StockDistribution
+from ditto_portfolio.accounting.dividends import Distribution
 
 from ditto_application.exceptions import AppBuilderError
 
@@ -199,7 +199,7 @@ def ordinary_market_transform(
     *,
     start_date: str,
     participation: pl.DataFrame | None = None,
-    cash_dividends: tuple[StockDistribution, ...] = (),
+    cash_dividends: tuple[Distribution, ...] = (),
 ) -> Callable[[pl.DataFrame], pl.DataFrame]:
     """Use real status/limits for stocks and the verified ETF limit formula."""
     execution_dates = (

@@ -270,7 +270,8 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
     force: bool = False,
 ) -> IngestionResult:
     """按标的处理获取的数据：写入。"""
-    if df.is_empty():
+    # Cash-account reconstruction must verify empty announcement payloads too.
+    if df.is_empty() and dataset not in {"dividend", "etf_dividend"}:
         return _handle_instrument_empty(
             df, dataset, params, source_ticker=source_ticker, chunk_id=chunk_id, ctx=ctx
         )

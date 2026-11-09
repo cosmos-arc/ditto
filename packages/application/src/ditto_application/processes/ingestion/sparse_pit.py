@@ -32,6 +32,7 @@ _SPARSE_PIT_DATASETS: frozenset[str] = frozenset(
         "income_statement",
         "cash_flow",
         "dividend",
+        "etf_dividend",
         "corporate_actions",
         "index_weight",
         # #521/#522：披露锚数据集（kd=公告日），与三表同走 as-of 快照证据

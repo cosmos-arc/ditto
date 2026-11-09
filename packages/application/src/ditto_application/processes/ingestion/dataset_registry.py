@@ -835,6 +835,12 @@ _FUNDAMENTAL_REGISTRATIONS: tuple[DatasetRegistration, ...] = (
         ),
     ),
     DatasetRegistration(
+        dataset=Dataset.ETF_DIVIDEND,
+        write_kind=WriteKind.FUNDAMENTAL,
+        date_schedule=DateScheduleType.NATURAL_DAYS,
+        instrument_fetch_factory=_instrument_fetch("market", "fetch_etf_dividend"),
+    ),
+    DatasetRegistration(
         dataset=Dataset.CORPORATE_ACTIONS,
         write_kind=WriteKind.FUNDAMENTAL,
         date_schedule=DateScheduleType.NATURAL_DAYS,

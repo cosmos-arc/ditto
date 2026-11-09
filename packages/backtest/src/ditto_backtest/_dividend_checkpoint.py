@@ -7,11 +7,11 @@ from typing import cast
 import orjson
 from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.accounting.dividends import (
+    Distribution,
     DividendBook,
     DividendEntry,
     DividendLot,
     DividendRight,
-    StockDistribution,
 )
 
 from ditto_backtest._checkpoint_codec import (
@@ -28,9 +28,12 @@ def dividend_payload(book: DividendBook) -> dict[str, object]:
     return cast(dict[str, object], orjson.loads(orjson.dumps(asdict(book))))
 
 
-def _event(payload: object) -> StockDistribution:
+def _event(payload: object) -> Distribution:
     row = payload_mapping(payload)
-    return StockDistribution(
+    asset_class = payload_str(row, "asset_class")
+    if asset_class not in ("stock", "etf"):
+        raise ValueError("invalid distribution asset class")
+    return Distribution(
         instrument_id=InstrumentId(payload_int(row, "instrument_id")),
         record_date=date.fromisoformat(payload_str(row, "record_date")),
         ex_date=date.fromisoformat(payload_str(row, "ex_date")),
@@ -47,6 +50,7 @@ def _event(payload: object) -> StockDistribution:
         else None,
         taxable_share_income=payload_float(row, "taxable_share_income"),
         share_tax_basis=payload_str(row, "share_tax_basis"),
+        asset_class=asset_class,
     )
 
 

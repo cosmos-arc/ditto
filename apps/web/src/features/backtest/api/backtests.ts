@@ -123,6 +123,8 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 			) ||
 			dividends.events.some(
 				(event) =>
+					(event.asset_class !== "stock" && event.asset_class !== "etf") ||
+					(event.asset_class === "etf" && event.share_ratio !== 0) ||
 					!Number.isSafeInteger(event.instrument_id) ||
 					event.instrument_id <= 0 ||
 					!event.source_snapshot_id ||
@@ -195,6 +197,7 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 					policy: dividends.policy,
 					events: dividends.events.map((event) => ({
 						eventId: event.event_id,
+						assetClass: event.asset_class,
 						symbol: event.source_ticker || String(event.instrument_id),
 						source: event.source_snapshot_id,
 						announcement: event.announcement_date,

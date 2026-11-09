@@ -1483,10 +1483,10 @@ def test_daily_st_buy_cap_counts_prior_fills_without_resetting_for_another_order
     if unlisted:
         from datetime import date
 
-        from ditto_portfolio.accounting.dividends import DividendBook, StockDistribution
+        from ditto_portfolio.accounting.dividends import Distribution, DividendBook
         from ditto_portfolio.accounting.position import Position
 
-        event = StockDistribution(
+        event = Distribution(
             InstrumentId(1),
             date(2026, 10, 7),
             date(2026, 10, 8),

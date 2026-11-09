@@ -355,6 +355,17 @@ INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
         task_name="ingest_dividend",
         priority=40,
     ),
+    _Dataset.ETF_DIVIDEND: DatasetSpec(
+        dataset=_Dataset.ETF_DIVIDEND,
+        description="ETF 现金分红 (按标的公告区间采集)",
+        tier=TaskTier.T2_REPAIR,
+        update_frequency="按需补采",
+        typical_available_time=time(20, 0),
+        depends_on=[_Dataset.ETF_BASIC],
+        critical_fields=["instrument_id", "ex_dividend_date", "knowledge_date"],
+        task_name="ingest_etf_dividend",
+        priority=40,
+    ),
     _Dataset.VALUATION_METRICS: create_t1_config(
         dataset=_Dataset.VALUATION_METRICS,
         description="估值指标",

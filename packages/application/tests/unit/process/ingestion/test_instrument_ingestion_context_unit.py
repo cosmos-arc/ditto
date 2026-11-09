@@ -3,6 +3,7 @@
 from typing import cast
 
 import polars as pl
+import pytest
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.evidence_commit import (
     EvidenceCommitOutcome,
@@ -406,3 +407,57 @@ def _unused_write_result() -> WriteResult:
         rows_total=0,
         blocked=False,
     )
+
+
+@pytest.mark.parametrize("dataset", ["dividend", "etf_dividend"])
+def test_empty_distribution_history_retains_exact_readable_source(
+    tmp_path, mocker, dataset
+):
+    from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
+    from ditto_data.sources.tushare.processors.mappings.capital import (
+        ETF_DIVIDEND_MAPPING,
+    )
+    from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
+
+    frame = TushareDataTransformer.transform(
+        pl.DataFrame(), dataset, ETF_DIVIDEND_MAPPING
+    )
+    writer = mocker.Mock(spec=IngestionDataWriter)
+    writer.write_data.return_value = WriteResult(
+        file_path=f"{dataset}/2014",
+        checksum="empty-canonical",
+        rows_written=0,
+        rows_total=0,
+        blocked=False,
+    )
+    committer = mocker.Mock(spec=IngestionEvidenceCommitter)
+    committer.commit.return_value = EvidenceCommitOutcome(
+        chunk_id="cash-empty", completed=True
+    )
+    checker = mocker.Mock(spec=QualityCheckerProtocol)
+    checker.handle.return_value = (frame, False)
+    payloads = FilesystemProviderPayloadStore(tmp_path)
+    result = _process_fetched_data_by_instrument(
+        frame,
+        dataset,
+        "159915.SZ",
+        InstrumentIngestParams(
+            instrument_id=2001567, start_date="2014-01-01", end_date="2014-12-31"
+        ),
+        ctx=InstrumentPostIngestContext(
+            result_handler=IngestionResultHandler(None, "tushare"),
+            data_writer=writer,
+            source_name="tushare",
+            quality_checker=checker,
+            evidence_committer=committer,
+            provider_payload_writer=payloads,
+        ),
+    )
+    assert result.status == "success"
+    snapshot = committer.commit.call_args.args[0].provider_snapshot
+    assert snapshot.payload_retained
+    intent = committer.prepare_payload_write.call_args.args[0]
+    restored = payloads.read_payload(intent.payload)
+    assert restored.is_empty()
+    assert restored.schema == frame.schema
+    assert snapshot.source_ticker_scope == ("159915.SZ",)

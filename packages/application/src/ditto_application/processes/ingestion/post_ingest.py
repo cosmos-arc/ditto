@@ -236,7 +236,8 @@ def process_fetched_data(  # noqa: C901, PLR0911, PLR0912, PLR0913, PLR0915 - fa
         and request_end is not None
         else trade_date
     )
-    if df.is_empty():
+    # Cash-account reconstruction must verify empty announcement payloads too.
+    if df.is_empty() and dataset not in {"dividend", "etf_dividend"}:
         if expects_rows_per_trading_day(dataset):
             # A full-market trading-day snapshot answering "no rows" means
             # the provider has not published yet (or an outage): fail

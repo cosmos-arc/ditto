@@ -49,6 +49,7 @@ class TestSupportedInstrumentDatasets:
             Dataset.INCOME_STATEMENT,
             Dataset.CASH_FLOW,
             Dataset.DIVIDEND,
+            Dataset.ETF_DIVIDEND,
             Dataset.MARGIN_TRADING,
             Dataset.PLEDGE_RATIO,
             Dataset.INDEX_WEIGHT,

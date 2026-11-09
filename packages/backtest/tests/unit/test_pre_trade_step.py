@@ -342,10 +342,10 @@ def test_st_submission_cap_includes_unfilled_orders_and_releases_cancellations(
     if unlisted:
         from datetime import date
 
-        from ditto_portfolio.accounting.dividends import DividendBook, StockDistribution
+        from ditto_portfolio.accounting.dividends import Distribution, DividendBook
         from ditto_portfolio.accounting.position import Position
 
-        event = StockDistribution(
+        event = Distribution(
             iid,
             date(2026, 10, 7),
             date(2026, 10, 8),

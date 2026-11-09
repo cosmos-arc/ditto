@@ -161,6 +161,7 @@ _FUNDAMENTAL_DOMAINS: frozenset[str] = frozenset(
         "income_statement",
         "cash_flow",
         "dividend",
+        "etf_dividend",
         "earnings_forecast",
         "earnings_express",
         # #521/#522 官方财务指标/基金持仓
@@ -223,6 +224,7 @@ _EXPERIMENTAL_DATASETS: frozenset[str] = frozenset(
     {
         "cash_flow",
         "dividend",
+        "etf_dividend",
         "valuation_metrics",
         "margin_trading",
         "pledge_ratio",
@@ -325,6 +327,7 @@ def _resolve_asset_class(dataset_id: str) -> DatasetAssetClass | None:
     if dataset_id in {
         "etf_daily",
         "fund_adj",
+        "etf_dividend",
         "etf_nav",
         "etf_reference",
         "fund_share",
@@ -346,6 +349,7 @@ def _resolve_schedule(dataset_id: str) -> DatasetSchedule:
     if dataset_id in {
         "fx_daily",
         "dividend",
+        "etf_dividend",
         "corporate_actions",
         "earnings_forecast",
         "earnings_express",
@@ -663,6 +667,7 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     "income_statement",
     "cash_flow",
     "dividend",
+    "etf_dividend",
     # Capital
     "valuation_metrics",
     "margin_trading",
@@ -702,6 +707,7 @@ _INSTRUMENT_INGESTION_DATASETS: frozenset[str] = frozenset(
         "income_statement",
         "cash_flow",
         "dividend",
+        "etf_dividend",
         "valuation_metrics",
         "margin_trading",
         "pledge_ratio",
@@ -729,6 +735,8 @@ def _resolve_ingestion_granularities(
     """Resolve supported ingestion granularities for a dataset."""
     if dataset_id in _UNSUPPORTED_INGESTION_DATASETS:
         return ()
+    if dataset_id == "etf_dividend":
+        return ("instrument",)
     if dataset_id in _INSTRUMENT_INGESTION_DATASETS:
         return ("date", "instrument")
     return ("date",)

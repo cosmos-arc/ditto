@@ -3,7 +3,10 @@
 from dataclasses import replace
 
 import pytest
-from ditto_execution.reality.ordinary_equity import CashEquityListing
+from ditto_execution.reality.ordinary_equity import (
+    CashEquityListing,
+    ordinary_execution_fields,
+)
 from ditto_execution.reality.ordinary_etf import etf_rule_history
 from ditto_kernel.identity import InstrumentId
 
@@ -160,3 +163,33 @@ def test_verified_etf_listing_does_not_wait_thirty_calendar_days():
     assert history[0][0].ipo_date == "2019-12-05"
     with pytest.raises(ValueError, match="exit"):
         _history(_facts(), ["2019-12-05"], replace(listing, delist_date="2019-12-05"))
+
+
+def test_etf_cash_reconciles_source_factor_and_ex_price_without_accepting_folds():
+    rules = _history(_facts(category="equity"), ["2025-06-18"])[0]
+    row = {
+        "trade_date": "2025-06-18",
+        "_previous_close": 3.989,
+        "_previous_adj": 1.2078,
+        "adj_factor": 1.235,
+        "pre_close": 3.901,
+        "volume": 100.0,
+    }
+    assert ordinary_execution_fields(
+        row, rules, start_date="2025-06-18", cash_dividend=0.088
+    ) == {"limit_up": 4.291, "limit_down": 3.511, "is_suspended": False}
+    for changed, cash, shares in [
+        ({}, None, 0),
+        ({"adj_factor": 2.47}, 0.088, 0),
+        ({"adj_factor": 1.2355}, 0.088, 0),
+        ({"pre_close": 3.989}, 0.088, 0),
+        ({}, 0.088, 1),
+    ]:
+        with pytest.raises(ValueError, match=r"corporate action|ETF ex reference"):
+            ordinary_execution_fields(
+                {**row, **changed},
+                rules,
+                start_date="2025-06-18",
+                cash_dividend=cash,
+                share_ratio=shares,
+            )

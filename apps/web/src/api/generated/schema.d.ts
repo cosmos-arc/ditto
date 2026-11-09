@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: a3c038b6b79625a4dcb19744237c8098d5a71d41b6c7fbcc75411ece08d59129
+ * Schema SHA-256: 585c54817c8d145d6664c5565620973debbe584bb09191fc154fffe5f937aad7
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -10001,6 +10001,11 @@ export interface components {
         DividendEventResponse: {
             /** Announcement Date */
             announcement_date: string;
+            /**
+             * Asset Class
+             * @enum {string}
+             */
+            asset_class: "stock" | "etf";
             /** Event Id */
             event_id: string;
             /** Ex Date */

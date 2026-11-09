@@ -9,12 +9,13 @@ from ditto_backtest.result import BacktestAccountStateSnapshot
 from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.dividends import StockDistribution
+from ditto_portfolio.accounting.dividends import Distribution
 from ditto_portfolio.accounting.position import Position
 
 
-def test_saved_receivable_and_fifo_tax_resume_without_second_payment():
-    event = StockDistribution(
+@pytest.mark.parametrize("asset_class", ["stock", "etf"])
+def test_saved_receivable_and_fifo_tax_resume_without_second_payment(asset_class):
+    event = Distribution(
         InstrumentId(1),
         date(2020, 6, 2),
         date(2020, 6, 3),
@@ -22,6 +23,7 @@ def test_saved_receivable_and_fifo_tax_resume_without_second_payment():
         1,
         date(2020, 5, 20),
         "snapshot:cash",
+        asset_class=asset_class,
     )
     from ditto_portfolio.accounting.dividends import DividendBook
 
@@ -36,6 +38,7 @@ def test_saved_receivable_and_fifo_tax_resume_without_second_payment():
     account.settle_dividends("2020-06-03")
     snapshot = BacktestAccountStateSnapshot.from_account_view(account.get_view())
     restored = BacktestAccountStateSnapshot.from_json(snapshot.to_json())
+    assert restored.dividends.events[0].asset_class == asset_class
     assert restored.dividends.receivable == 100
     assert restored.state_hash == snapshot.state_hash
     resumed = Account(
@@ -57,7 +60,7 @@ def test_saved_receivable_and_fifo_tax_resume_without_second_payment():
 
 @pytest.mark.pit
 def test_future_dividend_is_not_visible_to_the_strategy_account_view():
-    event = StockDistribution(
+    event = Distribution(
         InstrumentId(1),
         date(2020, 6, 10),
         date(2020, 6, 11),
@@ -79,7 +82,7 @@ def test_saved_unlisted_shares_unlock_once_after_restore():
 
     from ditto_portfolio.accounting.dividends import DividendBook
 
-    event = StockDistribution(
+    event = Distribution(
         InstrumentId(1),
         date(2020, 6, 2),
         date(2020, 6, 3),
@@ -152,7 +155,7 @@ def test_trade_matching_survives_share_credit_restore_and_listing(method):
         builder.on_fill(item, account.get_view())
 
     fill("2020-06-02", OrderSide.BUY, 100, 12)
-    event = StockDistribution(
+    event = Distribution(
         InstrumentId(1),
         date(2020, 6, 2),
         date(2020, 6, 3),
@@ -220,7 +223,7 @@ def test_fifo_attributes_whole_share_credit_across_fractional_cost_lots():
             ),
             account.get_view(),
         )
-    event = StockDistribution(
+    event = Distribution(
         InstrumentId(1),
         date(2020, 6, 2),
         date(2020, 6, 3),

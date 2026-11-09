@@ -13,18 +13,19 @@ const labels: Record<string, string> = {
 
 export function BacktestDividends({ statement }: { readonly statement: BacktestDividendStatement | null | undefined }) {
 	if (!statement)
-		return <p className="mb-3 text-xs text-(--color-foreground-secondary)">本报告没有已保存的股票分红与送转事件。</p>;
+		return <p className="mb-3 text-xs text-(--color-foreground-secondary)">本报告没有已保存的分红与送转事件。</p>;
 	return (
 		<details className="mb-3 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-3 text-xs">
 			<summary className="cursor-pointer rounded-(--radius-sm) font-medium focus-visible:outline-2 focus-visible:outline-offset-4">
-				股票分红与送转账本（{statement.events.length} 个事件）
+				分红与送转账本（{statement.events.length} 个事件）
 			</summary>
 			<p className="my-3">{statement.policy}</p>
 			<p>金额单位：人民币元（CNY）；日期：交易所当地日期。净资产 = 现金 + 应收 + 持仓市值 − 待扣税款。</p>
 			{statement.events.map((event) => (
 				<details key={event.eventId} className="my-3">
 					<summary className="cursor-pointer focus-visible:outline-2">
-						{event.symbol} · 登记 {event.record} · {event.quantity} 股 · 税前每股 {money(event.grossPerShare)} 元
+						{event.symbol} · 登记 {event.record} · {event.quantity} {event.assetClass === "etf" ? "份" : "股"} · 税前每
+						{event.assetClass === "etf" ? "份" : "股"} {money(event.grossPerShare)} 元
 					</summary>
 					<p>
 						实施公告 {event.announcement}；除息 {event.ex}；派息 {event.pay ?? "无现金分派"}。
@@ -45,7 +46,9 @@ export function BacktestDividends({ statement }: { readonly statement: BacktestD
 				{statement.entries.map((entry) => (
 					<li key={`${entry.eventId}-${entry.day}-${entry.kind}-${entry.acquired}`}>
 						{entry.day} · {labels[entry.kind]} · {money(entry.amount)} 元
-						{entry.quantity ? ` · ${entry.quantity} 股` : ""}
+						{entry.quantity
+							? ` · ${entry.quantity} ${statement.events.find((event) => event.eventId === entry.eventId)?.assetClass === "etf" ? "份" : "股"}`
+							: ""}
 						{entry.acquired ? ` · 取得日 ${entry.acquired}` : ""}
 					</li>
 				))}
@@ -77,16 +80,22 @@ export function BacktestDividends({ statement }: { readonly statement: BacktestD
 						))}
 					</tbody>
 				</table>
-				<table aria-label="送转每日份额与成本" className="mt-3 w-full whitespace-nowrap text-left font-data">
+				<table aria-label="持仓每日份额与成本" className="mt-3 w-full whitespace-nowrap text-left font-data">
 					<thead>
 						<tr>
-							{["日期", "证券", "总份额（股）", "可卖（股）", "未可卖（股）", "平均成本（元/股）", "总成本（元）"].map(
-								(label) => (
-									<th key={label} scope="col" className="p-2">
-										{label}
-									</th>
-								),
-							)}
+							{[
+								"日期",
+								"证券",
+								"总份额（股/份）",
+								"可卖（股/份）",
+								"未可卖（股/份）",
+								"平均成本（元/股或份）",
+								"总成本（元）",
+							].map((label) => (
+								<th key={label} scope="col" className="p-2">
+									{label}
+								</th>
+							))}
 						</tr>
 					</thead>
 					<tbody>

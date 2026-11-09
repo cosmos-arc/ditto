@@ -11,7 +11,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.dividends import DividendBook, StockDistribution
+from ditto_portfolio.accounting.dividends import Distribution, DividendBook
 from ditto_portfolio.accounting.fills import FillEvent
 from ditto_portfolio.accounting.position import Position
 from ditto_portfolio.events import PositionChanged
@@ -65,7 +65,7 @@ class Account:
         positions: dict[InstrumentId, Position] | None = None,
         cash: CashBook | None = None,
         event_bus: EventBus | None = None,
-        dividends: tuple[StockDistribution, ...] = (),
+        dividends: tuple[Distribution, ...] = (),
         dividend_state: DividendBook | None = None,
     ) -> None:
         """

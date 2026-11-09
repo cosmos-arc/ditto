@@ -7,7 +7,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.dividends import StockDistribution
+from ditto_portfolio.accounting.dividends import Distribution
 from ditto_portfolio.accounting.fills import FillEvent
 
 
@@ -33,9 +33,44 @@ def trade(account: Account, day: str, side: OrderSide, quantity: int, price: flo
     account.mark_to_market({InstrumentId(1): price})
 
 
+@pytest.mark.parametrize("year", [2014, 2025])
+def test_etf_distribution_preserves_cash_right_without_stock_withholding(year):
+    event = Distribution(
+        InstrumentId(1),
+        date(year, 1, 20),
+        date(year, 1, 21),
+        date(year, 1, 27),
+        0.048,
+        date(year, 1, 15),
+        "snapshot:fund-dividend",
+        source_ticker="510300.SH",
+        asset_class="etf",
+    )
+    account = Account(cash=CashBook(2000, 2000, 0), dividends=(event, event))
+    trade(account, f"{year}-01-20", OrderSide.BUY, 100, 10)
+    account.close_dividend_day(f"{year}-01-20")
+    account.settle_dividends(f"{year}-01-21")
+    view = account.get_view()
+    assert view.cash.available == 1000
+    assert view.dividends.receivable == pytest.approx(4.8)
+    assert view.nav == pytest.approx(2000)
+    trade(account, f"{year}-01-21", OrderSide.SELL, 100, 9.952)
+    account.close_dividend_day(f"{year}-01-21")
+    assert account.get_view().dividends.tax_payable == 0
+    account.settle_dividends(f"{year}-01-22")
+    assert account.cash.available == pytest.approx(1995.2)
+    account.settle_dividends(f"{year}-01-27")
+    account.settle_dividends(f"{year}-01-27")
+    assert account.cash.available == pytest.approx(2000)
+    assert account.get_view().dividends.receivable == 0
+    entries = account.get_view().dividends.entries
+    assert [e.amount for e in entries if e.kind == "cash_payment"] == [4.8]
+    assert not any(e.kind in {"tax_reserved", "tax_payment"} for e in entries)
+
+
 @pytest.mark.pit
 def test_future_event_cannot_leak_acquisition_lots_or_book_clocks():
-    event = StockDistribution(
+    event = Distribution(
         InstrumentId(1),
         date(2020, 6, 10),
         date(2020, 6, 11),
@@ -59,7 +94,7 @@ def test_future_event_cannot_leak_acquisition_lots_or_book_clocks():
 
 
 def test_repeated_session_closes_use_final_net_holdings_and_tax():
-    event = StockDistribution(
+    event = Distribution(
         InstrumentId(1),
         date(2020, 6, 2),
         date(2020, 6, 3),
@@ -90,7 +125,7 @@ def test_repeated_session_closes_use_final_net_holdings_and_tax():
 
 
 def test_dividend_receivable_cannot_be_spent_and_payment_is_idempotent():
-    event = StockDistribution(
+    event = Distribution(
         instrument_id=InstrumentId(1),
         record_date=date(2020, 6, 2),
         ex_date=date(2020, 6, 3),
@@ -146,7 +181,7 @@ def test_calendar_month_year_tax_boundaries(sell_date, expected_tax):
 
 
 def test_partial_sale_uses_oldest_lot_without_taxing_the_entire_entitlement():
-    event = StockDistribution(
+    event = Distribution(
         InstrumentId(1),
         date(2020, 6, 2),
         date(2020, 6, 3),
@@ -174,7 +209,7 @@ def test_partial_sale_uses_oldest_lot_without_taxing_the_entire_entitlement():
 
 def test_share_distribution_preserves_cost_and_waits_for_listing_before_sale():
     """100 at 12 becomes 150 at 8; the 50 new shares unlock on their own date."""
-    event = StockDistribution(
+    event = Distribution(
         InstrumentId(1),
         date(2020, 6, 2),
         date(2020, 6, 3),
@@ -216,7 +251,7 @@ def test_share_distribution_preserves_cost_and_waits_for_listing_before_sale():
 
 
 def test_same_day_share_credit_and_buy_form_one_tax_acquisition_lot():
-    first = StockDistribution(
+    first = Distribution(
         InstrumentId(1),
         date(2020, 6, 2),
         date(2020, 6, 3),
@@ -228,7 +263,7 @@ def test_same_day_share_credit_and_buy_form_one_tax_acquisition_lot():
         listing_date=date(2020, 6, 3),
         share_tax_basis="issuer:premium-capital",
     )
-    second = StockDistribution(
+    second = Distribution(
         InstrumentId(1),
         date(2020, 6, 4),
         date(2020, 6, 5),
@@ -253,7 +288,7 @@ def test_same_day_share_credit_and_buy_form_one_tax_acquisition_lot():
 
 
 def test_initial_share_tax_reduces_receivable_before_payment_not_available_cash():
-    event = StockDistribution(
+    event = Distribution(
         InstrumentId(1),
         date(2014, 6, 2),
         date(2014, 6, 3),
@@ -289,7 +324,7 @@ def test_initial_share_tax_reduces_receivable_before_payment_not_available_cash(
 
 
 def test_fractional_entitlement_refuses_atomically_and_revised_close_can_retry():
-    event = StockDistribution(
+    event = Distribution(
         InstrumentId(1),
         date(2020, 6, 2),
         date(2020, 6, 3),
@@ -315,7 +350,7 @@ def test_fractional_entitlement_refuses_atomically_and_revised_close_can_retry()
 
 @pytest.mark.parametrize("buy_day", ["2020-06-04", "2020-06-08"])
 def test_tax_fifo_cannot_dispose_unlisted_shares_before_later_buys(buy_day):
-    first = StockDistribution(
+    first = Distribution(
         InstrumentId(1),
         date(2020, 6, 3),
         date(2020, 6, 4),
@@ -327,7 +362,7 @@ def test_tax_fifo_cannot_dispose_unlisted_shares_before_later_buys(buy_day):
         listing_date=date(2020, 6, 12),
         share_tax_basis="issuer",
     )
-    second = StockDistribution(
+    second = Distribution(
         InstrumentId(1),
         date(2020, 6, 30),
         date(2020, 7, 1),
