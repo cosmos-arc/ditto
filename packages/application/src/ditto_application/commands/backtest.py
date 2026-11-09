@@ -229,7 +229,9 @@ class BacktestRunHandler:
         config = orjson.loads(record.config_json)
         if not isinstance(config, dict):
             raise AppCommandError("Invalid backtest submission receipt")
-        receipt = find_mutation_receipt([config], command.idempotency)
+        receipt = find_mutation_receipt(
+            [cast("dict[str, object]", config)], command.idempotency
+        )
         if (
             receipt != {"run_id": run_id, "strategy_id": command.strategy_id}
             or record.strategy_id != command.strategy_id
