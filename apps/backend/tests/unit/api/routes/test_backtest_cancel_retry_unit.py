@@ -640,6 +640,38 @@ class TestGetReport:
         for field in ("usage_context", "strategy_promotion", "pit_policy"):
             assert payload[field] == report[field]
 
+    @pytest.mark.parametrize("ratio", [None, 0.0, 1.25])
+    async def test_report_omits_only_undefined_optional_ratios(
+        self, mock_query_facade: MagicMock, ratio: float | None
+    ) -> None:
+        """Preserve real zero values and all other report evidence on the wire."""
+        bill = {
+            "currency": "CNY",
+            "policy": "saved",
+            "rules_observed_at": "2026-11-09",
+            "source_ref": "fees",
+            "final_cash": 1000.0,
+            "fills": [],
+        }
+        mock_query_facade.get_report.return_value = {
+            "run_id": "run-001",
+            "aggregated_trade_stats": {
+                "total_trades": 3,
+                "profit_factor": ratio,
+                "avg_win_loss_ratio": ratio,
+            },
+            "fee_statement": bill,
+        }
+        response = await _call_report("run-001", mock_query_facade)
+        payload = response.model_dump(mode="json")["data"]
+        assert payload["fee_statement"] == bill
+        assert payload["aggregated_trade_stats"]["total_trades"] == 3
+        for name in ("profit_factor", "avg_win_loss_ratio"):
+            if ratio is None:
+                assert name not in payload["aggregated_trade_stats"]
+            else:
+                assert payload["aggregated_trade_stats"][name] == ratio
+
     async def test_report_not_found(
         self,
         mock_query_facade: MagicMock,

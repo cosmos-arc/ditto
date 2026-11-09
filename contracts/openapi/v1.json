@@ -8894,16 +8894,9 @@
             "type": "number"
           },
           "avg_win_loss_ratio": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "default": 0.0,
-            "title": "Avg Win Loss Ratio"
+            "title": "Avg Win Loss Ratio",
+            "type": "number"
           },
           "best_trade": {
             "default": 0.0,
@@ -8936,16 +8929,9 @@
             "type": "number"
           },
           "profit_factor": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "default": 0.0,
-            "title": "Profit Factor"
+            "title": "Profit Factor",
+            "type": "number"
           },
           "short_trades": {
             "default": 0,

@@ -164,3 +164,24 @@ it.each(["currency", "direction", "identity", "quantity"])(
 		await expect(fetchBacktestReport("bt-001")).rejects.toThrow("费用账单响应无效");
 	},
 );
+
+it("preserves other statistics when undefined optional ratios are omitted by HTTP", async () => {
+	vi.stubGlobal(
+		"fetch",
+		vi.fn<typeof fetch>(async () =>
+			Response.json({
+				data: {
+					...mockBacktestReport,
+					aggregated_trade_stats: {
+						...mockBacktestReport.aggregated_trade_stats,
+						profit_factor: undefined,
+						avg_win_loss_ratio: undefined,
+						total_trades: 3,
+					},
+				},
+			}),
+		),
+	);
+	const report = await fetchBacktestReport("bt-001");
+	expect(report.tradeStats).toMatchObject({ totalTrades: 3, profitFactor: null, avgWinLossRatio: null });
+});

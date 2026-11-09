@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import isfinite, nan
 from typing import Any, Literal, cast
 
 import orjson
@@ -260,10 +261,14 @@ class AggregatedTradeStatsResponse(BaseModel):
     win_trades: int = Field(default=0)
     loss_trades: int = Field(default=0)
     win_rate: float = Field(default=0.0)
-    profit_factor: float | None = Field(default=0.0)
+    profit_factor: float = Field(
+        default=0.0, exclude_if=lambda value: not isfinite(value)
+    )
     avg_win: float = Field(default=0.0)
     avg_loss: float = Field(default=0.0)
-    avg_win_loss_ratio: float | None = Field(default=0.0)
+    avg_win_loss_ratio: float = Field(
+        default=0.0, exclude_if=lambda value: not isfinite(value)
+    )
     max_consecutive_wins: int = Field(default=0)
     max_consecutive_losses: int = Field(default=0)
     avg_holding_days: float = Field(default=0.0)
@@ -273,6 +278,12 @@ class AggregatedTradeStatsResponse(BaseModel):
     avg_trade_return_pct: float = Field(default=0.0)
 
     model_config = ConfigDict(strict=True, extra="ignore")
+
+    @field_validator("profit_factor", "avg_win_loss_ratio", mode="before")
+    @classmethod
+    def omit_undefined_ratio(cls, value: object) -> object:
+        """Orjson saves non-finite ratios as null; omit only these optional values."""
+        return nan if value is None else value
 
 
 class AlphaStatsResponse(BaseModel):

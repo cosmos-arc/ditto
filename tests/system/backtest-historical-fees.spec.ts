@@ -34,8 +34,8 @@ for (const [start, end] of [
 		expect(report.fee_statement).toBeTruthy();
 		const statement = report.fee_statement;
 		expect(statement.fills.length).toBeGreaterThan(2);
-		expect(report.aggregated_trade_stats.profit_factor).toBeNull();
-		expect(report.aggregated_trade_stats.avg_win_loss_ratio).toBeNull();
+		expect(report.aggregated_trade_stats).not.toHaveProperty("profit_factor");
+		expect(report.aggregated_trade_stats).not.toHaveProperty("avg_win_loss_ratio");
 		let cash = 250000;
 		let fees = 0;
 		const directions = new Set<string>();
