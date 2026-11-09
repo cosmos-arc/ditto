@@ -190,5 +190,7 @@ test("strategy detail submits an exact ordinary version and recovers a lost resp
  await page.getByRole("button", {name: "提交回测", exact: true}).click();
  await expect(form.getByRole("link", {name: "查看本次回测"})).toBeVisible();
  await expect(form.getByRole("button", {name: "提交回测", exact: true})).toBeDisabled();
+ await page.keyboard.press("Escape");
+ await expect(page.getByRole("button", {name: "提交回测", exact: true})).toBeFocused();
  expect(submissions).toHaveLength(2);
 });

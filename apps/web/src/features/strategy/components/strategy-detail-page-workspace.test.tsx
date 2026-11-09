@@ -88,6 +88,8 @@ describe("StrategyDetailPage governed workspace", () => {
 			"seed_etf_industry_rotation version 3 ordinary form",
 		);
 		expect(screen.queryByRole("link", { name: "打开实验创建器" })).not.toBeInTheDocument();
+		await user.keyboard("{Escape}");
+		expect(screen.getByRole("button", { name: "提交回测" })).toHaveFocus();
 	});
 
 	it("deprecates the current version through the audited governance command", async () => {

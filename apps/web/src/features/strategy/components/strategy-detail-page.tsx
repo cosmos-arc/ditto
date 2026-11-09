@@ -1,5 +1,5 @@
 import { Link, useParams } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout, ShellHeaderExtension } from "@/features/shell";
@@ -24,6 +24,7 @@ export function StrategyDetailPage({ renderGovernanceActions, renderBacktestForm
 	const detail = useStrategy(strategyId);
 	const [tab, setTab] = useState<DetailTab>("overview");
 	const [overlay, setOverlay] = useState<StrategyDetailOverlay | null>(null);
+	const backtestButton = useRef<HTMLButtonElement>(null);
 
 	return (
 		<section aria-label="策略详情工作区" className="h-full min-h-0">
@@ -34,7 +35,13 @@ export function StrategyDetailPage({ renderGovernanceActions, renderBacktestForm
 							编辑策略
 						</Link>
 					</Button>
-					<Button size="sm" variant="outline" onClick={() => setOverlay("backtest")} disabled={!detail.data}>
+					<Button
+						ref={backtestButton}
+						size="sm"
+						variant="outline"
+						onClick={() => setOverlay("backtest")}
+						disabled={!detail.data}
+					>
 						提交回测
 					</Button>
 					<Button size="sm" variant="outline" onClick={() => setOverlay("copy")} disabled={!detail.data}>
@@ -116,6 +123,7 @@ export function StrategyDetailPage({ renderGovernanceActions, renderBacktestForm
 				/>
 			</Tabs>
 			<StrategyDetailOverlays
+				onBacktestCloseAutoFocus={() => backtestButton.current?.focus()}
 				backtestForm={detail.data ? renderBacktestForm?.(strategyId, detail.data.version) : null}
 				open={overlay}
 				onClose={() => setOverlay(null)}

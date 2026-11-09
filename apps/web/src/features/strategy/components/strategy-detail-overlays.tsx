@@ -18,6 +18,7 @@ export type StrategyDetailOverlay = "backtest" | "copy" | "deprecate" | "rollbac
 
 interface StrategyDetailOverlaysProps {
 	readonly backtestForm?: ReactNode;
+	readonly onBacktestCloseAutoFocus?: () => void;
 	readonly detail: StrategyDetail | undefined;
 	readonly detailLoading: boolean;
 	readonly onClose: () => void;
@@ -28,6 +29,7 @@ interface StrategyDetailOverlaysProps {
 
 export function StrategyDetailOverlays({
 	backtestForm,
+	onBacktestCloseAutoFocus,
 	detail,
 	detailLoading,
 	onClose,
@@ -40,7 +42,16 @@ export function StrategyDetailOverlays({
 	return (
 		<>
 			<Sheet open={open === "backtest"} onOpenChange={(isOpen) => !isOpen && onClose()}>
-				<SheetContent side="right" aria-label="提交回测" className="p-0">
+				<SheetContent
+					side="right"
+					aria-label="提交回测"
+					className="p-0"
+					onCloseAutoFocus={(event) => {
+						if (!onBacktestCloseAutoFocus) return;
+						event.preventDefault();
+						onBacktestCloseAutoFocus();
+					}}
+				>
 					<SheetHeader className="border-b border-(--color-border-subtle) px-5 py-4 pr-14">
 						<SheetTitle>提交回测</SheetTitle>
 						<SheetDescription>选择策略版本、日期和资金，提交普通研究回测。</SheetDescription>
