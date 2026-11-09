@@ -40,7 +40,7 @@ from ditto_execution.planner import ExecutionPlanner, SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_execution.reality.ordinary_equity import (
     RULES_OBSERVED_AT,
-    is_mainboard_stock,
+    cash_stock_board,
 )
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
@@ -879,10 +879,10 @@ class BacktestRuntimeBuilder:
                 trading_days,
                 warmup_days=max_lookback,
                 knowledge_lag_days=config.knowledge_lag_days,
-                mainboard_ids=frozenset(
+                ipo_covered_ids=frozenset(
                     int(str(row["instrument_id"]))
                     for row in historical_provider.roster
-                    if is_mainboard_stock(
+                    if cash_stock_board(
                         str(row["asset_class"]),
                         str(row["exchange"]),
                         str(row["ticker"]),

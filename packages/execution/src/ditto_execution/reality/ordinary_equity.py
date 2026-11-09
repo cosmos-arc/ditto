@@ -1,8 +1,8 @@
 """
-Observed cash-equity rules for limited historical research (#723, #753).
+Observed cash-equity rules for limited historical research (#723, #753, #754).
 
 Authority/effective dates: docs/evidence/ordinary-backtest-20261108/rules.md.
-Main-board history: docs/evidence/mainboard-rules-753.md.
+Stock history: docs/evidence/mainboard-rules-753.md and chinext-rules-754.md.
 These are reconstructed rules, never evidence of historical knowability.
 """
 
@@ -33,11 +33,12 @@ __all__ = [
     "RULES_EFFECTIVE_FROM",
     "RULES_OBSERVED_AT",
     "CashEquityListing",
+    "cash_stock_board",
     "is_mainboard_stock",
-    "mainboard_rule_history",
-    "mainboard_trading_history",
     "ordinary_equity_rules",
     "ordinary_execution_fields",
+    "stock_rule_history",
+    "stock_trading_history",
 ]
 
 RULES_OBSERVED_AT = "2026-11-08T06:22:22+00:00"
@@ -92,7 +93,23 @@ def is_mainboard_stock(asset_class: str, exchange: str, ticker: str) -> bool:
     )
 
 
-def mainboard_rule_history(
+def cash_stock_board(asset_class: str, exchange: str, ticker: str) -> str | None:
+    """Verified domestic stock code ranges; exclude CDRs and index identities."""
+    if is_mainboard_stock(asset_class, exchange, ticker):
+        return "main"
+    if (
+        asset_class == "stock"
+        and exchange == "SZSE"
+        and len(ticker) == _A_SHARE_CODE_LENGTH
+        and ticker.isascii()
+        and ticker.isdigit()
+        and "300000" <= ticker <= "309799"
+    ):
+        return "chinext"
+    return None
+
+
+def stock_rule_history(
     listing: CashEquityListing,
     *,
     commission_rate: float,
@@ -101,8 +118,8 @@ def mainboard_rule_history(
     trading_days: list[str],
 ) -> tuple[_InstrumentRules, ...]:
     """Bind independent trading and fee effective dates to the same consumer."""
-    if not is_mainboard_stock(listing.asset_class, listing.exchange, listing.ticker):
-        raise ValueError(f"not a covered main-board A share: {listing.instrument_id}")
+    if cash_stock_board(listing.asset_class, listing.exchange, listing.ticker) is None:
+        raise ValueError(f"not a covered domestic A share: {listing.instrument_id}")
     base = ordinary_equity_rules(
         listing,
         commission_rate=commission_rate,
@@ -110,7 +127,7 @@ def mainboard_rule_history(
         end=end,
         historical_reconstruction=True,
     )
-    trading = mainboard_trading_history(
+    trading = stock_trading_history(
         listing, start=start, end=end, trading_days=trading_days
     )
     fees = _stock_fee_history(listing, commission_rate=commission_rate)
@@ -163,29 +180,38 @@ def _stock_fee_history(
     )
 
 
-def mainboard_trading_history(
+def stock_trading_history(
     listing: CashEquityListing, *, start: str, end: str, trading_days: list[str]
 ) -> tuple[_TradingRuleSet, ...]:
-    """Dated main-board trading rules; fee coverage is a separate requirement."""
-    if not is_mainboard_stock(listing.asset_class, listing.exchange, listing.ticker):
-        raise ValueError(f"not a covered main-board A share: {listing.instrument_id}")
+    """Dated domestic stock trading rules; fee coverage is a separate requirement."""
+    if cash_stock_board(listing.asset_class, listing.exchange, listing.ticker) is None:
+        raise ValueError(f"not a covered domestic A share: {listing.instrument_id}")
     if not "2014-01-01" <= start <= end <= RULES_OBSERVED_AT[:10]:
         raise ValueError(
-            "main-board trading rules cover 2014-01-01 through the observed date"
+            "stock trading rules cover 2014-01-01 through the observed date"
         )
-    _validate_mainboard_calendar(listing, start, trading_days)
+    _validate_stock_calendar(listing, start, trading_days)
+    chinext = (
+        cash_stock_board(listing.asset_class, listing.exchange, listing.ticker)
+        == "chinext"
+    )
+    # These three already-delisting stocks retained the old mechanism throughout.
+    legacy_exit = chinext and listing.ticker in {"300090", "300156", "300216"}
+    registration = "2020-08-24" if chinext else "2023-04-10"
     versions: dict[str, float | None] = {
         "2014-01-01": 0.1,
         "2014-06-13": 0.1,
         "2023-04-10": 0.1,
         "2026-07-06": 0.1,
     }
+    if chinext and not legacy_exit:
+        versions.update({"2020-08-24": 0.2, "2023-04-10": 0.2, "2026-07-06": 0.2})
     if listing.exchange == "SSE":
         versions["2018-08-20"] = 0.1
     if listing.list_date >= trading_days[0]:
         sessions = [day for day in trading_days if day >= listing.list_date]
         initial_sessions = (
-            _IPO_NO_LIMIT_SESSIONS if listing.list_date >= "2023-04-10" else 1
+            _IPO_NO_LIMIT_SESSIONS if listing.list_date >= registration else 1
         )
         versions[listing.list_date] = None
         for effective in list(versions):
@@ -195,12 +221,16 @@ def mainboard_trading_history(
             ):
                 versions[effective] = None
         if len(sessions) > initial_sessions:
-            versions[sessions[initial_sessions]] = 0.1
+            sixth = sessions[initial_sessions]
+            versions[sixth] = (
+                0.2 if chinext and not legacy_exit and sixth >= registration else 0.1
+            )
     history: list[_TradingRuleSet] = []
-    for effective, band in sorted(versions.items()):
-        if effective > end:
-            continue
+    for effective, band in sorted(
+        (day, band) for day, band in versions.items() if day <= end
+    ):
         closing_auction = listing.exchange == "SZSE" or effective >= "2018-08-20"
+        reformed_chinext = chinext and not legacy_exit and effective >= registration
         history.append(
             _TradingRuleSet(
                 instrument_id=listing.instrument_id,
@@ -208,9 +238,11 @@ def mainboard_trading_history(
                 settlement_cycle=1,
                 fund_settlement_cycle=0,
                 price_limit_pct=band,
-                order_types_supported=_mainboard_order_types(
+                order_types_supported=_stock_order_types(
                     listing.exchange, effective, band, closing_auction
                 ),
+                max_limit_order_quantity=300_000 if reformed_chinext else 1_000_000,
+                max_market_order_quantity=150_000 if reformed_chinext else 1_000_000,
                 call_auction_sessions=("09:15-09:25", "14:57-15:00")
                 if closing_auction
                 else ("09:15-09:25",),
@@ -219,7 +251,7 @@ def mainboard_trading_history(
     return tuple(history)
 
 
-def _mainboard_order_types(
+def _stock_order_types(
     exchange: str, effective: str, band: float | None, closing_auction: bool
 ) -> tuple[str, ...]:
     """Only SSE registration-era rules allow market orders without a daily band."""
@@ -231,11 +263,11 @@ def _mainboard_order_types(
     return tuple(order_types)
 
 
-def _validate_mainboard_calendar(
+def _validate_stock_calendar(
     listing: CashEquityListing, start: str, trading_days: list[str]
 ) -> None:
     if not trading_days or trading_days != sorted(set(trading_days)):
-        raise ValueError("main-board rules require a sorted, unique trading calendar")
+        raise ValueError("stock rules require a sorted, unique trading calendar")
     for day in trading_days:
         date.fromisoformat(day)
     if listing.list_date >= trading_days[0] and listing.list_date not in trading_days:
@@ -246,7 +278,7 @@ def _validate_mainboard_calendar(
         listing.list_date < trading_days[0]
         and sum(day < start for day in trading_days) < _IPO_NO_LIMIT_SESSIONS
     ):
-        raise ValueError("main-board calendar must retain five prior trading sessions")
+        raise ValueError("stock calendar must retain five prior trading sessions")
 
 
 def ordinary_equity_rules(
@@ -259,8 +291,9 @@ def ordinary_equity_rules(
 ) -> _InstrumentRules:
     """Reject unknown coverage/exit periods; retain seed commission assumptions."""
     key = (listing.asset_class, listing.exchange, listing.ticker)
-    mainboard = historical_reconstruction and is_mainboard_stock(*key)
-    if key not in _COVERAGE and not mainboard:
+    board = cash_stock_board(*key)
+    historical_stock = historical_reconstruction and board is not None
+    if key not in _COVERAGE and not historical_stock:
         raise ValueError(f"missing ordinary asset rule: {listing.instrument_id} {key}")
     representative_2014 = (
         historical_reconstruction
@@ -274,7 +307,7 @@ def ordinary_equity_rules(
     )
     effective_from = (
         "2014-01-01"
-        if mainboard
+        if historical_stock
         else ("2014-09-26" if representative_2014 else RULES_EFFECTIVE_FROM)
     )
     if not effective_from <= start <= end <= RULES_OBSERVED_AT[:10]:
@@ -282,7 +315,7 @@ def ordinary_equity_rules(
             "ordinary rule coverage is " + f"{effective_from}..{RULES_OBSERVED_AT[:10]}"
         )
     if (
-        not mainboard
+        not historical_stock
         and (date.fromisoformat(start) - date.fromisoformat(listing.list_date)).days
         < MIN_ORDINARY_LISTED_DAYS
     ) or (listing.delist_date is not None and listing.delist_date <= end):
@@ -303,7 +336,7 @@ def ordinary_equity_rules(
             tick_size=0.01 if stock else 0.001,
             lot_size=100,
             multiplier=1.0,
-            board_segment="main" if stock else "domestic_equity_etf",
+            board_segment=(board or "main") if stock else "domestic_equity_etf",
             lifecycle_state="normal",
             ipo_date=listing.list_date,
             delisting_date=listing.delist_date,
@@ -313,7 +346,7 @@ def ordinary_equity_rules(
             as_of_date=effective_from,
             settlement_cycle=1,
             fund_settlement_cycle=0,
-            price_limit_pct=0.10 if mainboard else _COVERAGE[key],
+            price_limit_pct=0.10 if historical_stock else _COVERAGE[key],
             order_types_supported=("market", "limit", "market_on_close"),
             call_auction_sessions=("09:15-09:25",)
             if representative_2014
@@ -384,7 +417,10 @@ def _stock_execution_fields(
     iid, day = definition.instrument_id, str(row["trade_date"])
     if row.get("is_st") is not False:
         raise ValueError(f"unverified risk-warning rule/status: {iid} {day}")
-    if rule.price_limit_pct is None and (definition.ipo_date or "") >= "2023-04-10":
+    registration = (
+        "2020-08-24" if definition.board_segment == "chinext" else "2023-04-10"
+    )
+    if rule.price_limit_pct is None and (definition.ipo_date or "") >= registration:
         # The verified listing calendar/rule proves the exemption. A missing
         # or extreme vendor price must never independently grant this state.
         return {"limit_up": None, "limit_down": None}

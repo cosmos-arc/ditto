@@ -532,26 +532,47 @@ class TestAShareFillScenarios:
             assert result.can_retry is scenario.expected_can_retry
 
 
-def test_ordinary_mainboard_ipo_phase_drives_fill_then_limit_rejection() -> None:
+@pytest.mark.parametrize(
+    ("ticker", "days", "band"),
+    [
+        (
+            "001246",
+            [
+                "2026-09-30",
+                "2026-10-08",
+                "2026-10-09",
+                "2026-10-12",
+                "2026-10-13",
+                "2026-10-14",
+            ],
+            0.1,
+        ),
+        (
+            "300896",
+            [
+                "2020-09-28",
+                "2020-09-29",
+                "2020-09-30",
+                "2020-10-09",
+                "2020-10-12",
+                "2020-10-13",
+            ],
+            0.2,
+        ),
+    ],
+)
+def test_ordinary_stock_ipo_phase_drives_fill_then_limit_rejection(
+    ticker: str, days: list[str], band: float
+) -> None:
     from ditto_execution.reality.ordinary_equity import (
         CashEquityListing,
-        mainboard_rule_history,
         ordinary_execution_fields,
+        stock_rule_history,
     )
     from ditto_execution.rules import InMemoryRuleProvider
 
-    listing = CashEquityListing(
-        InstrumentId(1), "001246", "stock", "SZSE", "2026-09-30", None
-    )
-    days = [
-        "2026-09-30",
-        "2026-10-08",
-        "2026-10-09",
-        "2026-10-12",
-        "2026-10-13",
-        "2026-10-14",
-    ]
-    history = mainboard_rule_history(
+    listing = CashEquityListing(InstrumentId(1), ticker, "stock", "SZSE", days[0], None)
+    history = stock_rule_history(
         listing, commission_rate=0.001, start=days[0], end=days[-1], trading_days=days
     )
     provider = InMemoryRuleProvider(
@@ -559,11 +580,12 @@ def test_ordinary_mainboard_ipo_phase_drives_fill_then_limit_rejection() -> None
         trading_rules={InstrumentId(1): [row[1] for row in history]},
         fee_schedules={InstrumentId(1): [row[2] for row in history]},
     )
-    fifth = provider.get_rules("2026-10-13", [InstrumentId(1)])[InstrumentId(1)]
-    sixth = provider.get_rules("2026-10-14", [InstrumentId(1)])[InstrumentId(1)]
+    fifth = provider.get_rules(days[4], [InstrumentId(1)])[InstrumentId(1)]
+    sixth = provider.get_rules(days[5], [InstrumentId(1)])[InstrumentId(1)]
+    upper, lower = 10 * (1 + band), 10 * (1 - band)
     values = ordinary_execution_fields(
         {
-            "trade_date": "2026-10-13",
+            "trade_date": days[4],
             "is_st": False,
             "pre_close": 10.0,
             "limit_up": 999999.999,
@@ -590,11 +612,11 @@ def test_ordinary_mainboard_ipo_phase_drives_fill_then_limit_rejection() -> None
     assert (
         ordinary_execution_fields(
             {
-                "trade_date": "2026-10-14",
+                "trade_date": days[5],
                 "is_st": False,
                 "pre_close": 10.0,
-                "limit_up": 11.0,
-                "limit_down": 9.0,
+                "limit_up": upper,
+                "limit_down": lower,
             },
             sixth,
             start_date=days[0],
@@ -603,7 +625,7 @@ def test_ordinary_mainboard_ipo_phase_drives_fill_then_limit_rejection() -> None
     )
     rejected = model.try_fill(
         _order(),
-        _market_snapshot(close=11.0, limit_up=11.0, limit_down=9.0),
+        _market_snapshot(close=upper, limit_up=upper, limit_down=lower),
         sixth[0],
         sixth[1],
     )
@@ -612,7 +634,7 @@ def test_ordinary_mainboard_ipo_phase_drives_fill_then_limit_rejection() -> None
     with pytest.raises(ValueError, match="disagrees with dated rule"):
         ordinary_execution_fields(
             {
-                "trade_date": "2026-10-14",
+                "trade_date": days[5],
                 "is_st": False,
                 "pre_close": 10.0,
                 "limit_up": 999999.999,

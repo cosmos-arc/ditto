@@ -8,10 +8,10 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.reality.ordinary_equity import (
     MIN_ORDINARY_LISTED_DAYS,
     CashEquityListing,
-    is_mainboard_stock,
-    mainboard_rule_history,
+    cash_stock_board,
     ordinary_equity_rules,
     ordinary_execution_fields,
+    stock_rule_history,
 )
 from ditto_execution.rules import InMemoryRuleProvider
 from ditto_kernel.identity import InstrumentId
@@ -57,12 +57,12 @@ def build_ordinary_rules(
             else None,
         )
         rule_start = start
-        if historical_roster is not None and is_mainboard_stock(
+        if historical_roster is not None and cash_stock_board(
             listing.asset_class, listing.exchange, listing.ticker
         ):
             if listing.list_date > end:
                 continue
-            rules[InstrumentId(iid)] = mainboard_rule_history(
+            rules[InstrumentId(iid)] = stock_rule_history(
                 listing,
                 commission_rate=commission_rate,
                 start=max(start, listing.list_date),
@@ -117,11 +117,18 @@ def ordinary_rule_description(
         if trading.price_limit_pct is None
         else f"涨跌幅 {trading.price_limit_pct:.0%}"
     )
-    if trading.price_limit_pct is None and (definition.ipo_date or "") < "2023-04-10":
+    registration = (
+        "2020-08-24" if definition.board_segment == "chinext" else "2023-04-10"
+    )
+    if trading.price_limit_pct is None and (definition.ipo_date or "") < registration:
         band = "上市首日申报价格范围"
     if "market" not in trading.order_types_supported:
         band += " · 不接受市价申报"
     unit = "股" if definition.asset_class == "stock" else "份"
+    if trading.max_limit_order_quantity is not None:
+        band += f" · 限价/收盘单笔 ≤{trading.max_limit_order_quantity} {unit}"
+    if trading.max_market_order_quantity is not None:
+        band += f" · 市价单笔 ≤{trading.max_market_order_quantity} {unit}"
     return (
         f"{definition.exchange}/{definition.board_segment}/{trading.as_of_date}"
         + f" · {band} · 买入 {definition.lot_size} {unit}"

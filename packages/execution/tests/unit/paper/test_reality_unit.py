@@ -424,3 +424,30 @@ def test_paper_fee_consumer_preserves_per_share_transfer_charge() -> None:
     assert result.fill is not None
     assert result.fill.transfer_fee == pytest.approx(0.03)
     assert result.fill.total_cost == pytest.approx(6.03)
+
+
+@pytest.mark.parametrize("supported", [True, False])
+def test_paper_obeys_dated_submission_type_and_size(supported: bool) -> None:
+    definition, trading, fee = _rules()
+    result = ASharePaperReality().execute(
+        paper_order=_paper_order(_order(side=OrderSide.BUY, quantity=200)),
+        lineage=_lineage(),
+        rules=(
+            definition,
+            replace(
+                trading,
+                max_market_order_quantity=100,
+                order_types_supported=("market",) if supported else ("limit",),
+            ),
+            fee,
+        ),
+        assumption=_assumption(),
+        context=_context(),
+    )
+    assert result.status is PaperRealityStatus.REJECTED
+    assert result.fill is None
+    assert result.reason == (
+        "order_quantity_exceeds_dated_maximum"
+        if supported
+        else "unsupported_order_type"
+    )
