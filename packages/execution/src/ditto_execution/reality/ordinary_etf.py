@@ -5,10 +5,16 @@ from datetime import date
 from math import isfinite
 
 from ditto_kernel.trading import (
-    FeeSchedule,
-    InstrumentDefinition,
-    InstrumentRules,
-    TradingRuleSet,
+    FeeSchedule as _FeeSchedule,
+)
+from ditto_kernel.trading import (
+    InstrumentDefinition as _InstrumentDefinition,
+)
+from ditto_kernel.trading import (
+    InstrumentRules as _InstrumentRules,
+)
+from ditto_kernel.trading import (
+    TradingRuleSet as _TradingRuleSet,
 )
 
 from ditto_execution.reality.ordinary_equity import CashEquityListing
@@ -32,7 +38,7 @@ def etf_rule_history(
     start: str,
     end: str,
     trading_days: list[str],
-) -> tuple[InstrumentRules, ...]:
+) -> tuple[_InstrumentRules, ...]:
     """Require one sourced version per field/session; no category inference."""
     if listing.asset_class != "etf" or listing.exchange not in {"SSE", "SZSE"}:
         raise ValueError(f"unsupported ETF identity: {listing.instrument_id}")
@@ -46,7 +52,7 @@ def etf_rule_history(
         raise ValueError("commission_rate must be finite and non-negative")
     if not trading_days or trading_days != sorted(set(trading_days)):
         raise ValueError("ETF rules require a sorted, unique trading calendar")
-    history: list[InstrumentRules] = []
+    history: list[_InstrumentRules] = []
     previous: tuple[dict[str, str], str, bool] | None = None
     days = [date.fromisoformat(day).isoformat() for day in trading_days]
     for day in (day for day in days if max(start, listing.list_date) <= day <= end):
@@ -59,7 +65,7 @@ def etf_rule_history(
         )
         if (values, effective_from, closing) == previous:
             continue
-        definition = InstrumentDefinition(
+        definition = _InstrumentDefinition(
             instrument_id=listing.instrument_id,
             asset_class="etf",
             exchange={"SSE": "XSHG", "SZSE": "XSHE"}[listing.exchange],
@@ -79,7 +85,7 @@ def etf_rule_history(
         history.append(
             (
                 definition,
-                TradingRuleSet(
+                _TradingRuleSet(
                     instrument_id=listing.instrument_id,
                     as_of_date=effective_from,
                     settlement_cycle=int(values["settlement_cycle"]),
@@ -94,7 +100,7 @@ def etf_rule_history(
                     max_limit_order_quantity=1_000_000,
                     max_market_order_quantity=1_000_000,
                 ),
-                FeeSchedule(
+                _FeeSchedule(
                     instrument_id=listing.instrument_id,
                     as_of_date=effective_from,
                     commission_rate=commission_rate,
