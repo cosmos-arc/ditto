@@ -107,6 +107,8 @@ class FeeSchedule:
     min_commission: float
     stamp_duty_rate: float
     transfer_fee_rate: float
+    # Early cash-equity schedules charge nominal value per share, not turnover.
+    transfer_fee_per_share: float = 0.0
 
 
 class FeeModel(Protocol):

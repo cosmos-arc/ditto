@@ -12,6 +12,7 @@ import { useBacktestReport, useBacktestRun } from "../hooks";
 import { comparisonLifetime, useBacktestComparison } from "../hooks/use-backtest-comparison";
 import { legacyBacktestUsage } from "../types";
 import { BacktestAuditView } from "./backtest-audit-view";
+import { BacktestFeeStatementView } from "./backtest-fee-statement";
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
 import { type BacktestOverlayId, BacktestOverlays, backtestActions } from "./backtest-overlays";
 import { BacktestOverview } from "./backtest-overview";
@@ -227,6 +228,7 @@ export function BacktestPage() {
 									description="标的名称未进入公共契约时保留 instrument ID，不推断证券名称。"
 								>
 									<div data-info-level="l1" data-info-unit="backtest-trades">
+										{reportQuery.data ? <BacktestFeeStatementView statement={reportQuery.data.feeStatement} /> : null}
 										<BacktestTrades jobId={runId} />
 									</div>
 								</WorkbenchPanel>

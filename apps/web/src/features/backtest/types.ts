@@ -42,10 +42,10 @@ export interface BacktestTradeStats {
 	readonly lossTrades: number;
 	/** Percentage points, matching the engine: 58.33 means 58.33%. */
 	readonly winRate: number;
-	readonly profitFactor: number;
+	readonly profitFactor: number | null;
 	readonly avgWin: number;
 	readonly avgLoss: number;
-	readonly avgWinLossRatio: number;
+	readonly avgWinLossRatio: number | null;
 	readonly maxConsecutiveWins: number;
 	readonly maxConsecutiveLosses: number;
 	readonly avgHoldingDays: number;
@@ -55,12 +55,44 @@ export interface BacktestTradeStats {
 	readonly avgTradeReturnPct: number;
 }
 
+export interface BacktestFeeStatement {
+	readonly currency: "CNY";
+	readonly policy: string;
+	readonly rulesObservedAt: string;
+	readonly sourceRef: string;
+	readonly finalCash: number | null;
+	readonly fills: readonly {
+		readonly fillId: string;
+		readonly orderId: string;
+		readonly instrumentId: number;
+		readonly symbol: string;
+		readonly tradeDate: string;
+		readonly direction: "buy" | "sell";
+		readonly quantity: number;
+		readonly price: number;
+		readonly commission: number;
+		readonly stampDuty: number;
+		readonly transferFee: number;
+		readonly totalFee: number;
+		readonly schedule: {
+			readonly instrumentId: number;
+			readonly asOfDate: string;
+			readonly commissionRate: number;
+			readonly minCommission: number;
+			readonly stampDutyRate: number;
+			readonly transferFeeRate: number;
+			readonly transferFeePerShare: number;
+		};
+	}[];
+}
+
 export interface BacktestReport {
 	readonly runId: string;
 	readonly periodStart: string;
 	readonly periodEnd: string;
 	readonly initialCash: number;
 	readonly finalNav: number;
+	readonly feeStatement?: BacktestFeeStatement | null;
 	readonly rebalanceFreq: string;
 	readonly alphaStats: BacktestAlphaStats | null;
 	readonly tradeStats: BacktestTradeStats | null;

@@ -12,7 +12,7 @@
 | 2023-04-10 注册制主板新股 | [沪市首批上市时间](https://big5.sse.com.cn/site/cht/www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20230404_5719112.shtml)、[沪市规则存档](https://www.sse.com.cn/lawandrules/sselawsrules2025/repeal/rules/c/c_20250612_10824490.shtml)、[深市生效日说明](https://investor.szse.cn/knowledge/stock/deal/t20230621_601277.html)、[深市前五日说明](https://investor.szse.cn/knowledge/stock/deal/t20230525_600599.html) | 前五交易日无日涨跌幅限制，第六日起普通 10%；买入单位 100 股、报价单位 0.01 元、T+1。规则选取与成交使用同一 provider。 |
 | 2026-07-06 新版 | [沪市规则](https://www.sse.com.cn/lawandrules/sselawsrules2025/trade/universal/c/c_20260424_10816492.shtml)、[深市规则](https://docs.static.szse.cn/www/lawrules/rule/trade/current/W020260424690713155663.pdf) | 保留普通主板及上述 IPO 规则。普通日上下限按十进制四舍五入至报价单位、至少相差一档且价格不低于一档，并核对原始限价；风险警示股仍待 #756。 |
 
-上述是日线研究执行的适用范围，不声称完整模拟交易所微观结构。盘中 2%/十档申报范围、临停及订单队列不由 OHLC 推造。旧版本文档仅建立交易规则时间线，历史费用、除权会计与退出处理仍需独立完整输入。收费继续沿用 #723 已核实的 2023-08-28 起区间；更早股票窗口明确提示 #757，不套用现代税率。
+上述是日线研究执行的适用范围，不声称完整模拟交易所微观结构。盘中 2%/十档申报范围、临停及订单队列不由 OHLC 推造。旧版本文档仅建立交易规则时间线，历史费用、除权会计与退出处理仍需独立完整输入。本票合并时收费沿用 #723 的 2023-08-28 起区间；后续 [#757](historical-fees-757.md) 补齐更早费用并按成交日选取，不套用现代税率。
 
 沪市旧制同样限制无限幅证券市价申报，见 [2014 规则第 3.4.5 条](https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20150912_3988782.shtml)。2023 注册制规则实施后才扩大该范围，见 [交易所修订说明](https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20230201_5715605.shtml)及上表正式规则。规则时间线和回归分别核对旧制、新制沪市 IPO 与深市 IPO；旧费率缺证不能成为提前套用新制订单能力的理由。
 

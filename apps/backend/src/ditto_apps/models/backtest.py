@@ -260,10 +260,10 @@ class AggregatedTradeStatsResponse(BaseModel):
     win_trades: int = Field(default=0)
     loss_trades: int = Field(default=0)
     win_rate: float = Field(default=0.0)
-    profit_factor: float = Field(default=0.0)
+    profit_factor: float | None = Field(default=0.0)
     avg_win: float = Field(default=0.0)
     avg_loss: float = Field(default=0.0)
-    avg_win_loss_ratio: float = Field(default=0.0)
+    avg_win_loss_ratio: float | None = Field(default=0.0)
     max_consecutive_wins: int = Field(default=0)
     max_consecutive_losses: int = Field(default=0)
     avg_holding_days: float = Field(default=0.0)
@@ -310,6 +310,47 @@ class BacktestUsageContextResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class FeeScheduleResponse(BaseModel):
+    """Exact dated rates consumed by a saved fill; CNY per share for nominal fees."""
+
+    instrument_id: int
+    as_of_date: str
+    commission_rate: float
+    min_commission: float
+    stamp_duty_rate: float
+    transfer_fee_rate: float
+    transfer_fee_per_share: float
+
+
+class FeeBillResponse(BaseModel):
+    """One actual fill, including entries that remain open at the end of the run."""
+
+    fill_id: str
+    order_id: str
+    instrument_id: int
+    symbol: str
+    trade_date: str
+    direction: Literal["buy", "sell"]
+    quantity: int
+    price: float
+    commission: float
+    stamp_duty: float
+    transfer_fee: float
+    total_fee: float
+    schedule: FeeScheduleResponse
+
+
+class FeeStatementResponse(BaseModel):
+    """Persisted bill and research assumptions, never recomputed by a GET."""
+
+    currency: Literal["CNY"]
+    policy: str
+    rules_observed_at: str
+    source_ref: str
+    final_cash: float | None
+    fills: list[FeeBillResponse]
+
+
 class BacktestReportResponse(BaseModel):
     """回测报告响应 — 对应 backtest_report.json 的元数据结构."""
 
@@ -319,6 +360,9 @@ class BacktestReportResponse(BaseModel):
     )
     initial_cash: float = Field(default=0.0)
     final_nav: float = Field(default=0.0)
+    fee_statement: FeeStatementResponse | None = Field(
+        default=None, description="已保存的实际逐笔费用账单。旧报告缺失时不补算"
+    )
     aggregated_trade_stats: AggregatedTradeStatsResponse | None = Field(
         default=None,
         description="汇总交易统计",

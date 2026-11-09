@@ -54,6 +54,7 @@ class BacktestArtifactWriteOptions:
     resume_provenance: Mapping[str, object] | None = None
     strategy_promotion: Mapping[str, object] | None = None
     risk_report: Mapping[str, object] | None = None
+    fee_statement: Mapping[str, object] | None = None
 
 
 def enrich_record_with_symbol(
@@ -109,6 +110,10 @@ def write_backtest_artifacts(
         strategy_promotion=write_options.strategy_promotion,
         risk_report=write_options.risk_report,
     )
+    if write_options.fee_statement is not None:
+        metadata = orjson.loads(json_bytes)
+        metadata["fee_statement"] = dict(write_options.fee_statement)
+        json_bytes = orjson.dumps(metadata, option=orjson.OPT_INDENT_2)
     atomic_bytes_write(json_bytes, output_dir / "backtest_report.json")
     for name, df in parquet_tables.items():
         atomic_write(df, output_dir / f"{name}.parquet")

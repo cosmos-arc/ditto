@@ -608,6 +608,22 @@ def main() -> int:
                 ),
             )
 
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.fees_backtest_app:app", api_port
+                    ),
+                    prefix="ditto-system-historical-fees-",
+                    spec="backtest-historical-fees.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             # The same two completed engine runs drive the catalog multi-run
             # NAV overlay with legend toggles and the metrics diff table
             # (#215 ②).

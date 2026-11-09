@@ -93,6 +93,38 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 		periodEnd: dto.period?.["end"] ?? "",
 		initialCash: dto.initial_cash,
 		finalNav: dto.final_nav,
+		feeStatement: dto.fee_statement
+			? {
+					currency: dto.fee_statement.currency,
+					policy: dto.fee_statement.policy,
+					rulesObservedAt: dto.fee_statement.rules_observed_at,
+					sourceRef: dto.fee_statement.source_ref,
+					finalCash: dto.fee_statement.final_cash,
+					fills: dto.fee_statement.fills.map((fill) => ({
+						fillId: fill.fill_id,
+						orderId: fill.order_id,
+						instrumentId: fill.instrument_id,
+						symbol: fill.symbol,
+						tradeDate: fill.trade_date,
+						direction: fill.direction,
+						quantity: fill.quantity,
+						price: fill.price,
+						commission: fill.commission,
+						stampDuty: fill.stamp_duty,
+						transferFee: fill.transfer_fee,
+						totalFee: fill.total_fee,
+						schedule: {
+							instrumentId: fill.schedule.instrument_id,
+							asOfDate: fill.schedule.as_of_date,
+							commissionRate: fill.schedule.commission_rate,
+							minCommission: fill.schedule.min_commission,
+							stampDutyRate: fill.schedule.stamp_duty_rate,
+							transferFeeRate: fill.schedule.transfer_fee_rate,
+							transferFeePerShare: fill.schedule.transfer_fee_per_share,
+						},
+					})),
+				}
+			: null,
 		rebalanceFreq: dto.rebalance_freq,
 		usageContext: dto.usage_context
 			? {

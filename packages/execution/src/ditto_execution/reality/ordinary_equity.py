@@ -100,14 +100,9 @@ def mainboard_rule_history(
     end: str,
     trading_days: list[str],
 ) -> tuple[_InstrumentRules, ...]:
-    """Bind IPO phases to verified sessions, retaining the existing fee boundary."""
+    """Bind independent trading and fee effective dates to the same consumer."""
     if not is_mainboard_stock(listing.asset_class, listing.exchange, listing.ticker):
         raise ValueError(f"not a covered main-board A share: {listing.instrument_id}")
-    if start < RULES_EFFECTIVE_FROM:
-        raise ValueError(
-            "historical stock fee schedule missing before 2023-08-28 (#757); "
-            + f"requested {listing.instrument_id} {start}..{end}"
-        )
     base = ordinary_equity_rules(
         listing,
         commission_rate=commission_rate,
@@ -115,11 +110,56 @@ def mainboard_rule_history(
         end=end,
         historical_reconstruction=True,
     )
+    trading = mainboard_trading_history(
+        listing, start=start, end=end, trading_days=trading_days
+    )
+    fees = _stock_fee_history(listing, commission_rate=commission_rate)
+    dates = sorted({row.as_of_date for row in (*trading, *fees)})
     return tuple(
-        (base[0], rule, base[2])
-        for rule in mainboard_trading_history(
-            listing, start=start, end=end, trading_days=trading_days
+        (
+            base[0],
+            max(
+                (row for row in trading if row.as_of_date <= day),
+                key=lambda row: row.as_of_date,
+            ),
+            max(
+                (row for row in fees if row.as_of_date <= day),
+                key=lambda row: row.as_of_date,
+            ),
         )
+        for day in dates
+        if day <= end
+    )
+
+
+def _stock_fee_history(
+    listing: CashEquityListing, *, commission_rate: float
+) -> tuple[_FeeSchedule, ...]:
+    """CSDC charges excluding broker retention; assumptions in #757 evidence."""
+    # Issuer statements establish these non-CNY-1 denominations for 2014–2015.
+    nominal = {"601899": 0.1, "603993": 0.2}.get(listing.ticker, 1.0)
+    early_shanghai = listing.exchange == "SSE"
+    return tuple(
+        _FeeSchedule(
+            instrument_id=listing.instrument_id,
+            as_of_date=day,
+            commission_rate=commission_rate,
+            min_commission=5.0,
+            stamp_duty_rate=stamp,
+            transfer_fee_rate=transfer,
+            transfer_fee_per_share=per_share,
+        )
+        for day, stamp, transfer, per_share in [
+            (
+                "2014-01-01",
+                0.001,
+                0.0 if early_shanghai else 0.0000255,
+                nominal * 0.0003 if early_shanghai else 0.0,
+            ),
+            ("2015-08-01", 0.001, 0.00002, 0.0),
+            ("2022-04-29", 0.001, 0.00001, 0.0),
+            ("2023-08-28", 0.0005, 0.00001, 0.0),
+        ]
     )
 
 
@@ -232,14 +272,14 @@ def ordinary_equity_rules(
         }
         and "2014-09-26" <= start <= end <= "2014-12-31"
     )
-    effective_from = "2014-09-26" if representative_2014 else RULES_EFFECTIVE_FROM
-    if (
-        not representative_2014
-        and not RULES_EFFECTIVE_FROM <= start <= end <= RULES_OBSERVED_AT[:10]
-    ):
+    effective_from = (
+        "2014-01-01"
+        if mainboard
+        else ("2014-09-26" if representative_2014 else RULES_EFFECTIVE_FROM)
+    )
+    if not effective_from <= start <= end <= RULES_OBSERVED_AT[:10]:
         raise ValueError(
-            "ordinary rule coverage is "
-            + f"{RULES_EFFECTIVE_FROM}..{RULES_OBSERVED_AT[:10]}"
+            "ordinary rule coverage is " + f"{effective_from}..{RULES_OBSERVED_AT[:10]}"
         )
     if (
         not mainboard
@@ -279,13 +319,22 @@ def ordinary_equity_rules(
             if representative_2014
             else ("09:15-09:25", "14:57-15:00"),
         ),
-        _FeeSchedule(
+        max(
+            (
+                fee
+                for fee in _stock_fee_history(listing, commission_rate=commission_rate)
+                if fee.as_of_date <= start
+            ),
+            key=lambda fee: fee.as_of_date,
+        )
+        if stock
+        else _FeeSchedule(
             instrument_id=iid,
             as_of_date=effective_from,
             commission_rate=commission_rate,
             min_commission=5.0,
-            stamp_duty_rate=0.0005 if stock else 0.0,
-            transfer_fee_rate=0.00001 if stock else 0.0,
+            stamp_duty_rate=0.0,
+            transfer_fee_rate=0.0,
         ),
     )
 

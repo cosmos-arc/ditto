@@ -20,6 +20,7 @@ from ditto_execution.paper.contracts import (
     PaperRealityResult,
     PaperRealityStatus,
 )
+from ditto_execution.reality.fee import AShareFeeModel
 from ditto_execution.reality.price import round_to_tick
 
 __all__ = ["ASharePaperReality"]
@@ -170,15 +171,8 @@ class ASharePaperReality:
         if limit_outcome is not None:
             return limit_outcome
         amount = fill_price * order.quantity
-        commission = max(
-            fee_schedule.min_commission,
-            amount * fee_schedule.commission_rate,
-        )
-        transfer_fee = amount * fee_schedule.transfer_fee_rate
-        tax = (
-            amount * fee_schedule.stamp_duty_rate
-            if order.direction is OrderSide.SELL
-            else 0.0
+        commission, tax, transfer_fee = AShareFeeModel.components(
+            fill_price, order.quantity, order.direction, fee_schedule
         )
         total_cost = commission + transfer_fee + tax
         if order.direction is OrderSide.BUY and Decimal(str(amount)) + Decimal(

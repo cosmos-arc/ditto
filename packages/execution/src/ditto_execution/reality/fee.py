@@ -56,7 +56,7 @@ class AShareFeeModel:
     费用项:
     - 佣金: max(min_commission, amount * commission_rate)
     - 印花税: amount * stamp_duty_rate (仅卖出方向)
-    - 过户费: amount * transfer_fee_rate
+    - 过户费: amount * transfer_fee_rate + quantity * transfer_fee_per_share
     """
 
     def calculate(
@@ -67,11 +67,13 @@ class AShareFeeModel:
         fee_schedule: _FeeSchedule,
     ) -> float:
         """根据实际成交计算费用。"""
-        return self._compute_fee(
-            fill_price,
-            fill_quantity,
-            order.direction,
-            fee_schedule,
+        return sum(
+            self.components(
+                fill_price,
+                fill_quantity,
+                order.direction,
+                fee_schedule,
+            )
         )
 
     def estimate(
@@ -81,30 +83,35 @@ class AShareFeeModel:
         fee_schedule: _FeeSchedule,
     ) -> float:
         """根据预估价格估算费用。"""
-        return self._compute_fee(
-            estimated_price,
-            order.quantity,
-            order.direction,
-            fee_schedule,
+        return sum(
+            self.components(
+                estimated_price,
+                order.quantity,
+                order.direction,
+                fee_schedule,
+            )
         )
 
     @staticmethod
-    def _compute_fee(
+    def components(
         price: float,
         quantity: int,
         direction: _OrderSide,
         fee_schedule: _FeeSchedule,
-    ) -> float:
-        """核心费用计算 — 佣金 + 印花税(仅卖出) + 过户费。"""
+    ) -> tuple[float, float, float]:
+        """Return the commission, sell-side stamp duty and transfer charge in CNY."""
         amount = price * quantity
         commission = max(
             fee_schedule.min_commission,
             amount * fee_schedule.commission_rate,
         )
-        transfer = amount * fee_schedule.transfer_fee_rate
+        transfer = (
+            amount * fee_schedule.transfer_fee_rate
+            + quantity * fee_schedule.transfer_fee_per_share
+        )
 
         stamp = 0.0
         if direction == _OrderSide.SELL:
             stamp = amount * fee_schedule.stamp_duty_rate
 
-        return commission + stamp + transfer
+        return commission, stamp, transfer

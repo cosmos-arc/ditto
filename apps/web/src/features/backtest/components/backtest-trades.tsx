@@ -61,7 +61,7 @@ export function BacktestTrades({ jobId }: BacktestTradesProps) {
 				<span className="text-right">证据</span>
 			</div>
 			{trades.length === 0 ? (
-				<p className="p-4 text-xs text-(--color-foreground-tertiary)">当前运行没有成交记录。</p>
+				<p className="p-4 text-xs text-(--color-foreground-tertiary)">当前运行没有已平仓交易。</p>
 			) : (
 				<div className="divide-y divide-(--color-border-subtle)">
 					{trades.map((trade) => (
