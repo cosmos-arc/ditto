@@ -26,6 +26,7 @@ from ditto_application.commands.backtest import (
     parse_candidate_parameters,
 )
 from ditto_application.exceptions import AppCommandError, AppProcessError
+from ditto_application.mutation_idempotency import build_mutation_idempotency
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_kernel.strategy import ImpactModel
 from ditto_strategy.alpha.parameters import CandidateParameter, legacy_parameter_path
@@ -103,6 +104,56 @@ def _catalog_record(
 def mock_run_service() -> Mock:
     """Mock RunLifecycleService."""
     return Mock(spec=RunLifecycleService)
+
+
+def test_submission_replays_durable_run_and_rejects_changed_payload(
+    mock_catalog_service: Mock,
+    mock_factor_bridge: Mock,
+) -> None:
+    import orjson
+
+    records: dict[str, StrategyRunRecord] = {}
+    service = Mock(spec=RunLifecycleService)
+
+    def create_run(**kwargs: Any) -> None:
+        record = StrategyRunRecord(**kwargs, status="pending", started_at="2025-01-01")
+        records.setdefault(record.run_id, record)
+
+    service.create_run.side_effect = create_run
+    service.get_run.side_effect = records.get
+    handler = BacktestRunHandler(
+        catalog_service=mock_catalog_service,
+        run_service=service,
+        factor_bridge=mock_factor_bridge,
+    )
+    identity = build_mutation_idempotency(
+        operation_id="backtests_trigger_backtest",
+        resource_id="backtests",
+        raw_key="submission-1",
+        request_payload={"strategy_version": 7},
+    )
+    command = BacktestRunCommand(
+        strategy_id="momentum-etf",
+        strategy_version=7,
+        start_date="2025-01-01",
+        end_date="2025-01-31",
+        idempotency=identity,
+    )
+    first = handler.handle(command)
+    mock_catalog_service.get_spec.side_effect = AssertionError(
+        "replay must use durable version"
+    )
+    assert handler.handle(command).run_id == first.run_id
+    assert len(records) == 1
+    assert orjson.loads(records[first.run_id].config_json)["strategy_version"] == 7
+    changed = build_mutation_idempotency(
+        operation_id="backtests_trigger_backtest",
+        resource_id="backtests",
+        raw_key="submission-1",
+        request_payload={"strategy_version": 8},
+    )
+    with pytest.raises(AppCommandError, match="different request"):
+        handler.handle(replace(command, idempotency=changed, strategy_version=8))
 
 
 @pytest.fixture

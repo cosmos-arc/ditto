@@ -1,5 +1,5 @@
 import { Link, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout, ShellHeaderExtension } from "@/features/shell";
@@ -14,10 +14,11 @@ import { StrategyVersionsView } from "./strategy-versions-view";
 type DetailTab = "overview" | "versions" | "factors";
 
 interface StrategyDetailPageProps {
+	readonly renderBacktestForm?: (strategyId: string, version: number) => ReactNode;
 	readonly renderGovernanceActions: StrategyGovernanceActionsRenderer;
 }
 
-export function StrategyDetailPage({ renderGovernanceActions }: StrategyDetailPageProps) {
+export function StrategyDetailPage({ renderGovernanceActions, renderBacktestForm }: StrategyDetailPageProps) {
 	const { id } = useParams({ strict: false }) as { id: string };
 	const strategyId = id ?? "";
 	const detail = useStrategy(strategyId);
@@ -109,12 +110,13 @@ export function StrategyDetailPage({ renderGovernanceActions }: StrategyDetailPa
 							<span>
 								绩效证据 <strong className="font-medium text-(--color-foreground-secondary)">未评估</strong>
 							</span>
-							<span className="ml-auto">定义与治理来自服务端；回测证据需实验制品</span>
+							<span className="ml-auto">定义与治理来自服务端；研究回测不代表已获交易资格</span>
 						</div>
 					}
 				/>
 			</Tabs>
 			<StrategyDetailOverlays
+				backtestForm={detail.data ? renderBacktestForm?.(strategyId, detail.data.version) : null}
 				open={overlay}
 				onClose={() => setOverlay(null)}
 				onOpenVersions={() => setTab("versions")}

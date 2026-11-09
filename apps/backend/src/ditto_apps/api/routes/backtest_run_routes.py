@@ -34,13 +34,14 @@ from ditto_application.exceptions import AppError
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_application.queries.backtest import BacktestQueryFacade
 from ditto_kernel.strategy import RunStatus
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from loguru import logger
 
 from ditto_apps.api.errors import (
     APIError,
     raise_business_error,
 )
+from ditto_apps.api.mutation_idempotency import mutation_idempotency
 from ditto_apps.jobs.flows.backtest import run_backtest_flow
 from ditto_apps.models.backtest import (
     BacktestRunTriggerResponse,
@@ -104,9 +105,12 @@ def build_flow_params(
 def run_backtest_flow_sync(
     params: dict[str, object],
     on_failure: Callable[[str, str], None] | None = None,
+    claim_run: Callable[[str], bool] | None = None,
 ) -> None:
     """进程内执行回测 flow（V1 同步模式，绕过 Prefect engine）。"""
     run_id = str(params.get("run_id", ""))
+    if claim_run is not None and not claim_run(run_id):
+        return
     try:
         flow_fn = cast(
             Callable[..., Any],
@@ -168,6 +172,7 @@ def submit_backtest_flow(
     *,
     flow_params: dict[str, object],
     on_failure: Callable[[str, str], None],
+    claim_run: Callable[[str], bool] | None = None,
 ) -> None:
     """Submit a backtest flow without blocking the API response."""
     asyncio.get_running_loop().run_in_executor(
@@ -175,6 +180,7 @@ def submit_backtest_flow(
         run_backtest_flow_sync,
         flow_params,
         on_failure,
+        claim_run,
     )
 
 
@@ -194,16 +200,28 @@ async def trigger_backtest(
     body: CreateBacktestRunRequest,
     handler: Annotated[BacktestRunHandler, FromComponent()],
     run_service: Annotated[RunLifecycleService, FromComponent()],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> APIResponse[BacktestRunTriggerResponse]:
     """触发回测 — 校验参数 + 创建记录 + 后台提交 flow，返回 202 Accepted."""
     command = BacktestRunCommand(
         strategy_id=body.strategy_id,
+        strategy_version=body.strategy_version,
         start_date=body.start_date,
         end_date=body.end_date,
         initial_cash=body.initial_cash,
         parameter_overrides=tuple(body.parameter_overrides),
         cost_config=to_cost_config(body),
         allow_experimental_data=body.allow_experimental_data,
+        idempotency=(
+            mutation_idempotency(
+                operation_id="backtests_trigger_backtest",
+                resource_id="backtests",
+                raw_key=idempotency_key,
+                request_payload=body.model_dump(mode="json"),
+            )
+            if idempotency_key is not None
+            else None
+        ),
     )
 
     try:
@@ -214,7 +232,11 @@ async def trigger_backtest(
     # 后台提交 flow（不阻塞响应）
     flow_params = build_flow_params(command, result)
     on_failure = make_failure_callback(run_service)
-    submit_backtest_flow(flow_params=flow_params, on_failure=on_failure)
+    submit_backtest_flow(
+        flow_params=flow_params,
+        on_failure=on_failure,
+        claim_run=run_service.mark_running,
+    )
 
     return APIResponse(
         data=BacktestRunTriggerResponse(

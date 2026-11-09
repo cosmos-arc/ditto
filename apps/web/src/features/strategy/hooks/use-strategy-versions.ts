@@ -8,6 +8,7 @@ import { fetchStrategyVersions } from "../api/strategies";
 export function useStrategyVersions(id: string) {
 	return useQuery({
 		queryKey: strategyKeys.versions(id),
+		enabled: Boolean(id),
 		queryFn: async () => (await fetchStrategyVersions(id)).map(mapStrategyVersion),
 	});
 }

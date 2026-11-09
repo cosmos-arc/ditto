@@ -3,13 +3,17 @@ import { apiClient } from "@/api/transport";
 
 export async function createBacktestRun(input: {
 	readonly strategyId: string;
+	readonly strategyVersion: number;
+	readonly idempotencyKey: string;
 	readonly startDate: string;
 	readonly endDate: string;
 	readonly initialCash: number;
 	readonly allowExperimental: boolean;
 }) {
 	const result = await apiClient.post("/api/v1/backtests/runs", {
+		params: { header: { "Idempotency-Key": input.idempotencyKey } },
 		body: {
+			strategy_version: input.strategyVersion,
 			strategy_id: input.strategyId,
 			start_date: input.startDate,
 			end_date: input.endDate,
@@ -17,6 +21,15 @@ export async function createBacktestRun(input: {
 			allow_experimental_data: input.allowExperimental,
 		},
 	});
+	if (
+		!result ||
+		typeof result.run_id !== "string" ||
+		!/^[A-Za-z0-9._:-]+$/u.test(result.run_id) ||
+		result.strategy_id !== input.strategyId ||
+		!["pending", "running", "completed", "failed", "cancelled"].includes(result.status)
+	) {
+		throw new Error("回测提交响应无效；请重试以核对同一次提交。");
+	}
 	return { runId: result.run_id, status: result.status };
 }
 

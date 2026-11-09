@@ -11230,6 +11230,19 @@
             "minLength": 1,
             "title": "Strategy Id",
             "type": "string"
+          },
+          "strategy_version": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "精确策略版本, 省略时解析当前已发布版本",
+            "title": "Strategy Version"
           }
         },
         "required": [
@@ -31316,6 +31329,22 @@
         "description": "触发回测 — 校验参数 + 创建记录 + 后台提交 flow，返回 202 Accepted.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "backtests_trigger_backtest",
         "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
           {
             "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
             "in": "header",

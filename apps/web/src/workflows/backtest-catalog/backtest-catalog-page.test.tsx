@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
 import { BacktestCatalogPage } from "./backtest-catalog-page";
 
@@ -18,6 +18,7 @@ function wrapper({ children }: { readonly children: ReactNode }) {
 }
 
 describe("BacktestCatalogPage", () => {
+	beforeEach(() => sessionStorage.clear());
 	it.each([false, true])("submits a research run with explicit experimental choice %s", async (experimental) => {
 		const user = userEvent.setup();
 		let request: unknown;
@@ -60,6 +61,7 @@ describe("BacktestCatalogPage", () => {
 		);
 		expect(request).toEqual({
 			strategy_id: "seed_etf_trend_swing",
+			strategy_version: 1,
 			start_date: "2026-10-08",
 			end_date: "2026-11-06",
 			initial_cash: 1000000,

@@ -8,6 +8,7 @@ import {
 	type StrategyReviewEvidence,
 	type StrategyReviewEvidenceIssue,
 } from "@/features/strategy";
+import { BacktestCreateForm } from "../backtest-catalog/backtest-create-form";
 
 function packetErrorIssue(error: Error): StrategyReviewEvidenceIssue {
 	if (error instanceof ApiError) {
@@ -72,7 +73,13 @@ function renderGovernanceActions(props: StrategyGovernanceActionsSlotProps): Rea
 	return <StrategyReviewGovernanceActions {...props} />;
 }
 
+function renderBacktestForm(strategyId: string, version: number): ReactElement {
+	return <BacktestCreateForm key={strategyId} strategyId={strategyId} version={version} />;
+}
+
 /** Route-ready Strategy page whose cross-feature dependencies stay in the workflow layer. */
 export function StrategyGovernanceDetailPage(): ReactElement {
-	return <StrategyDetailPage renderGovernanceActions={renderGovernanceActions} />;
+	return (
+		<StrategyDetailPage renderGovernanceActions={renderGovernanceActions} renderBacktestForm={renderBacktestForm} />
+	);
 }

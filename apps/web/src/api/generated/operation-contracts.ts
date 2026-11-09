@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: bdae2cf5c582596cf37412a92d4ace386ab68bef0992b7a43a121371ae6df656
+ * Schema SHA-256: 73d5114fca705ce869f139cbd106e0aefee65c29b77a7f217830c33c368af32d
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -2660,7 +2660,7 @@ export const operationRequestContracts = {
   },
   "post /api/v1/backtests/runs": {
     parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
+      "header": ["Idempotency-Key", "X-Ditto-API-Contract-Version"],
     },
   },
   "post /api/v1/backtests/runs/{run_id}/cancel": {

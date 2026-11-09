@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -8,7 +8,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { StrategyDetail } from "@/types/strategy";
 import { useStrategyGovernance } from "../hooks/use-strategy-governance";
 import { DecisionDialog } from "./governance-dialogs";
@@ -17,6 +17,7 @@ import { StrategyListOverlays } from "./strategy-list-overlays";
 export type StrategyDetailOverlay = "backtest" | "copy" | "deprecate" | "rollback";
 
 interface StrategyDetailOverlaysProps {
+	readonly backtestForm?: ReactNode;
 	readonly detail: StrategyDetail | undefined;
 	readonly detailLoading: boolean;
 	readonly onClose: () => void;
@@ -26,6 +27,7 @@ interface StrategyDetailOverlaysProps {
 }
 
 export function StrategyDetailOverlays({
+	backtestForm,
 	detail,
 	detailLoading,
 	onClose,
@@ -41,26 +43,10 @@ export function StrategyDetailOverlays({
 				<SheetContent side="right" aria-label="提交回测" className="p-0">
 					<SheetHeader className="border-b border-(--color-border-subtle) px-5 py-4 pr-14">
 						<SheetTitle>提交回测</SheetTitle>
-						<SheetDescription>回测由实验 planning 固定完整身份并先执行只读 Preflight。</SheetDescription>
+						<SheetDescription>选择策略版本、日期和资金，提交普通研究回测。</SheetDescription>
 					</SheetHeader>
-					<div className="flex flex-1 flex-col gap-4 p-5">
-						<div className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-2 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-2) p-3 text-xs">
-							<span className="text-(--color-foreground-tertiary)">Strategy ID</span>
-							<code className="font-data text-(--color-foreground)">{strategyId}</code>
-							<span className="text-(--color-foreground-tertiary)">版本</span>
-							<code className="font-data text-(--color-foreground)">v{detail?.version ?? "—"}</code>
-							<span className="text-(--color-foreground-tertiary)">Spec</span>
-							<span className="text-(--color-foreground-secondary)">服务端策略定义</span>
-						</div>
-						<div className="rounded-(--radius-md) border border-(--color-led-warning) bg-(--color-led-warning-bg) p-3 text-xs leading-5 text-(--color-foreground-secondary)">
-							本页不会直接创建回测。实验创建器将要求 snapshot、时间范围、registry hash 与资源预算，Preflight
-							通过后才能启动。
-						</div>
-						<SheetFooter className="mt-auto">
-							<Button asChild className="w-full">
-								<Link to="/research/experiments/new">打开实验创建器</Link>
-							</Button>
-						</SheetFooter>
+					<div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
+						{backtestForm ?? <p>回测表单暂不可用，请从回测列表创建。</p>}
 					</div>
 				</SheetContent>
 			</Sheet>

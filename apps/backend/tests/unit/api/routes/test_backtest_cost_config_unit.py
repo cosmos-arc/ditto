@@ -264,7 +264,7 @@ def _inline_backtest_route_thread_bridge(monkeypatch: pytest.MonkeyPatch) -> Non
     )
     monkeypatch.setattr(
         "ditto_apps.api.routes.backtest_run_routes.submit_backtest_flow",
-        lambda *, flow_params, on_failure: None,
+        lambda *, flow_params, on_failure, claim_run=None: None,
     )
 
 
@@ -299,6 +299,7 @@ class TestTriggerBacktestCostConfigRoute:
         response = await _call_trigger(
             CreateBacktestRunRequest(
                 strategy_id="test",
+                strategy_version=3,
                 start_date="2025-01-01",
                 end_date="2025-01-31",
             ),
@@ -310,6 +311,7 @@ class TestTriggerBacktestCostConfigRoute:
         # 验证 handler.handle 被调用，且 command.cost_config 为 None
         mock_run_handler.handle.assert_called_once()
         command = mock_run_handler.handle.call_args.args[0]
+        assert command.strategy_version == 3
         assert command.cost_config is None
         assert command.allow_experimental_data is False
 
