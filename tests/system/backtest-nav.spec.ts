@@ -33,9 +33,7 @@ async function expectNoSeriousAccessibilityViolations(page: Page): Promise<void>
 
 test.describe
 	.serial("backtest NAV vs benchmark cockpit over a real engine run", () => {
-		test("renders overlay, excess and underwater panes with KPI-consistent readouts", async ({
-			page,
-		}) => {
+		test("renders overlay, excess and underwater panes with KPI-consistent readouts", async ({ page }) => {
 			const browserErrors = captureBrowserErrors(page);
 			await page.goto(`${webOrigin}/research/backtests/${RUN_WITH_BENCHMARK}`);
 
@@ -55,9 +53,9 @@ test.describe
 			await expect(host).toHaveAttribute("data-chart-panes", "3");
 
 			// 图例读数：策略净值/基准/超额/回撤 四芯片（默认锚定最后非空点）
-			await expect(
-				page.locator(`[data-testid='chart-readout-backtest-nav-${RUN_WITH_BENCHMARK}-nav']`),
-			).toContainText(/\d/);
+			await expect(page.locator(`[data-testid='chart-readout-backtest-nav-${RUN_WITH_BENCHMARK}-nav']`)).toContainText(
+				/\d/,
+			);
 			await expect(
 				page.locator(`[data-testid='chart-readout-backtest-nav-${RUN_WITH_BENCHMARK}-benchmark']`),
 			).toContainText(/\d/);
@@ -74,9 +72,7 @@ test.describe
 			await expect(page.locator('[data-state="benchmark-partial"]')).toBeVisible();
 
 			// 同口径交叉验证：aside 水下最深读数 == KPI 最大回撤（符号相反、数值一致）
-			const deepest = await page
-				.locator('[data-info-unit="nav-summary"] dt:has-text("最深回撤") + dd')
-				.textContent();
+			const deepest = await page.locator('[data-info-unit="nav-summary"] dt:has-text("最深回撤") + dd').textContent();
 			expect(deepest).toMatch(/^−\d+\.\d+%/);
 			// KPI 展示 1 位小数、水下曲线 2 位小数：数值一致（容差 0.1 个百分点）
 			const deepestNumber = Number.parseFloat((deepest ?? "").replace("−", ""));
@@ -87,9 +83,7 @@ test.describe
 			expect(browserErrors).toEqual([]);
 		});
 
-		test("keyboard journey: pan and zoom the NAV cockpit without leaving focus", async ({
-			page,
-		}) => {
+		test("keyboard journey: pan and zoom the NAV cockpit without leaving focus", async ({ page }) => {
 			const browserErrors = captureBrowserErrors(page);
 			await page.goto(`${webOrigin}/research/backtests/${RUN_WITH_BENCHMARK}`);
 			const host = page.locator(`[data-chart-interaction-contract="backtest-nav-${RUN_WITH_BENCHMARK}"]`);
@@ -97,21 +91,15 @@ test.describe
 			await host.focus();
 			const initial = (await host.getAttribute("data-chart-visible-range")) ?? "";
 			await page.keyboard.press("ArrowRight");
-			await expect
-				.poll(async () => (await host.getAttribute("data-chart-visible-range")) ?? "")
-				.not.toBe(initial);
+			await expect.poll(async () => (await host.getAttribute("data-chart-visible-range")) ?? "").not.toBe(initial);
 			const panned = (await host.getAttribute("data-chart-visible-range")) ?? "";
 			await page.keyboard.press("+");
 			await page.keyboard.press("End");
-			await expect
-				.poll(async () => (await host.getAttribute("data-chart-visible-range")) ?? "")
-				.not.toBe(panned);
+			await expect.poll(async () => (await host.getAttribute("data-chart-visible-range")) ?? "").not.toBe(panned);
 			expect(browserErrors).toEqual([]);
 		});
 
-		test("run without a configured benchmark degrades to nav-only with an explicit state", async ({
-			page,
-		}) => {
+		test("run without a configured benchmark degrades to nav-only with an explicit state", async ({ page }) => {
 			const browserErrors = captureBrowserErrors(page);
 			await page.goto(`${webOrigin}/research/backtests/${RUN_NO_BENCHMARK}`);
 
@@ -122,9 +110,9 @@ test.describe
 			await expect(
 				page.locator(`[data-testid='chart-readout-backtest-nav-${RUN_NO_BENCHMARK}-benchmark']`),
 			).toHaveCount(0);
-			await expect(
-				page.locator(`[data-testid='chart-readout-backtest-nav-${RUN_NO_BENCHMARK}-excess']`),
-			).toHaveCount(0);
+			await expect(page.locator(`[data-testid='chart-readout-backtest-nav-${RUN_NO_BENCHMARK}-excess']`)).toHaveCount(
+				0,
+			);
 			await expect(
 				page.locator('[data-state="benchmark-unavailable"]').filter({
 					hasText: "本运行未配置基准",
@@ -137,60 +125,80 @@ test.describe
 		});
 	});
 
-test("strategy detail submits an exact ordinary version and recovers a lost response without another run", async ({ page }) => {
- const strategyId = "seed_etf_trend_swing";
- const submissions: {key: string | undefined; body: unknown; runId: string}[] = [];
- await page.route("**/api/v1/backtests/runs", async (route) => {
-  if (route.request().method() !== "POST") return route.continue();
-  const response = await route.fetch();
-  expect(response.status()).toBe(202);
-  const payload = await response.json();
-  expect(typeof payload.data.run_id).toBe("string");
-  submissions.push({key: route.request().headers()["idempotency-key"], body: route.request().postDataJSON(), runId: payload.data.run_id});
-  if (submissions.length === 1) return route.abort("failed");
-  return route.fulfill({response});
- });
- await page.goto(`${webOrigin}/research/strategies/${strategyId}`);
- await page.getByRole("button", {name: "提交回测", exact: true}).click();
- const form = page.getByRole("dialog", {name: "提交回测"});
- await expect(form.getByLabel("策略版本")).toHaveValue("2");
- await expect(form.getByRole("option", { name: /^v1/ })).toHaveCount(1);
- await form.getByLabel("策略版本").selectOption("1");
- await form.getByLabel("开始日期").fill("2025-01-02");
- await form.getByLabel("结束日期").fill("2025-01-31");
- await form.getByLabel("初始资金（元）").fill("250000.50");
- await form.getByLabel("允许实验数据").check();
- await form.getByRole("button", {name: "提交回测", exact: true}).focus();
- await page.keyboard.press("Enter");
- await expect(form.getByRole("alert")).toBeVisible();
- await page.reload();
- await page.getByRole("button", {name: "提交回测", exact: true}).click();
- await expect(form.getByLabel("策略版本")).toHaveValue("1");
- await expect(form.getByLabel("初始资金（元）")).toHaveValue("250000.50");
- await form.getByRole("button", {name: "提交回测", exact: true}).click();
- const link = form.getByRole("link", {name: "查看本次回测"});
- await expect(link).toBeVisible();
- expect(submissions).toHaveLength(2);
- expect(submissions[0]?.key).toBeTruthy();
- expect(submissions[1]).toEqual(submissions[0]);
- expect(submissions[0]?.body).toEqual({strategy_id: strategyId, strategy_version: 1, start_date: "2025-01-02", end_date: "2025-01-31", initial_cash: 250000.5, allow_experimental_data: true});
- const runId = submissions[0]?.runId;
- expect(runId).toBeTruthy();
- await link.click();
- await expect(page).toHaveURL(`${webOrigin}/research/backtests/${encodeURIComponent(runId ?? "")}`);
- await page.reload();
- await expect(page.getByTestId("backtest-detail-meta")).toContainText("v1");
- const apiOrigin = requiredEnvironment("DITTO_SYSTEM_API_ORIGIN");
- const runs = await page.request.get(`${apiOrigin}/api/v1/backtests/runs?strategy_id=${strategyId}`);
- expect(runs.ok()).toBeTruthy();
- const body = await runs.json();
- expect(body.data).toHaveLength(1);
- expect(body.data[0]).toMatchObject({run_id: runId, strategy_id: strategyId, strategy_version: "1"});
- await page.goto(`${webOrigin}/research/strategies/${strategyId}`);
- await page.getByRole("button", {name: "提交回测", exact: true}).click();
- await expect(form.getByRole("link", {name: "查看本次回测"})).toBeVisible();
- await expect(form.getByRole("button", {name: "提交回测", exact: true})).toBeDisabled();
- await page.keyboard.press("Escape");
- await expect(page.getByRole("button", {name: "提交回测", exact: true})).toBeFocused();
- expect(submissions).toHaveLength(2);
+test("strategy detail submits an exact ordinary version and recovers a lost response without another run", async ({
+	page,
+}) => {
+	const strategyId = "seed_etf_trend_swing";
+	const submissions: { key: string | undefined; body: unknown; runId: string }[] = [];
+	await page.route("**/api/v1/backtests/runs", async (route) => {
+		if (route.request().method() !== "POST") return route.continue();
+		const response = await route.fetch();
+		expect(response.status()).toBe(202);
+		const payload = await response.json();
+		expect(typeof payload.data.run_id).toBe("string");
+		submissions.push({
+			key: route.request().headers()["idempotency-key"],
+			body: route.request().postDataJSON(),
+			runId: payload.data.run_id,
+		});
+		if (submissions.length === 1) return route.abort("failed");
+		return route.fulfill({ response });
+	});
+	await page.goto(`${webOrigin}/research/strategies/${strategyId}`);
+	await page.getByRole("button", { name: "提交回测", exact: true }).click();
+	const form = page.getByRole("dialog", { name: "提交回测" });
+	await expect(form.getByLabel("策略版本")).toHaveValue("2");
+	await expect(form.getByRole("option", { name: /^v1/ })).toHaveCount(1);
+	await form.getByLabel("策略版本").selectOption("1");
+	await form.getByLabel("开始日期").fill("2025-01-02");
+	await form.getByLabel("结束日期").fill("2025-01-31");
+	await form.getByLabel("初始资金（元）").fill("250000.50");
+	await form.getByLabel("允许实验数据").check();
+	await form.getByRole("button", { name: "提交回测", exact: true }).focus();
+	await page.keyboard.press("Enter");
+	await expect(form.getByRole("alert")).toBeVisible();
+	await page.reload();
+	await page.getByRole("button", { name: "提交回测", exact: true }).click();
+	await expect(form.getByLabel("策略版本")).toHaveValue("1");
+	await expect(form.getByLabel("初始资金（元）")).toHaveValue("250000.50");
+	await form.getByRole("button", { name: "提交回测", exact: true }).click();
+	const link = form.getByRole("link", { name: "查看本次回测" });
+	await expect(link).toBeVisible();
+	expect(submissions).toHaveLength(2);
+	expect(submissions[0]?.key).toBeTruthy();
+	expect(submissions[1]).toEqual(submissions[0]);
+	expect(submissions[0]?.body).toEqual({
+		strategy_id: strategyId,
+		strategy_version: 1,
+		start_date: "2025-01-02",
+		end_date: "2025-01-31",
+		initial_cash: 250000.5,
+		allow_experimental_data: true,
+	});
+	const runId = submissions[0]?.runId;
+	expect(runId).toBeTruthy();
+	await link.click();
+	await expect(page).toHaveURL(`${webOrigin}/research/backtests/${encodeURIComponent(runId ?? "")}`);
+	await page.reload();
+	await expect(page.getByTestId("backtest-detail-meta")).toContainText("v1");
+	await expect(page.getByTestId("backtest-detail-meta")).toContainText("failed");
+	const apiOrigin = requiredEnvironment("DITTO_SYSTEM_API_ORIGIN");
+	const runs = await page.request.get(`${apiOrigin}/api/v1/backtests/runs?strategy_id=${strategyId}`);
+	expect(runs.ok()).toBeTruthy();
+	const body = await runs.json();
+	expect(body.data).toHaveLength(1);
+	expect(body.data[0]).toMatchObject({
+		run_id: runId,
+		strategy_id: strategyId,
+		strategy_version: "1",
+		status: "failed",
+	});
+	expect(body.data[0].error_message).toContain("declared benchmark cannot be resolved");
+	await page.goto(`${webOrigin}/research/strategies/${strategyId}`);
+	await page.getByRole("button", { name: "提交回测", exact: true }).click();
+	await expect(form.getByRole("link", { name: "查看本次回测" })).toBeVisible();
+	await expect(form.getByRole("button", { name: "提交回测", exact: true })).toBeDisabled();
+	await page.keyboard.press("Escape");
+	await expect(page.getByRole("button", { name: "提交回测", exact: true })).toBeFocused();
+	expect(submissions).toHaveLength(2);
 });

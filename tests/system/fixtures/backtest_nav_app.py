@@ -445,10 +445,10 @@ def _persist_run(
 
 
 def _seed() -> None:
+    frames = _seed_market()
     with create_strategy_bundle() as bundle:
         assert bundle.seed_bootstrap is not None
         bundle.seed_bootstrap.run()
-    frames = _seed_market()
     provider = _SeededStoreProvider(frames)
     container = make_app_container()
     try:
