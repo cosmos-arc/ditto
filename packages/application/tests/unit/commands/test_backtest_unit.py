@@ -140,6 +140,8 @@ def test_submission_replays_durable_run_and_rejects_changed_payload(
         idempotency=identity,
     )
     first = handler.handle(command)
+    # Run IDs also name artifact directories on Windows.
+    assert not set(first.run_id).intersection('<>:"/\\|?*')
     mock_catalog_service.get_spec.side_effect = AssertionError(
         "replay must use durable version"
     )

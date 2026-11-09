@@ -36,6 +36,7 @@ from ditto_application.contracts import CostConfig
 from ditto_application.exceptions import AppCommandError
 from ditto_application.mutation_idempotency import (
     MutationIdempotency,
+    canonical_request_hash,
     find_mutation_receipt,
     mutation_event_id,
     mutation_receipt_detail,
@@ -124,7 +125,7 @@ class BacktestRunHandler:
 
         """
         run_id = (
-            mutation_event_id(command.idempotency)
+            canonical_request_hash(mutation_event_id(command.idempotency))
             if command.idempotency is not None
             else uuid.uuid4().hex[:8]
         )
