@@ -278,7 +278,7 @@ it("rejects an invalid bill and recovers by rereading the saved report", async (
 	);
 	const user = userEvent.setup();
 	render(<BacktestPage />, { wrapper });
-	await user.click(await screen.findByRole("tab", { name: "成交", exact: true }));
+	await user.click(await screen.findByRole("tab", { name: "成交" }));
 	const retry = await screen.findByRole("button", { name: "重试费用账单" });
 	expect(screen.queryByText(/逐笔费用账单（/)).not.toBeInTheDocument();
 	repaired = true;
