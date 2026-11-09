@@ -184,3 +184,19 @@ def test_stock_band_has_at_least_one_tick_difference() -> None:
         ordinary_execution_fields(
             {**row, "limit_up": 0.04}, rules, start_date="2026-10-08"
         )
+
+
+@pytest.mark.parametrize(
+    ("listing_day", "market_supported"), [("2018-08-17", False), ("2023-04-10", True)]
+)
+def test_sse_ipo_market_order_scope_changes_with_registration_rules(
+    listing_day: str, market_supported: bool
+) -> None:
+    listing = CashEquityListing(
+        InstrumentId(1), "603001", "stock", "SSE", listing_day, None
+    )
+    rule = mainboard_trading_history(
+        listing, start=listing_day, end=listing_day, trading_days=[listing_day]
+    )[-1]
+    assert rule.price_limit_pct is None
+    assert ("market" in rule.order_types_supported) is market_supported
