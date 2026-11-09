@@ -29,6 +29,9 @@ def test_dividend_range_excludes_future_announcement(adapter_class):
             "imp_ann_date": ["20260620"] * 2,
             "end_date": ["20251231"] * 2,
             "stk_div": [0.0] * 2,
+            "stk_bo_rate": [0.0] * 2,
+            "stk_co_rate": [0.0] * 2,
+            "div_listdate": [None] * 2,
             "div_proc": ["实施"] * 2,
         }
     )

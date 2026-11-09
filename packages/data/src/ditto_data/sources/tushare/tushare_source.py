@@ -332,8 +332,10 @@ class TushareSource:
         self._etf = ETFTushareAdapter(_client=self._client)
         self._index = IndexTushareAdapter(_client=self._client)
         self._industry = IndustryTushareAdapter(_client=self._client)
-        self._capital = CapitalTushareAdapter(_client=self._client)
-        self._fundamental = FundamentalTushareAdapter(_client=self._client)
+        self._capital = CapitalTushareAdapter(_client=self._client, settings=settings)
+        self._fundamental = FundamentalTushareAdapter(
+            _client=self._client, settings=settings
+        )
         self._macro = MacroTushareAdapter(_client=self._client)
         self._fx = FxTushareAdapter(_client=self._client)
         self._metal = MetalTushareAdapter(_client=self._client)

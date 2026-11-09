@@ -45,6 +45,9 @@ DIVIDEND_MAPPING = ColumnMapping(
         "imp_ann_date": "implementation_date",
         "end_date": "report_date",
         "stk_div": "stock_dividend_ratio",
+        "stk_bo_rate": "bonus_ratio",
+        "stk_co_rate": "capitalization_ratio",
+        "div_listdate": "share_listing_date",
         "ann_date": "knowledge_date",
         "div_proc": "div_proc",  # P015: 添加实施进度字段
     },
@@ -56,6 +59,7 @@ DIVIDEND_MAPPING = ColumnMapping(
             "pay_date",
             "implementation_date",
             "report_date",
+            "share_listing_date",
         ),
         "%Y%m%d",
     ),
@@ -63,6 +67,8 @@ DIVIDEND_MAPPING = ColumnMapping(
         "dividend_per_share",
         "gross_dividend_per_share",
         "stock_dividend_ratio",
+        "bonus_ratio",
+        "capitalization_ratio",
     ],
     computed_columns={
         "dividend_yield": pl.lit(None, dtype=pl.Float64),
@@ -79,7 +85,10 @@ DIVIDEND_MAPPING = ColumnMapping(
         "pay_date",
         "implementation_date",
         "report_date",
+        "share_listing_date",
         "stock_dividend_ratio",
+        "bonus_ratio",
+        "capitalization_ratio",
     ),
 )
 

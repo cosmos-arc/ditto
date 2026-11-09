@@ -99,7 +99,27 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 				(row) =>
 					![row.cash, row.available_cash, row.receivable, row.tax_payable, row.market_value, row.nav].every(
 						Number.isFinite,
-					) || Math.abs(row.cash + row.receivable + row.market_value - row.tax_payable - row.nav) > 0.00001,
+					) ||
+					Math.abs(row.cash + row.receivable + row.market_value - row.tax_payable - row.nav) > 0.00001 ||
+					!Array.isArray(row.positions) ||
+					row.positions.some(
+						(p) =>
+							!Number.isSafeInteger(p.instrument_id) ||
+							p.instrument_id <= 0 ||
+							!Number.isSafeInteger(p.quantity) ||
+							p.quantity <= 0 ||
+							!Number.isSafeInteger(p.available_quantity) ||
+							p.available_quantity < 0 ||
+							p.available_quantity > p.quantity ||
+							!Number.isSafeInteger(p.locked_quantity) ||
+							p.locked_quantity !== p.quantity - p.available_quantity ||
+							!Number.isFinite(p.total_cost) ||
+							Math.abs(p.total_cost - p.average_cost * p.quantity) > 0.00001 ||
+							!Number.isFinite(p.average_cost) ||
+							p.average_cost < 0 ||
+							!Number.isFinite(p.market_value) ||
+							p.market_value < 0,
+					),
 			) ||
 			dividends.events.some(
 				(event) =>
@@ -107,14 +127,29 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 					event.instrument_id <= 0 ||
 					!event.source_snapshot_id ||
 					!Number.isFinite(event.gross_per_share) ||
-					event.gross_per_share <= 0 ||
+					event.gross_per_share < 0 ||
+					!Number.isFinite(event.share_ratio) ||
+					event.share_ratio < 0 ||
+					event.gross_per_share + event.share_ratio <= 0 ||
+					!Number.isFinite(event.taxable_share_income) ||
+					event.taxable_share_income < 0 ||
+					(event.share_ratio > 0 &&
+						(!event.listing_date || event.listing_date < event.ex_date || !event.share_tax_basis)) ||
 					!Number.isSafeInteger(event.registered_quantity) ||
 					event.registered_quantity < 0,
 			) ||
 			dividends.entries.some(
 				(entry) =>
 					!Number.isFinite(entry.amount) ||
-					!["receivable", "cash_payment", "tax_reserved", "tax_payment"].includes(entry.kind),
+					![
+						"receivable",
+						"cash_payment",
+						"tax_reserved",
+						"tax_payment",
+						"share_credit",
+						"share_release",
+						"share_tax_payment",
+					].includes(entry.kind),
 			))
 	)
 		throw new Error("分红账本金额或来源不一致，请重新读取报告。");
@@ -166,6 +201,10 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 						record: event.record_date,
 						ex: event.ex_date,
 						pay: event.pay_date,
+						shareRatio: event.share_ratio,
+						listing: event.listing_date,
+						taxableShareIncome: event.taxable_share_income,
+						shareTaxBasis: event.share_tax_basis,
 						grossPerShare: event.gross_per_share,
 						quantity: event.registered_quantity,
 					})),
@@ -179,6 +218,16 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 					})),
 					balances: dividends.balances.map((row) => ({
 						day: row.trade_date,
+						positions: row.positions.map((p) => ({
+							instrumentId: p.instrument_id,
+							quantity: p.quantity,
+							availableQuantity: p.available_quantity,
+							averageCost: p.average_cost,
+							marketValue: p.market_value,
+							totalCost: p.total_cost,
+							lockedQuantity: p.locked_quantity,
+							symbol: p.source_ticker,
+						})),
 						cash: row.cash,
 						available: row.available_cash,
 						receivable: row.receivable,

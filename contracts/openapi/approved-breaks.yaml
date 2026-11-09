@@ -1,2 +1,22 @@
 schema: ditto.approved-breaks.v1
-breaks: []
+breaks:
+  - id: response-property-list-of-types-widened
+    fingerprint: 872b3cc09790
+    approved-by: https://github.com/cosmos-arc/ditto/issues/760#issuecomment-6745111212
+    added: "2026-11-10"
+    note: Pure share distributions have no cash payment date; the user authorized direct contract changes.
+  - id: response-property-enum-value-added
+    fingerprint: f80bf68f33b4
+    approved-by: https://github.com/cosmos-arc/ditto/issues/760#issuecomment-6745111212
+    added: "2026-11-10"
+    note: Record share credits in the saved distribution ledger.
+  - id: response-property-enum-value-added
+    fingerprint: 7af16c9e4305
+    approved-by: https://github.com/cosmos-arc/ditto/issues/760#issuecomment-6745111212
+    added: "2026-11-10"
+    note: Record shares becoming available on the independent listing date.
+  - id: response-property-enum-value-added
+    fingerprint: f1b2fedd0b86
+    approved-by: https://github.com/cosmos-arc/ditto/issues/760#issuecomment-6745111212
+    added: "2026-11-10"
+    note: Record initial withholding on issuer-proven taxable share income.

@@ -215,7 +215,7 @@ class TestDefaultMetadataScheduleAssignments:
     ) -> None:
         registry = default_dataset_metadata()
 
-        assert registry["dividend"].schema_version == "fundamental.dividend.v3"
+        assert registry["dividend"].schema_version == "fundamental.dividend.v4"
 
     def test_corporate_action_schema_versions_announcement_query_semantics(
         self,

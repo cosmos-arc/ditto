@@ -9,12 +9,12 @@ from ditto_backtest.result import BacktestAccountStateSnapshot
 from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.dividends import CashDividend
+from ditto_portfolio.accounting.dividends import StockDistribution
 from ditto_portfolio.accounting.position import Position
 
 
 def test_saved_receivable_and_fifo_tax_resume_without_second_payment():
-    event = CashDividend(
+    event = StockDistribution(
         InstrumentId(1),
         date(2020, 6, 2),
         date(2020, 6, 3),
@@ -57,7 +57,7 @@ def test_saved_receivable_and_fifo_tax_resume_without_second_payment():
 
 @pytest.mark.pit
 def test_future_dividend_is_not_visible_to_the_strategy_account_view():
-    event = CashDividend(
+    event = StockDistribution(
         InstrumentId(1),
         date(2020, 6, 10),
         date(2020, 6, 11),
@@ -72,3 +72,47 @@ def test_future_dividend_is_not_visible_to_the_strategy_account_view():
     assert account.get_view().nav == 1000
     account.settle_dividends("2020-06-08")
     assert account.get_view().dividends.events == (event,)
+
+
+def test_saved_unlisted_shares_unlock_once_after_restore():
+    from dataclasses import replace
+
+    from ditto_portfolio.accounting.dividends import DividendBook
+
+    event = StockDistribution(
+        InstrumentId(1),
+        date(2020, 6, 2),
+        date(2020, 6, 3),
+        None,
+        0,
+        date(2020, 5, 20),
+        "snapshot:shares",
+        share_ratio=0.5,
+        listing_date=date(2020, 6, 5),
+        share_tax_basis="issuer:premium-capital",
+    )
+    book = DividendBook.start((event,)).close("2020-06-02", {InstrumentId(1): 100})
+    account = Account(
+        cash=CashBook(800, 800, 0),
+        positions={
+            InstrumentId(1): Position(InstrumentId(1), 100, 100, 12, 1200, 0, 0, 0)
+        },
+        dividend_state=book,
+    )
+    account.settle_dividends("2020-06-03")
+    snapshot = BacktestAccountStateSnapshot.from_account_view(account.get_view())
+    restored = BacktestAccountStateSnapshot.from_json(snapshot.to_json())
+    assert restored.state_hash == snapshot.state_hash
+    resumed = Account(
+        cash=account.cash,
+        positions=dict(account.positions),
+        dividend_state=restored.dividends,
+    )
+    resumed.settle_dividends("2020-06-04")
+    assert resumed.positions[InstrumentId(1)].available_quantity == 100
+    resumed.settle_dividends("2020-06-05")
+    resumed.settle_dividends("2020-06-05")
+    assert resumed.positions[InstrumentId(1)] == replace(
+        account.positions[InstrumentId(1)], available_quantity=150
+    )
+    assert resumed.get_view().nav == 2000

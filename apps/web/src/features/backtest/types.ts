@@ -95,7 +95,11 @@ export interface BacktestDividendStatement {
 		readonly announcement: string;
 		readonly record: string;
 		readonly ex: string;
-		readonly pay: string;
+		readonly pay: string | null;
+		readonly shareRatio: number;
+		readonly listing: string | null;
+		readonly taxableShareIncome: number;
+		readonly shareTaxBasis: string;
 		readonly grossPerShare: number;
 		readonly quantity: number;
 	}[];
@@ -108,6 +112,16 @@ export interface BacktestDividendStatement {
 		readonly quantity: number;
 	}[];
 	readonly balances: readonly {
+		readonly positions: readonly {
+			readonly instrumentId: number;
+			readonly quantity: number;
+			readonly availableQuantity: number;
+			readonly averageCost: number;
+			readonly marketValue: number;
+			readonly totalCost: number;
+			readonly lockedQuantity: number;
+			readonly symbol: string;
+		}[];
 		readonly day: string;
 		readonly cash: number;
 		readonly available: number;

@@ -36,6 +36,9 @@ class BaseTushareAdapter:
             _client: 已存在的 client（用于依赖注入）.
 
         """
+        self._stock_distribution_terms = (
+            settings.stock_distribution_terms if settings else ()
+        )
         if _client is not None:
             self._client = _client
         else:

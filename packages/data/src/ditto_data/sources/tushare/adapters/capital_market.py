@@ -7,6 +7,7 @@ from datetime import date
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
+from ditto_data.sources.stock_distribution_terms import bind_stock_distribution_terms
 from ditto_data.sources.tushare.adapters._guards import assert_single_trade_date
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter
 from ditto_data.sources.tushare.processors.error_handler import (
@@ -186,7 +187,8 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
             params: dict[str, str] = {
                 "api_name": "dividend",
                 "fields": "ts_code,ex_date,cash_div,cash_div_tax,record_date,pay_date,"
-                + "ann_date,imp_ann_date,end_date,stk_div,div_proc",
+                + "ann_date,imp_ann_date,end_date,stk_div,stk_bo_rate,stk_co_rate,"
+                + "div_listdate,div_proc",
             }
 
             if ts_code:
@@ -198,6 +200,9 @@ class CapitalMarketTushareAdapter(BaseTushareAdapter):
 
             result = TushareDataTransformer.transform(
                 response, "dividend", DIVIDEND_MAPPING
+            )
+            result = bind_stock_distribution_terms(
+                result, self._stock_distribution_terms
             )
 
             # dividend 忽略 start/end；按实际公告日过滤，不能改用除权日。

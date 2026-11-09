@@ -12,41 +12,87 @@ import {
 
 afterEach(() => vi.unstubAllGlobals());
 
-it.each(["nav", "kind"])("rejects inconsistent saved dividend evidence over HTTP: %s", async (field) => {
-	const statement = {
-		currency: "CNY",
-		policy: "saved",
-		events: [],
-		entries: [
-			{
-				event_id: "1:2020-06-02",
-				day: "2020-06-03",
-				kind: "receivable",
-				amount: 100,
-				quantity: 100,
-				acquired: "2020-06-01",
-			},
-		],
-		balances: [
-			{
-				trade_date: "2020-06-03",
-				cash: 1000,
-				available_cash: 1000,
-				receivable: 100,
-				tax_payable: 0,
-				market_value: 900,
-				nav: 2000,
-			},
-		],
-	};
-	if (field === "nav") statement.balances[0]!.nav = 2100;
-	else statement.entries[0]!.kind = "unknown";
-	vi.stubGlobal(
-		"fetch",
-		vi.fn<typeof fetch>(async () => Response.json({ data: { ...mockBacktestReport, dividend_statement: statement } })),
-	);
-	await expect(fetchBacktestReport("run-1")).rejects.toThrow("分红账本金额或来源不一致");
-});
+it.each(["valid", "nav", "kind", "locked", "cost", "listing"])(
+	"validates saved distribution evidence over HTTP: %s",
+	async (field) => {
+		const statement = {
+			currency: "CNY",
+			policy: "saved",
+			events: [
+				{
+					event_id: "1:2020-06-02",
+					instrument_id: 1,
+					source_ticker: "600000.SH",
+					source_snapshot_id: "source:shares",
+					announcement_date: "2020-05-28",
+					record_date: "2020-06-02",
+					ex_date: "2020-06-03",
+					pay_date: null,
+					gross_per_share: 0,
+					share_ratio: 0.5,
+					listing_date: "2020-06-05",
+					taxable_share_income: 0,
+					share_tax_basis: "issuer:premium-capital",
+					registered_quantity: 100,
+				},
+			],
+			entries: [
+				{
+					event_id: "1:2020-06-02",
+					day: "2020-06-03",
+					kind: "receivable",
+					amount: 100,
+					quantity: 100,
+					acquired: "2020-06-01",
+				},
+			],
+			balances: [
+				{
+					trade_date: "2020-06-03",
+					cash: 1000,
+					available_cash: 1000,
+					receivable: 100,
+					tax_payable: 0,
+					market_value: 900,
+					nav: 2000,
+					positions: [
+						{
+							instrument_id: 1,
+							source_ticker: "600000.SH",
+							quantity: 150,
+							available_quantity: 100,
+							locked_quantity: 50,
+							average_cost: 8,
+							total_cost: 1200,
+							market_value: 900,
+						},
+					],
+				},
+			],
+		};
+		if (field === "nav") statement.balances[0]!.nav = 2100;
+		if (field === "kind") statement.entries[0]!.kind = "unknown";
+		if (field === "locked") statement.balances[0]!.positions[0]!.locked_quantity = 0;
+		if (field === "cost") statement.balances[0]!.positions[0]!.total_cost = 800;
+		if (field === "listing") statement.events[0]!.listing_date = "2020-06-01";
+		vi.stubGlobal(
+			"fetch",
+			vi.fn<typeof fetch>(async () =>
+				Response.json({ data: { ...mockBacktestReport, dividend_statement: statement } }),
+			),
+		);
+		if (field === "valid") {
+			const report = await fetchBacktestReport("run-1");
+			expect(report.dividendStatement?.events[0]).toMatchObject({ pay: null, shareRatio: 0.5, listing: "2020-06-05" });
+			expect(report.dividendStatement?.balances[0]?.positions[0]).toMatchObject({
+				quantity: 150,
+				availableQuantity: 100,
+				lockedQuantity: 50,
+				totalCost: 1200,
+			});
+		} else await expect(fetchBacktestReport("run-1")).rejects.toThrow("分红账本金额或来源不一致");
+	},
+);
 
 describe("backtest API view-model boundaries", () => {
 	it("keeps report scope and original provenance through mapping, with conservative legacy defaults", () => {

@@ -1,4 +1,4 @@
-"""Cash-share entitlements and daily-net FIFO tax, independent of price factors."""
+"""Stock distribution entitlements and daily-net FIFO tax, independent of prices."""
 
 from __future__ import annotations
 
@@ -6,39 +6,78 @@ from calendar import monthrange
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import date
+from decimal import Decimal
 from math import isfinite
 
 from ditto_kernel.identity import InstrumentId
 
 
 @dataclass(frozen=True)
-class CashDividend:
-    """An implemented, source-pinned CNY cash dividend for unrestricted A shares."""
+class StockDistribution:
+    """An implemented cash/share distribution for unrestricted A shares."""
 
     instrument_id: InstrumentId
     record_date: date
     ex_date: date
-    pay_date: date
+    pay_date: date | None
     gross_per_share: float
     announcement_date: date
     source_snapshot_id: str
     source_ticker: str = ""
+    share_ratio: float = 0.0
+    listing_date: date | None = None
+    taxable_share_income: float = 0.0
+    share_tax_basis: str = ""
 
     def __post_init__(self) -> None:
         """Require complete dates, cash units and an applicable tax regime."""
         if not (
             self.instrument_id > 0
             and date(2013, 1, 1) <= self.record_date
-            and self.announcement_date
-            < self.record_date
-            < self.ex_date
-            <= self.pay_date
+            and self.announcement_date < self.record_date < self.ex_date
             and isfinite(self.gross_per_share)
-            and self.gross_per_share > 0
+            and self.gross_per_share >= 0
+            and isfinite(self.share_ratio)
+            and self.share_ratio >= 0
+            and self.gross_per_share + self.share_ratio > 0
+            and isfinite(self.taxable_share_income)
+            and self.taxable_share_income >= 0
+            and (
+                not (
+                    self.gross_per_share
+                    or self.taxable_share_income * self.withholding_rate
+                )
+                or (self.pay_date is not None and self.pay_date >= self.ex_date)
+            )
+            and (
+                not self.share_ratio
+                or (
+                    self.listing_date is not None
+                    and self.listing_date >= self.ex_date
+                    and self.share_tax_basis
+                )
+            )
+            and (self.share_ratio > 0 or self.taxable_share_income == 0)
             and self.source_snapshot_id
         ):
-            raise ValueError("unknown/invalid cash dividend facts or tax regime")
-        object.__setattr__(self, "gross_per_share", float(self.gross_per_share))
+            raise ValueError("unknown/invalid stock distribution facts or tax regime")
+        for field in ("gross_per_share", "share_ratio", "taxable_share_income"):
+            object.__setattr__(self, field, float(getattr(self, field)))
+
+    @property
+    def taxable_per_share(self) -> float:
+        """Cash plus source-proven taxable share income, per registered old share."""
+        return self.gross_per_share + self.taxable_share_income
+
+    def shares_for(self, registered: int) -> int:
+        """An account cannot infer the market-wide lottery for fractional shares."""
+        shares = Decimal(str(self.share_ratio)) * registered
+        if shares != shares.to_integral_value():
+            raise ValueError(
+                f"fractional share allocation requires evidence: {self.identity} "
+                f"({registered} registered shares * {self.share_ratio})"
+            )
+        return int(shares)
 
     @property
     def identity(self) -> str:
@@ -80,7 +119,7 @@ class DividendLot:
 class DividendRight:
     """Frozen record-date shares, including rights retained after disposal."""
 
-    event: CashDividend
+    event: StockDistribution
     acquired: date
     quantity: int
     remaining: int
@@ -99,12 +138,16 @@ class DividendEntry:
     quantity: int
     acquired: str = ""
 
+    def __post_init__(self) -> None:
+        """Keep serialized amounts stable across checkpoint decoding."""
+        object.__setattr__(self, "amount", float(self.amount))
+
 
 @dataclass(frozen=True)
 class DividendBook:
     """Immutable snapshot used by account views, checkpoints and reports."""
 
-    events: tuple[CashDividend, ...] = ()
+    events: tuple[StockDistribution, ...] = ()
     lots: tuple[DividendLot, ...] = ()
     rights: tuple[DividendRight, ...] = ()
     entries: tuple[DividendEntry, ...] = ()
@@ -113,9 +156,9 @@ class DividendBook:
     settled_day: str = ""
 
     @classmethod
-    def start(cls, events: tuple[CashDividend, ...]) -> DividendBook:
+    def start(cls, events: tuple[StockDistribution, ...]) -> DividendBook:
         """Collapse identical events and reject conflicting identities."""
-        unique: dict[str, CashDividend] = {}
+        unique: dict[str, StockDistribution] = {}
         for event in events:
             previous = unique.setdefault(event.identity, event)
             if previous != event:
@@ -126,7 +169,11 @@ class DividendBook:
     def receivable(self) -> float:
         """Net declared cash earned but not yet payable."""
         return sum(
-            r.quantity * r.event.gross_per_share * (1 - r.event.withholding_rate)
+            r.quantity
+            * (
+                r.event.gross_per_share
+                - r.event.taxable_per_share * r.event.withholding_rate
+            )
             for r in self.rights
             if r.accrued and not r.paid
         )
@@ -149,6 +196,9 @@ class DividendBook:
             amount = (
                 right.quantity * event.gross_per_share * (1 - event.withholding_rate)
             )
+            share_tax = (
+                right.quantity * event.taxable_share_income * event.withholding_rate
+            )
             if not right.accrued and current >= event.ex_date:
                 right = replace(right, accrued=True)
                 entries.append(
@@ -156,14 +206,14 @@ class DividendBook:
                         event.identity,
                         day,
                         "receivable",
-                        amount,
+                        amount - share_tax,
                         right.quantity,
                         right.acquired.isoformat(),
                     )
                 )
-            if not right.paid and current >= event.pay_date:
+            if not right.paid and current >= (event.pay_date or event.ex_date):
                 right = replace(right, paid=True)
-                cash += amount
+                cash += amount - share_tax
                 entries.append(
                     DividendEntry(
                         event.identity,
@@ -174,14 +224,62 @@ class DividendBook:
                         right.acquired.isoformat(),
                     )
                 )
+                if share_tax:
+                    entries.append(
+                        DividendEntry(
+                            event.identity,
+                            day,
+                            "share_tax_payment",
+                            -share_tax,
+                            right.quantity,
+                            right.acquired.isoformat(),
+                        )
+                    )
             rights.append(right)
+        lots = self._settle_shares(day, entries)
         return replace(
             self,
+            lots=tuple(sorted(lots, key=lambda lot: (lot.acquired, lot.instrument_id))),
             rights=tuple(rights),
             entries=tuple(entries),
             tax_payable=0.0,
             settled_day=day,
         ), cash
+
+    def _settle_shares(
+        self, day: str, entries: list[DividendEntry]
+    ) -> list[DividendLot]:
+        """Credit shares once, independently of their later trading eligibility."""
+        current, lots = date.fromisoformat(day), list(self.lots)
+        for event in self.events:
+            if not event.share_ratio:
+                continue
+            event_rights = [r for r in self.rights if r.event == event]
+            registered = sum(r.quantity for r in event_rights)
+            if not registered:
+                continue
+            quantity = event.shares_for(registered)
+            credited = any(
+                e.event_id == event.identity and e.kind == "share_credit"
+                for e in entries
+            )
+            if current >= event.ex_date and not credited:
+                entries.append(
+                    DividendEntry(event.identity, day, "share_credit", 0, quantity)
+                )
+                lots.append(DividendLot(event.instrument_id, event.ex_date, quantity))
+            if (
+                event.listing_date is not None
+                and current >= event.listing_date
+                and not any(
+                    e.event_id == event.identity and e.kind == "share_release"
+                    for e in entries
+                )
+            ):
+                entries.append(
+                    DividendEntry(event.identity, day, "share_release", 0, quantity)
+                )
+        return lots
 
     def close(self, day: str, holdings: Mapping[InstrumentId, int]) -> DividendBook:
         """Track net daily changes, then freeze record-date rights after trading."""
@@ -199,9 +297,24 @@ class DividendBook:
                 lots.append(DividendLot(iid, current, change))
             elif change < 0:
                 payable += _dispose_lots(lots, rights, entries, iid, -change, current)
-        lots = [lot for lot in lots if lot.quantity]
+        quantities: dict[tuple[InstrumentId, date], int] = {}
+        for lot in lots:
+            key = (lot.instrument_id, lot.acquired)
+            quantities[key] = quantities.get(key, 0) + lot.quantity
+        lots = [
+            DividendLot(iid, acquired, quantity)
+            for (iid, acquired), quantity in quantities.items()
+            if quantity
+        ]
         for event in self.events:
             if event.record_date == current:
+                event.shares_for(
+                    sum(
+                        lot.quantity
+                        for lot in lots
+                        if lot.instrument_id == event.instrument_id
+                    )
+                )
                 rights.extend(
                     DividendRight(event, lot.acquired, lot.quantity, lot.quantity)
                     for lot in lots
@@ -256,7 +369,7 @@ def _dispose_lots(
             rate = dividend_tax_rate(lot.acquired, current, right.event.record_date)
             tax = (
                 entitled
-                * right.event.gross_per_share
+                * right.event.taxable_per_share
                 * (rate - right.event.withholding_rate)
             )
             payable += tax

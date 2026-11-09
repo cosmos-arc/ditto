@@ -14260,6 +14260,13 @@
             "title": "Nav",
             "type": "number"
           },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/DividendPositionResponse"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
           "receivable": {
             "title": "Receivable",
             "type": "number"
@@ -14275,6 +14282,7 @@
         },
         "required": [
           "trade_date",
+          "positions",
           "cash",
           "available_cash",
           "receivable",
@@ -14308,7 +14316,10 @@
               "receivable",
               "cash_payment",
               "tax_reserved",
-              "tax_payment"
+              "tax_payment",
+              "share_credit",
+              "share_release",
+              "share_tax_payment"
             ],
             "title": "Kind",
             "type": "string"
@@ -14352,9 +14363,27 @@
             "title": "Instrument Id",
             "type": "integer"
           },
+          "listing_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Date"
+          },
           "pay_date": {
-            "title": "Pay Date",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pay Date"
           },
           "record_date": {
             "title": "Record Date",
@@ -14364,6 +14393,14 @@
             "title": "Registered Quantity",
             "type": "integer"
           },
+          "share_ratio": {
+            "title": "Share Ratio",
+            "type": "number"
+          },
+          "share_tax_basis": {
+            "title": "Share Tax Basis",
+            "type": "string"
+          },
           "source_snapshot_id": {
             "title": "Source Snapshot Id",
             "type": "string"
@@ -14371,6 +14408,10 @@
           "source_ticker": {
             "title": "Source Ticker",
             "type": "string"
+          },
+          "taxable_share_income": {
+            "title": "Taxable Share Income",
+            "type": "number"
           }
         },
         "required": [
@@ -14383,9 +14424,61 @@
           "ex_date",
           "pay_date",
           "gross_per_share",
-          "registered_quantity"
+          "registered_quantity",
+          "share_ratio",
+          "listing_date",
+          "taxable_share_income",
+          "share_tax_basis"
         ],
         "title": "DividendEventResponse",
+        "type": "object"
+      },
+      "DividendPositionResponse": {
+        "properties": {
+          "available_quantity": {
+            "title": "Available Quantity",
+            "type": "integer"
+          },
+          "average_cost": {
+            "title": "Average Cost",
+            "type": "number"
+          },
+          "instrument_id": {
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "locked_quantity": {
+            "title": "Locked Quantity",
+            "type": "integer"
+          },
+          "market_value": {
+            "title": "Market Value",
+            "type": "number"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "source_ticker": {
+            "title": "Source Ticker",
+            "type": "string"
+          },
+          "total_cost": {
+            "title": "Total Cost",
+            "type": "number"
+          }
+        },
+        "required": [
+          "source_ticker",
+          "locked_quantity",
+          "total_cost",
+          "instrument_id",
+          "quantity",
+          "available_quantity",
+          "average_cost",
+          "market_value"
+        ],
+        "title": "DividendPositionResponse",
         "type": "object"
       },
       "DividendStatementResponse": {

@@ -1712,9 +1712,9 @@ class TestExecutionDelay:
         from ditto_execution.orders.book import OrderBook
         from ditto_execution.orders.journal import InMemoryOrderEventJournal
         from ditto_portfolio.accounting.account import Account
-        from ditto_portfolio.accounting.dividends import CashDividend
+        from ditto_portfolio.accounting.dividends import StockDistribution
 
-        event = CashDividend(
+        event = StockDistribution(
             InstrumentId(1),
             date(2026, 3, 3),
             date(2026, 3, 4),

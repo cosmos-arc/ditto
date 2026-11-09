@@ -87,6 +87,9 @@ class TestCapitalTushareAdapterFetchDividend:
                 "imp_ann_date": ["20231228"],
                 "end_date": ["20231231"],
                 "stk_div": [0.0],
+                "stk_bo_rate": [0.0],
+                "stk_co_rate": [0.0],
+                "div_listdate": [None],
                 "record_date": ["20240102"],
                 "ann_date": ["20240101"],
                 "div_proc": ["实施"],  # P015: 实施进度

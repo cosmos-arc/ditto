@@ -18,7 +18,7 @@ from ditto_data.services.market_adjustment import adjust_retained_bars
 from ditto_data.services.market_status import stock_execution_bars
 from ditto_data.services.market_types import AdjType
 from ditto_kernel.identity import InstrumentId
-from ditto_portfolio.accounting.dividends import CashDividend
+from ditto_portfolio.accounting.dividends import StockDistribution
 
 from ditto_application.builders.data_provider import resolve_frozen_snapshot_rows
 from ditto_application.catalog_freshness import observed_at
@@ -55,7 +55,7 @@ class FrozenHistoryProvider:
         self._ticker_ids: dict[str, InstrumentId] = {}
         self._asset_class = ""
         self._etf_reference: pl.DataFrame | None = None
-        self.cash_dividends: tuple[CashDividend, ...] = ()
+        self.cash_dividends: tuple[StockDistribution, ...] = ()
 
     def freeze_cash_dividends(self, *, start: str, end: str) -> None:
         """Pin implementation facts selected by the raw announcement date."""
@@ -80,15 +80,29 @@ class FrozenHistoryProvider:
         try:
             selected = implemented_cash_dividends(frame, start=start, end=end)
             self.cash_dividends = tuple(
-                CashDividend(
+                StockDistribution(
                     instrument_id=InstrumentId(row["instrument_id"]),
                     record_date=row["record_date"],
                     ex_date=row["ex_dividend_date"],
                     pay_date=row["pay_date"],
                     gross_per_share=row["gross_dividend_per_share"],
-                    announcement_date=row["implementation_date"],
+                    announcement_date=max(
+                        row["implementation_date"], row["share_tax_knowledge_date"]
+                    )
+                    if row["stock_dividend_ratio"]
+                    else row["implementation_date"],
                     source_snapshot_id=row["source_snapshot_id"],
                     source_ticker=row["source_ticker"],
+                    share_ratio=row["stock_dividend_ratio"],
+                    listing_date=row["share_listing_date"]
+                    if row["stock_dividend_ratio"]
+                    else None,
+                    taxable_share_income=row["taxable_share_income"]
+                    if row["stock_dividend_ratio"]
+                    else 0,
+                    share_tax_basis=row["share_tax_basis"]
+                    if row["stock_dividend_ratio"]
+                    else "",
                 )
                 for row in selected.to_dicts()
             )
@@ -510,7 +524,12 @@ class FrozenHistoryProvider:
                 bars = cash_adjusted_suspension_marks(
                     bars,
                     tuple(
-                        (int(event.instrument_id), event.ex_date, event.gross_per_share)
+                        (
+                            int(event.instrument_id),
+                            event.ex_date,
+                            event.gross_per_share,
+                            event.share_ratio,
+                        )
                         for event in self.cash_dividends
                     ),
                 )

@@ -51,7 +51,9 @@ class CapitalTushareAdapter(BaseTushareAdapter):
         _client: TushareClient | None = None,
     ) -> None:
         super().__init__(token=token, settings=settings, _client=_client)
-        self._market = CapitalMarketTushareAdapter(_client=self._client)
+        self._market = CapitalMarketTushareAdapter(
+            _client=self._client, settings=settings
+        )
         self._index = CapitalIndexTushareAdapter(_client=self._client)
         self._corporate = CapitalCorporateTushareAdapter(_client=self._client)
         self._flows = CapitalFlowsTushareAdapter(_client=self._client)
