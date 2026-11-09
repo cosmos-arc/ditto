@@ -145,3 +145,29 @@ it.each([{ run_id: "another-run" }, { purpose: "unknown" }, { input_status: "unk
 		expect(screen.queryByText(/实际入库/)).not.toBeInTheDocument();
 	},
 );
+
+it("shows an old request without optional scope evidence as unrecorded", async () => {
+	server.use(
+		http.get("/api/v1/backtests/runs/:id/request", () =>
+			HttpResponse.json({
+				data: {
+					run_id: run.runId,
+					purpose: "unclassified",
+					input_status: "unrecorded",
+					universe: "",
+					frozen_at: "",
+					reason: "",
+					start_date: null,
+					end_date: null,
+					initial_cash: null,
+				},
+			}),
+		),
+	);
+	render(<BacktestRequestPanel run={run} />, { wrapper });
+	await screen.findByText(/旧请求未记录用途.*未记录冻结预检/);
+	expect(screen.getByText(/请求区间 未记录 → 未记录.*初始资金 未记录/)).toBeVisible();
+	expect(screen.getByText(/证券池 未记录.*冻结证券 尚未解析/)).toBeVisible();
+	expect(screen.getByText("尚无已保存的冻结来源。")).toBeVisible();
+	expect(screen.queryByText(/载荷校验通过/)).not.toBeInTheDocument();
+});
