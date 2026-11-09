@@ -141,6 +141,11 @@ class PaperInstrumentRulesBody(BaseModel):
     multiplier: float = Field(default=1.0, gt=0)
     lifecycle_state: str = "listed"
     price_limit_pct: float | None = Field(default=0.1, gt=0)
+    order_types_supported: list[Literal["market", "limit"]] = Field(
+        default_factory=lambda: ["market", "limit"], min_length=1
+    )
+    max_limit_order_quantity: int | None = Field(default=None, gt=0)
+    max_market_order_quantity: int | None = Field(default=None, gt=0)
 
 
 class PaperFillAssumptionBody(BaseModel):

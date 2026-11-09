@@ -22703,6 +22703,30 @@
             "title": "Lot Size",
             "type": "integer"
           },
+          "max_limit_order_quantity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Limit Order Quantity"
+          },
+          "max_market_order_quantity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Market Order Quantity"
+          },
           "min_commission": {
             "minimum": 0.0,
             "title": "Min Commission",
@@ -22713,6 +22737,18 @@
             "exclusiveMinimum": 0.0,
             "title": "Multiplier",
             "type": "number"
+          },
+          "order_types_supported": {
+            "items": {
+              "enum": [
+                "market",
+                "limit"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Order Types Supported",
+            "type": "array"
           },
           "price_limit_pct": {
             "anyOf": [

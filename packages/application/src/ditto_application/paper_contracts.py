@@ -71,6 +71,9 @@ class PaperInstrumentRulesInput:
     multiplier: float = 1.0
     lifecycle_state: str = "listed"
     price_limit_pct: float | None = 0.1
+    order_types_supported: tuple[str, ...] = ("market", "limit")
+    max_limit_order_quantity: int | None = None
+    max_market_order_quantity: int | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

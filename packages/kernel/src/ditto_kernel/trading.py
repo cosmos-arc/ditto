@@ -95,6 +95,8 @@ class TradingRuleSet:
     price_limit_pct: float | None
     order_types_supported: tuple[str, ...]
     call_auction_sessions: tuple[str, ...]
+    max_limit_order_quantity: int | None = None
+    max_market_order_quantity: int | None = None
 
 
 @dataclass(frozen=True)

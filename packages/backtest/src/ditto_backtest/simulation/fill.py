@@ -13,6 +13,7 @@ from typing import Protocol
 
 from ditto_execution.fills import Filled, FillOutcome, NoFill
 from ditto_execution.orders.model import Order as _Order
+from ditto_execution.reality.order import order_rule_rejection
 from ditto_kernel.order import OrderSide as _OrderSide
 from ditto_kernel.order import OrderType as _OrderType
 from ditto_kernel.trading import InstrumentDefinition as _InstrumentDefinition
@@ -172,8 +173,8 @@ class AShareFillModel:
         trading_rule: _TradingRuleSet,
     ) -> FillOutcome | None:
         """A 股规则矩阵 — 返回 None 表示未匹配任何规则。"""
-        if order.order_type.value not in trading_rule.order_types_supported:
-            return NoFill(reason="unsupported_order_type", can_retry=False)
+        if reason := order_rule_rejection(order, trading_rule):
+            return NoFill(reason=reason, can_retry=False)
         # 停牌
         if market.is_suspended:
             return NoFill(reason="suspended", can_retry=True)

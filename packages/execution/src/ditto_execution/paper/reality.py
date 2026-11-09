@@ -21,6 +21,7 @@ from ditto_execution.paper.contracts import (
     PaperRealityStatus,
 )
 from ditto_execution.reality.fee import AShareFeeModel
+from ditto_execution.reality.order import order_rule_rejection
 from ditto_execution.reality.price import round_to_tick
 
 __all__ = ["ASharePaperReality"]
@@ -71,6 +72,8 @@ class ASharePaperReality:
         """Apply quantity, position, and T+1 constraints."""
         definition, trading_rules, _fee_schedule = rules
         order = paper_order.order
+        if reason := order_rule_rejection(order, trading_rules):
+            return self._reject(paper_order, reason, context.execution_at)
         lot_reason = self._lot_reason(
             side=order.direction,
             quantity=order.quantity,

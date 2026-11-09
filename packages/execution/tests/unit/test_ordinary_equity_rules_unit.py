@@ -6,10 +6,10 @@ import pytest
 from ditto_execution.reality.ordinary_equity import (
     CashEquityListing,
     is_mainboard_stock,
-    mainboard_rule_history,
-    mainboard_trading_history,
     ordinary_equity_rules,
     ordinary_execution_fields,
+    stock_rule_history,
+    stock_trading_history,
 )
 from ditto_kernel.identity import InstrumentId
 
@@ -44,7 +44,7 @@ def test_historical_fee_bill_uses_fill_date_and_nominal_not_market_value(
     listing = CashEquityListing(
         InstrumentId(1), ticker, "stock", exchange, "2012-10-09", None
     )
-    history = mainboard_rule_history(
+    history = stock_rule_history(
         listing,
         commission_rate=0.0003,
         start="2014-01-02",
@@ -165,7 +165,7 @@ def test_mainboard_ipo_rules_change_on_sixth_session_not_calendar_age() -> None:
         "2026-10-13",
         "2026-10-14",
     ]
-    history = mainboard_rule_history(
+    history = stock_rule_history(
         listing, commission_rate=0.001, start=days[0], end=days[-1], trading_days=days
     )
     from ditto_execution.rules import InMemoryRuleProvider
@@ -209,7 +209,7 @@ def test_mainboard_identity_calendar_and_older_fee_boundaries() -> None:
         "2018-08-17",
         "2018-08-20",
     ]
-    history = mainboard_trading_history(
+    history = stock_trading_history(
         listing, start=days[-2], end=days[-1], trading_days=days
     )
     before = [rule for rule in history if rule.as_of_date <= days[-2]][-1]
@@ -217,10 +217,10 @@ def test_mainboard_identity_calendar_and_older_fee_boundaries() -> None:
     assert "market_on_close" not in before.order_types_supported
     assert "market_on_close" in after.order_types_supported
     with pytest.raises(ValueError, match="five prior trading sessions"):
-        mainboard_trading_history(
+        stock_trading_history(
             listing, start=days[-2], end=days[-1], trading_days=days[-2:]
         )
-    combined = mainboard_rule_history(
+    combined = stock_rule_history(
         listing, commission_rate=0.001, start=days[-2], end=days[-1], trading_days=days
     )
     assert combined[-1][2].as_of_date == "2015-08-01"
@@ -256,7 +256,7 @@ def test_sse_ipo_market_order_scope_changes_with_registration_rules(
     listing = CashEquityListing(
         InstrumentId(1), "603001", "stock", "SSE", listing_day, None
     )
-    rule = mainboard_trading_history(
+    rule = stock_trading_history(
         listing, start=listing_day, end=listing_day, trading_days=[listing_day]
     )[-1]
     assert rule.price_limit_pct is None

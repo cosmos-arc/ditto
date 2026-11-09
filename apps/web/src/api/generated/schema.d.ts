@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 360f4abdd034793bc49e1cf67d6f58b33be2f093d6b282a6ef4f5dca1597545f
+ * Schema SHA-256: 352cb1f184fa2ca8da86849c0fac0f96287bca7cfe23d62753a044fe523d7135
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -13852,6 +13852,10 @@ export interface components {
             lifecycle_state: string;
             /** Lot Size */
             lot_size: number;
+            /** Max Limit Order Quantity */
+            max_limit_order_quantity?: number | null;
+            /** Max Market Order Quantity */
+            max_market_order_quantity?: number | null;
             /** Min Commission */
             min_commission: number;
             /**
@@ -13859,6 +13863,8 @@ export interface components {
              * @default 1
              */
             multiplier: number;
+            /** Order Types Supported */
+            order_types_supported?: ("market" | "limit")[];
             /**
              * Price Limit Pct
              * @default 0.1

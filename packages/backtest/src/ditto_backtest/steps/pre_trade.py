@@ -18,6 +18,7 @@ from typing import ClassVar
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.events import OrderSubmitted
 from ditto_execution.orders.model import Order
+from ditto_execution.reality.order import order_rule_rejection
 from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
@@ -217,15 +218,13 @@ class PreTradeStep:
     ) -> OrderCheckResult:
         """Reject unsupported order types before submission; retain the reason."""
         rules = pre_trade_context.rules.get(order.instrument_id)
-        if (
-            rules is not None
-            and order.order_type.value not in rules[1].order_types_supported
-        ):
+        reason = order_rule_rejection(order, rules[1]) if rules is not None else None
+        if reason is not None:
             return OrderCheckResult(
                 decision=Decision.REJECT,
                 order_id=order.order_id,
-                reason="unsupported_order_type",
-                triggered_checks=("dated_order_type",),
+                reason=reason,
+                triggered_checks=("dated_order_rule",),
             )
         return self._pre_trade_check.check_order(order, pre_trade_context)
 

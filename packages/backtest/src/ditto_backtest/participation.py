@@ -12,7 +12,7 @@ def daily_participation(
     *,
     warmup_days: int,
     knowledge_lag_days: int,
-    mainboard_ids: frozenset[int] = frozenset(),
+    ipo_covered_ids: frozenset[int] = frozenset(),
 ) -> pl.DataFrame:
     """Project half-open membership and listing life; count actual prior sessions."""
     intervals = pl.DataFrame(roster).with_columns(
@@ -47,7 +47,7 @@ def daily_participation(
             )
         ).alias("requires_quote"),
     )
-    execution_covered = pl.col("instrument_id").is_in(mainboard_ids) | (
+    execution_covered = pl.col("instrument_id").is_in(ipo_covered_ids) | (
         (pl.col("trade_date") - pl.col("list_date")).dt.total_days()
         >= MIN_ORDINARY_LISTED_DAYS
     )
