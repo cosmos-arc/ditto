@@ -20,6 +20,7 @@ from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.orders.trigger import OrderTrigger
+from ditto_execution.reality.order import minimum_order_rejection
 from ditto_execution.reality.price import round_to_tick
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
@@ -296,12 +297,22 @@ class BacktestBrokerage:
             definition,
         )
 
-        # Try fill
-        outcome = self._model.fill_model.try_fill(
-            remaining_order,
-            market,
-            definition,
-            trading_rule,
+        # The minimum applies to the original submission, not a residual fill.
+        reason = (
+            minimum_order_rejection(
+                ticket.order,
+                trading_rule,
+                position_quantity=position.quantity if position else 0,
+            )
+            if ticket.filled_quantity == 0
+            else None
+        )
+        outcome = (
+            NoFill(reason=reason, can_retry=False)
+            if reason
+            else self._model.fill_model.try_fill(
+                remaining_order, market, definition, trading_rule
+            )
         )
 
         if isinstance(outcome, Filled):

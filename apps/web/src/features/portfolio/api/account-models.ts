@@ -389,6 +389,7 @@ export interface PaperInstrumentRulesBody {
 	exchange: string;
 	lifecycle_state: string;
 	lot_size: number;
+	min_order_quantity: number;
 	min_commission: number;
 	multiplier: number;
 	price_limit_pct: number | null;

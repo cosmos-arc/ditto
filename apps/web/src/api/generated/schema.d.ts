@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 352cb1f184fa2ca8da86849c0fac0f96287bca7cfe23d62753a044fe523d7135
+ * Schema SHA-256: a43e90d1e8f42233911667bdda26786eea41f93c1f10290f710b38f2bae895f0
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -13858,6 +13858,11 @@ export interface components {
             max_market_order_quantity?: number | null;
             /** Min Commission */
             min_commission: number;
+            /**
+             * Min Order Quantity
+             * @default 1
+             */
+            min_order_quantity: number;
             /**
              * Multiplier
              * @default 1

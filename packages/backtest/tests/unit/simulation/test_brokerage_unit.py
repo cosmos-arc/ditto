@@ -1358,3 +1358,52 @@ class TestT1FreezeSellDeduction:
         pos = view.positions[InstrumentId(1)]
         assert pos.quantity == 600
         assert pos.available_quantity == 600
+
+
+@pytest.mark.parametrize("quantity", [199, 201])
+def test_star_submission_minimum_does_not_block_partial_fill_remainder(
+    quantity: int,
+) -> None:
+    from ditto_execution.reality.ordinary_equity import stock_rule_history
+
+    rules = stock_rule_history(
+        CashEquityListing(
+            InstrumentId(1), "688001", "stock", "SSE", "2019-07-22", None
+        ),
+        commission_rate=0.001,
+        start="2019-07-22",
+        end="2019-07-22",
+        trading_days=["2019-07-22"],
+    )[-1]
+    account, book = _account(), _order_book()
+    brk = BacktestBrokerage(
+        account=account,
+        order_book=book,
+        model=BrokerageModel(
+            fill_model=AShareFillModel(participation_rate=0.01),
+            slippage_model=FixedBpsSlippage(bps=0),
+        ),
+        rules_getter=lambda _iid, _day: rules,
+    )
+    brk.place_order(_order(quantity=quantity))
+    inputs = ProcessInput(
+        step_time=datetime(2019, 7, 22, 15),
+        trade_date="2019-07-22",
+        bars={
+            InstrumentId(1): replace(
+                _market_snapshot(volume=10_000), trade_date="2019-07-22"
+            )
+        },
+    )
+    fills = [fill for _ in range(3) for fill in brk.process_pending(inputs)]
+    ticket = book.get(ClientOrderId("ORD-001"))
+    assert ticket is not None
+    if quantity == 199:
+        assert fills == []
+        assert ticket.status is OrderStatus.INVALID
+        assert ticket.order_events[-1].message == "order_quantity_below_dated_minimum"
+        assert account.cash.available == 1_000_000.0
+    else:
+        assert [fill.filled_quantity for fill in fills] == [100, 100, 1]
+        assert ticket.status is OrderStatus.FILLED
+        assert account.positions[InstrumentId(1)].quantity == 201

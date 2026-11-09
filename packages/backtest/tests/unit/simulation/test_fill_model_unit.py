@@ -533,10 +533,11 @@ class TestAShareFillScenarios:
 
 
 @pytest.mark.parametrize(
-    ("ticker", "days", "band"),
+    ("ticker", "exchange", "days", "band"),
     [
         (
             "001246",
+            "SZSE",
             [
                 "2026-09-30",
                 "2026-10-08",
@@ -549,6 +550,7 @@ class TestAShareFillScenarios:
         ),
         (
             "300896",
+            "SZSE",
             [
                 "2020-09-28",
                 "2020-09-29",
@@ -559,10 +561,23 @@ class TestAShareFillScenarios:
             ],
             0.2,
         ),
+        (
+            "688001",
+            "SSE",
+            [
+                "2019-07-22",
+                "2019-07-23",
+                "2019-07-24",
+                "2019-07-25",
+                "2019-07-26",
+                "2019-07-29",
+            ],
+            0.2,
+        ),
     ],
 )
 def test_ordinary_stock_ipo_phase_drives_fill_then_limit_rejection(
-    ticker: str, days: list[str], band: float
+    ticker: str, exchange: str, days: list[str], band: float
 ) -> None:
     from ditto_execution.reality.ordinary_equity import (
         CashEquityListing,
@@ -571,7 +586,9 @@ def test_ordinary_stock_ipo_phase_drives_fill_then_limit_rejection(
     )
     from ditto_execution.rules import InMemoryRuleProvider
 
-    listing = CashEquityListing(InstrumentId(1), ticker, "stock", "SZSE", days[0], None)
+    listing = CashEquityListing(
+        InstrumentId(1), ticker, "stock", exchange, days[0], None
+    )
     history = stock_rule_history(
         listing, commission_rate=0.001, start=days[0], end=days[-1], trading_days=days
     )
@@ -597,10 +614,17 @@ def test_ordinary_stock_ipo_phase_drives_fill_then_limit_rejection(
     assert values == {"limit_up": None, "limit_down": None}
     model = AShareFillModel()
     forbidden = model.try_fill(
-        _order(), _market_snapshot(close=12.0, high=12.0), fifth[0], fifth[1]
+        _order(quantity=201),
+        _market_snapshot(close=12.0, high=12.0),
+        fifth[0],
+        fifth[1],
     )
-    assert isinstance(forbidden, NoFill)
-    assert forbidden.reason == "unsupported_order_type"
+    if exchange == "SSE":
+        assert isinstance(forbidden, Filled)
+        assert forbidden.fill_event.filled_quantity == 201
+    else:
+        assert isinstance(forbidden, NoFill)
+        assert forbidden.reason == "unsupported_order_type"
     filled = model.try_fill(
         _order(order_type=OrderType.MARKET_ON_CLOSE),
         _market_snapshot(close=12.0, high=12.0),

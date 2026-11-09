@@ -34,6 +34,8 @@ class TimeSlice:
     bars: dict[InstrumentId, MarketSnapshot]
     benchmark_close: float | None = None
     source_snapshot_ids: dict[InstrumentId, str] = field(default_factory=dict)
+    # None means unfiltered; an empty set means no decision candidates today.
+    eligible_ids: frozenset[InstrumentId] | None = None
 
 
 class Synchronizer(Protocol):

@@ -120,7 +120,11 @@ def ordinary_rule_description(
     registration = (
         "2020-08-24" if definition.board_segment == "chinext" else "2023-04-10"
     )
-    if trading.price_limit_pct is None and (definition.ipo_date or "") < registration:
+    if (
+        trading.price_limit_pct is None
+        and definition.board_segment != "star"
+        and (definition.ipo_date or "") < registration
+    ):
         band = "上市首日申报价格范围"
     if "market" not in trading.order_types_supported:
         band += " · 不接受市价申报"
@@ -129,10 +133,22 @@ def ordinary_rule_description(
         band += f" · 限价/收盘单笔 ≤{trading.max_limit_order_quantity} {unit}"
     if trading.max_market_order_quantity is not None:
         band += f" · 市价单笔 ≤{trading.max_market_order_quantity} {unit}"
+    quantity = f"买入 {definition.lot_size} {unit}"
+    if trading.min_order_quantity > definition.lot_size:
+        quantity = (
+            f"买卖 {trading.min_order_quantity} {unit}起"
+            + f", 递增 {definition.lot_size} {unit}"
+            + f"; 不足 {trading.min_order_quantity} {unit}仅可全部卖出"
+        )
     return (
         f"{definition.exchange}/{definition.board_segment}/{trading.as_of_date}"
-        + f" · {band} · 买入 {definition.lot_size} {unit}"
+        + f" · {band} · {quantity}"
         + f" · 报价 {definition.tick_size:g} 元 · T+{trading.settlement_cycle}"
+        + (
+            " · 规则依据 docs/evidence/star-rules-755.md"
+            if definition.board_segment == "star"
+            else ""
+        )
     )
 
 

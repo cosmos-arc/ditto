@@ -156,6 +156,7 @@ const paperOrderBody = {
 		exchange: "SSE",
 		lifecycle_state: "listed",
 		lot_size: 100,
+		min_order_quantity: 1,
 		min_commission: 5,
 		multiplier: 1,
 		price_limit_pct: 0.1,

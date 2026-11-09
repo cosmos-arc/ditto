@@ -19,7 +19,7 @@ export const backtestActions = [
 ] as const;
 
 const copy = {
-	export: { title: "导出回测报告", description: "导出已发布 report 与精确 run identity。", kind: "sheet" },
+	export: { title: "导出回测报告", description: "导出本次运行、已发布报告、逐日规则与状态、冻结来源。", kind: "sheet" },
 	"enable-signal": {
 		title: "启用信号确认",
 		description: "回测不能直接启用交易信号，只能进入策略治理。",
@@ -31,6 +31,8 @@ const copy = {
 export function BacktestOverlays({
 	active,
 	agentActions,
+	exportError,
+	exportPending,
 	onClose,
 	onExport,
 	period,
@@ -39,6 +41,8 @@ export function BacktestOverlays({
 }: {
 	readonly active: BacktestOverlayId | null;
 	readonly agentActions: ReactNode;
+	readonly exportError: string;
+	readonly exportPending: boolean;
 	readonly onClose: () => void;
 	readonly onExport: () => void;
 	readonly period: string;
@@ -50,8 +54,8 @@ export function BacktestOverlays({
 	const details = copy[active];
 	const actions =
 		active === "export" ? (
-			<Button type="button" onClick={onExport}>
-				下载 JSON
+			<Button type="button" onClick={onExport} disabled={exportPending}>
+				{exportPending ? "正在读取导出证据…" : "下载 JSON"}
 			</Button>
 		) : active === "enable-signal" ? (
 			<a
@@ -64,6 +68,7 @@ export function BacktestOverlays({
 
 	return (
 		<PageActionOverlay {...details} open onClose={onClose} actions={actions}>
+			{active === "export" && exportError ? <p role="alert">导出失败：{exportError} 请重试下载。</p> : null}
 			<OverlayFactList
 				facts={[
 					["Run", runId],

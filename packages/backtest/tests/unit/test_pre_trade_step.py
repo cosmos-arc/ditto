@@ -265,3 +265,47 @@ def test_planner_rejection_reaches_saved_decision_stream() -> None:
         0,
     )
     assert saved.check_sequence == ("planner", "defer")
+
+
+def test_dated_minimum_is_rechecked_after_risk_resizes_an_order() -> None:
+    from ditto_execution.reality.ordinary_equity import (
+        CashEquityListing,
+        stock_rule_history,
+    )
+    from ditto_kernel.identity import InstrumentId
+
+    order = _make_order(instrument_id=InstrumentId(1), quantity=201)
+    rules = stock_rule_history(
+        CashEquityListing(
+            InstrumentId(1), "688001", "stock", "SSE", "2019-07-22", None
+        ),
+        commission_rate=0.001,
+        start="2019-07-22",
+        end="2019-07-22",
+        trading_days=["2019-07-22"],
+    )[-1]
+    step = PreTradeStep(
+        pre_trade_check=Mock(
+            check_order=Mock(
+                return_value=Mock(
+                    decision=Decision.RESIZE,
+                    resized_quantity=199,
+                    reason="risk resized",
+                    triggered_checks=("risk",),
+                )
+            )
+        ),
+        brokerage=Mock(),
+        fee_model=Mock(),
+        event_bus=None,
+        clock=_make_clock(),
+    )
+    ctx = _make_ctx()
+    ctx.slice_ = _make_slice()
+    ctx.account_view = _make_account_view()
+    ctx.execution_plan = _make_execution_plan(orders=(order,))
+    ctx.rules = {InstrumentId(1): rules}
+    step.execute(ctx)
+    assert ctx.step_orders == []
+    assert ctx.pre_trade_decisions[0].reason == "order_quantity_below_dated_minimum"
+    assert ctx.pre_trade_decisions[0].final_quantity == 0

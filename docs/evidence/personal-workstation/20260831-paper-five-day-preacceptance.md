@@ -21,7 +21,7 @@ PASS。确定性预验收在 fresh 临时 SQLite 中按 2026-08-24 至 2026-08-2
 ## 校验身份
 
 - 最终 ledger hash：`account-ledger:sha256:d8c59e0527ffd91b91d78710c509be7d8ca3db764ecac8571939eb3d2a199ff1`
-- evidence hash：`sha256:fa5f520ae2c4bf0ded10b484d8c234f79c2c6e355bab60dc48ff223d522f6e71`
+- evidence hash：`sha256:24b5fd203c4126dce6158af87184db6f2ba2422654e45c8b08d00faf2954f4f4`
 - 机器证据：[`20260831-paper-five-day-preacceptance.json`](20260831-paper-five-day-preacceptance.json)
 - 可重放命令：`uv run --no-sync python scripts/evidence/paper_five_day_preacceptance.py`
 
@@ -30,3 +30,5 @@ PASS。确定性预验收在 fresh 临时 SQLite 中按 2026-08-24 至 2026-08-2
 2026-11-09 随 #757 重新生成当前确定性样例。费用表新增 `transfer_fee_per_share=0.0` 进入请求身份，五日请求哈希及对账校验和相应更新；成交、账本事件、最终账本和全部行为断言不变。本次重放不刷新历史 Q4/PAP-09 的运行或发布资格。
 
 同日随 #754 再次重放：交易规则新增两个单笔申报数量上限字段，默认空值也进入完整请求身份。仅请求哈希、对账校验和、证据哈希与生成时间变化，成交、金额、账本及五日行为断言不变。
+
+同日随 #755 重放：新增最小申报量字段进入请求身份，仍仅变动五日请求/对账及派生证据身份，成交、金额和最终账本不变。当前样例不代表真实连续运行。

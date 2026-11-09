@@ -18,7 +18,7 @@ from typing import ClassVar
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.events import OrderSubmitted
 from ditto_execution.orders.model import Order
-from ditto_execution.reality.order import order_rule_rejection
+from ditto_execution.reality.order import minimum_order_rejection, order_rule_rejection
 from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
@@ -144,6 +144,15 @@ class PreTradeStep:
                         ),
                     )
 
+            # Risk resizing must not turn a valid submission into an illegal one.
+            if result.decision is not Decision.REJECT:
+                candidate = (
+                    order.with_quantity(result.resized_quantity)
+                    if result.resized_quantity is not None
+                    else order
+                )
+                result = self._dated_order_check(candidate, pre_trade_context) or result
+
             # 计算最终数量
             if result.decision == Decision.REJECT:
                 final_qty = 0
@@ -217,8 +226,20 @@ class PreTradeStep:
         pre_trade_context: PreTradeContext,
     ) -> OrderCheckResult:
         """Reject unsupported order types before submission; retain the reason."""
+        rejection = self._dated_order_check(order, pre_trade_context)
+        return rejection or self._pre_trade_check.check_order(order, pre_trade_context)
+
+    @staticmethod
+    def _dated_order_check(
+        order: Order, pre_trade_context: PreTradeContext
+    ) -> OrderCheckResult | None:
         rules = pre_trade_context.rules.get(order.instrument_id)
-        reason = order_rule_rejection(order, rules[1]) if rules is not None else None
+        if rules is None:
+            return None
+        position = pre_trade_context.account_view.positions.get(order.instrument_id)
+        reason = order_rule_rejection(order, rules[1]) or minimum_order_rejection(
+            order, rules[1], position_quantity=position.quantity if position else 0
+        )
         if reason is not None:
             return OrderCheckResult(
                 decision=Decision.REJECT,
@@ -226,7 +247,7 @@ class PreTradeStep:
                 reason=reason,
                 triggered_checks=("dated_order_rule",),
             )
-        return self._pre_trade_check.check_order(order, pre_trade_context)
+        return None
 
     def _place_order(self, order: Order) -> None:
         """通过 brokerage 提交订单。"""
