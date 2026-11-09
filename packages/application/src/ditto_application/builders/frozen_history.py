@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import polars as pl
 from ditto_backtest.provenance import aggregate_source_snapshot_id
@@ -42,6 +42,9 @@ class FrozenHistoryProvider:
         self.instrument_ids: tuple[int, ...] = ()
         self.frozen_at, self._source = frozen_at, source
         self.sources: list[dict[str, object]] = []
+        self.roster: list[dict[str, object]] = []
+        self.membership_intervals: list[dict[str, object]] = []
+        self.participation: list[dict[str, object]] = []
         self._frames: dict[str, pl.DataFrame] = {}
         self._ticker_ids: dict[str, InstrumentId] = {}
         self._asset_class = ""
@@ -58,7 +61,7 @@ class FrozenHistoryProvider:
         include_fundamentals: bool = False,
     ) -> None:
         """Resolve catalog windows once, then verify and retain their exact bytes."""
-        if self._frames:
+        if set(self._frames) - {"calendar"}:
             raise AppBuilderError("historical inputs are already frozen")
         if self._source != "tushare" or asset_class not in {"stock", "etf"}:
             raise AppBuilderError("unverified historical source/asset time semantics")
@@ -78,6 +81,8 @@ class FrozenHistoryProvider:
         if include_fundamentals:
             datasets.update(income_statement=ticker_ids, balance_sheet=ticker_ids)
         for dataset, scope in datasets.items():
+            if dataset == "calendar" and dataset in self._frames:
+                continue
             financial = dataset in {"income_statement", "balance_sheet"}
             self._frames[dataset] = self._freeze_dataset(
                 dataset,
@@ -86,6 +91,41 @@ class FrozenHistoryProvider:
                 end=(calendar_end or end) if dataset == "calendar" else end,
                 date_column="knowledge_date" if financial else "trade_date",
             )
+
+    def prepare_calendar(self, *, start: str, end: str, warmup: int, lag: int) -> str:
+        """Expand verified calendar coverage until the required sessions exist."""
+        candidates = [
+            s
+            for s in self._reader.list_snapshots(
+                dataset_id="calendar", source=self._source
+            )
+            if s.created_at <= self.frozen_at and s.request_start <= start
+        ]
+        if not candidates:
+            raise AppBuilderError("missing retained calendar")
+        earliest = min(s.request_start for s in candidates)
+        cutoff = (date.fromisoformat(start) - timedelta(days=lag)).isoformat()
+        span = max(31, warmup * 2 + lag)
+        while True:
+            first = max(
+                earliest, (date.fromisoformat(start) - timedelta(days=span)).isoformat()
+            )
+            self._frames["calendar"] = self._freeze_dataset(
+                "calendar",
+                {"": InstrumentId(0)},
+                start=first,
+                end=end,
+                date_column="trade_date",
+            )
+            days = self.get_schedule(first, end)["trade_date"].to_list()
+            prior = [day for day in days if day < cutoff]
+            if len(prior) >= warmup:
+                return prior[-warmup] if warmup else start
+            if first == earliest:
+                raise AppBuilderError(
+                    f"insufficient retained trading calendar: {len(prior)} < {warmup}"
+                )
+            span *= 2
 
     def _freeze_dataset(
         self,
@@ -158,7 +198,18 @@ class FrozenHistoryProvider:
             "rows": snapshot.row_count,
             "verified": False,
         }
-        self.sources.append(evidence)
+        previous = next(
+            (
+                item
+                for item in self.sources
+                if item["snapshot_id"] == snapshot.snapshot_id
+            ),
+            None,
+        )
+        if previous is None:
+            self.sources.append(evidence)
+        else:
+            evidence = previous
         try:
             frame = self._reader.read(
                 snapshot.snapshot_id, completed_before=self.frozen_at
@@ -197,8 +248,15 @@ class FrozenHistoryProvider:
                     return_dtype=pl.Int64,
                 )
                 .alias("instrument_id"),
-                pl.col("knowledge_date").cast(pl.Date),
             )
+            if "knowledge_date" in frame.columns:
+                frame = frame.with_columns(pl.col("knowledge_date").cast(pl.Date))
+            elif dataset not in {"stock_status", "stock_limit"}:
+                raise AppBuilderError(
+                    f"{dataset} retained payload lacks knowledge_date"
+                )
+            # Daily status/limits are realized execution facts only. Do not invent
+            # a publication/receipt timestamp for provider rows that lack one.
         return frame
 
     def get_bars(self, query: BarQuery) -> pl.DataFrame:
@@ -303,7 +361,13 @@ class FrozenHistoryProvider:
             & pl.col("trade_date")
             .cast(pl.Date)
             .is_between(date.fromisoformat(query.start), date.fromisoformat(query.end))
-        ).sort(["instrument_id", "trade_date", "knowledge_date"])
+        ).sort(
+            [
+                "instrument_id",
+                "trade_date",
+                *(["knowledge_date"] if "knowledge_date" in frame.columns else []),
+            ]
+        )
 
     def get_schedule(self, start: str, end: str) -> pl.DataFrame:
         """Require every calendar day to be represented before selecting sessions."""

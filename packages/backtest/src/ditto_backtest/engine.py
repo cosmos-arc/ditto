@@ -570,7 +570,7 @@ class EngineLoop:
             trade_date=date,
             strategy_id=self._config.strategy_id,
             run_id=self._config.strategy_run_id,
-            bars=slice_.bars,
+            bars=slice_.strategy_bars,
             benchmark_close=slice_.benchmark_close,
         )
 

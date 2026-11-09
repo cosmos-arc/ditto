@@ -58,6 +58,7 @@ class SnapshotProviders:
     require_source_snapshot_lineage: bool = False
     market: Callable[[pl.DataFrame], pl.DataFrame] | None = None
     requirements: FeedInputRequirements | None = None
+    participation: pl.DataFrame | None = None
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,14 @@ class Slice:
     bars: dict[InstrumentId, _MarketSnapshot]
     benchmark_close: float | None = None
     source_snapshot_ids: dict[InstrumentId, str] = field(default_factory=dict)
+    eligible_ids: frozenset[InstrumentId] | None = None
+
+    @property
+    def strategy_bars(self) -> dict[InstrumentId, _MarketSnapshot]:
+        """Decision candidates; all actual bars remain available for held assets."""
+        if self.eligible_ids is None:
+            return self.bars
+        return {iid: bar for iid, bar in self.bars.items() if iid in self.eligible_ids}
 
 
 # ---------------------------------------------------------------------------
@@ -260,6 +269,55 @@ def _aggregate_source_snapshot_ids_by_instrument(
     return result
 
 
+def _validate_input_rows(frame: pl.DataFrame, expected: list[tuple[int, str]]) -> None:
+    """Check required actual quotes without inventing missing trading prices."""
+    expected_frame = pl.DataFrame(
+        expected,
+        schema={"instrument_id": pl.Int64, "trade_date": pl.String},
+        orient="row",
+    )
+    if frame.is_empty():
+        raise ValueError(f"missing backtest inputs: {expected[:10]}")
+    actual = frame.with_columns(pl.col("trade_date").cast(pl.String))
+    missing = expected_frame.join(
+        actual.select("instrument_id", "trade_date"),
+        on=["instrument_id", "trade_date"],
+        how="anti",
+    )
+    if not missing.is_empty():
+        raise ValueError(
+            f"missing backtest member/date inputs ({missing.height}): "
+            + f"{missing.head(10).to_dicts()}"
+        )
+    if actual.select("instrument_id", "trade_date").is_duplicated().any():
+        raise ValueError("duplicate backtest member/date inputs")
+    relevant = actual.join(
+        expected_frame, on=["instrument_id", "trade_date"], how="semi"
+    )
+    bad = relevant.filter(
+        pl.any_horizontal(
+            [
+                pl.col(column).is_null()
+                | ~pl.col(column).is_finite()
+                | (pl.col(column) <= 0)
+                for column in ("open", "high", "low", "close")
+            ]
+        )
+    )
+    if not bad.is_empty():
+        raise ValueError(
+            "invalid OHLC: "
+            + str(bad.select("instrument_id", "trade_date").head(10).to_dicts())
+        )
+    if (
+        _SOURCE_SNAPSHOT_ID_COLUMN not in relevant.columns
+        or relevant[_SOURCE_SNAPSHOT_ID_COLUMN].null_count()
+    ):
+        raise ValueError(
+            "source snapshot lineage is incomplete for required backtest inputs"
+        )
+
+
 # ---------------------------------------------------------------------------
 # ProviderBackedDataFeed
 # ---------------------------------------------------------------------------
@@ -296,6 +354,7 @@ class ProviderBackedDataFeed:
         self._benchmark_id = benchmark_id
         self._snapshots = snapshot_providers or SnapshotProviders()
         self._requirements = self._snapshots.requirements
+        self.participation = self._snapshots.participation
         self._benchmark_ticker = (
             self._requirements.benchmark_ticker if self._requirements else None
         )
@@ -367,54 +426,27 @@ class ProviderBackedDataFeed:
         expected = [
             (int(iid), day) for iid in self._id_map.values() for day in required_days
         ]
+        if self.participation is not None:
+            expected = [
+                (int(iid), str(day))
+                for iid, day in self.participation.filter(pl.col("requires_quote"))
+                .select("instrument_id", "trade_date")
+                .iter_rows()
+            ]
         if self._benchmark_id is not None:
             expected.extend((int(self._benchmark_id), day) for day in run_days)
-        expected_frame = pl.DataFrame(
-            expected,
-            schema={"instrument_id": pl.Int64, "trade_date": pl.String},
-            orient="row",
-        )
-        if frame.is_empty():
-            raise ValueError(f"missing backtest inputs: {expected[:10]}")
-        actual = frame.with_columns(pl.col("trade_date").cast(pl.String))
-        missing = expected_frame.join(
-            actual.select("instrument_id", "trade_date"),
-            on=["instrument_id", "trade_date"],
-            how="anti",
-        )
-        if not missing.is_empty():
-            raise ValueError(
-                f"missing backtest member/date inputs ({missing.height}): "
-                + f"{missing.head(10).to_dicts()}"
-            )
-        if actual.select("instrument_id", "trade_date").is_duplicated().any():
-            raise ValueError("duplicate backtest member/date inputs")
-        relevant = actual.join(
-            expected_frame, on=["instrument_id", "trade_date"], how="semi"
-        )
-        bad = relevant.filter(
-            pl.any_horizontal(
-                [
-                    pl.col(column).is_null()
-                    | ~pl.col(column).is_finite()
-                    | (pl.col(column) <= 0)
-                    for column in ("open", "high", "low", "close")
-                ]
-            )
-        )
-        if not bad.is_empty():
-            raise ValueError(
-                "invalid OHLC: "
-                + str(bad.select("instrument_id", "trade_date").head(10).to_dicts())
-            )
-        if (
-            _SOURCE_SNAPSHOT_ID_COLUMN not in relevant.columns
-            or relevant[_SOURCE_SNAPSHOT_ID_COLUMN].null_count()
-        ):
-            raise ValueError(
-                "source snapshot lineage is incomplete for required backtest inputs"
-            )
-        self.get_history(list(self._id_map.values()), cutoff, requirements.warmup_days)
+        _validate_input_rows(frame, expected)
+        initial_ids = list(self._id_map.values())
+        if self.participation is not None:
+            initial_ids = [
+                InstrumentId(int(iid))
+                for iid in self.participation.filter(
+                    (pl.col("trade_date") == run_days[0])
+                    & (pl.col("status") == "eligible")
+                )["instrument_id"].to_list()
+            ]
+        if initial_ids:
+            self.get_history(initial_ids, cutoff, requirements.warmup_days)
 
     def _validate_required_source_snapshot_lineage(self, df: pl.DataFrame) -> None:
         """Fail closed when a research/context-bound run has incomplete bar lineage."""
@@ -425,6 +457,10 @@ class ProviderBackedDataFeed:
             for ticker, iid in self._id_map.items()
             if ticker in self._tickers and iid != self._benchmark_id
         }
+        if self.participation is not None:
+            expected &= set(
+                self.participation.filter(pl.col("requires_quote"))["instrument_id"]
+            )
         if _SOURCE_SNAPSHOT_ID_COLUMN not in df.columns:
             missing = sorted(int(item) for item in expected)
         else:
@@ -504,6 +540,19 @@ class ProviderBackedDataFeed:
         )
 
         day_df = df.filter(pl.col("trade_date").cast(pl.String) == date)
+        eligible_ids = None
+        if self.participation is not None:
+            daily = self.participation.filter(pl.col("trade_date") == date)
+            eligible_ids = frozenset(
+                InstrumentId(int(iid))
+                for iid in daily.filter(pl.col("status") == "eligible")["instrument_id"]
+            )
+            quote_ids = daily.filter(pl.col("execution_available"))[
+                "instrument_id"
+            ].to_list()
+            if self._benchmark_id is not None:
+                quote_ids.append(int(self._benchmark_id))
+            day_df = day_df.filter(pl.col("instrument_id").is_in(quote_ids))
         self._record_consumed_inputs(day_df, kind="execution", cutoff=date)
         day_source_snapshot_ids = _aggregate_source_snapshot_ids_by_instrument(
             day_df,
@@ -529,6 +578,7 @@ class ProviderBackedDataFeed:
             trade_date=date,
             step_time=step_time,
             bars=bars,
+            eligible_ids=eligible_ids,
             benchmark_close=benchmark_close,
             source_snapshot_ids={
                 iid: day_source_snapshot_ids[iid]

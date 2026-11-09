@@ -62,6 +62,7 @@ from ditto_application.processes.execution.backtest_audit import (
     ArtifactPersistContext,
     persist_artifact,
     persist_audit,
+    persist_daily_participation,
     resolve_run_id,
 )
 from ditto_application.processes.execution.backtest_config_validation import (
@@ -514,7 +515,17 @@ class BacktestService:
             ),
         )
         t0 = time.monotonic()
-        engine_result = engine_loop.run()
+        try:
+            engine_result = engine_loop.run()
+        finally:
+            persist_daily_participation(
+                self._data_feed,
+                self._options.artifact_service,
+                strategy_id=self._config.strategy_id,
+                run_id=run_id,
+                start_date=self._config.start_date,
+                completed_days={day for day, _ in collector.get_daily_snapshots()},
+            )
         self._last_run_cancelled = engine_result.cancelled
         elapsed = time.monotonic() - t0
 

@@ -79,10 +79,10 @@ def _exposure_aware_bundle(
         ctx.time_context.trade_date,
         strategy_id,
         run_id,
-        slice_.bars,
+        slice_.strategy_bars,
         getattr(slice_, "benchmark_close", None),
     )
-    instrument_ids = list(slice_.bars)
+    instrument_ids = list(slice_.strategy_bars)
     market_data = bundle.market_data.with_columns(
         pl.lit(ctx.time_context.trade_date).alias("trade_date"),
     )
@@ -208,8 +208,16 @@ def build_factor_bundle[CompiledT: _CompiledExpressionSet](
     if slice_ is None:
         msg = "slice_ required"
         raise AppProcessError(msg)
-    bars = slice_.bars
+    bars = slice_.strategy_bars
     instrument_ids = list(bars.keys())
+    if not instrument_ids:
+        return build_input_bundle(
+            ctx.time_context.trade_date,
+            strategy_id,
+            run_id,
+            bars,
+            slice_.benchmark_close,
+        )
 
     instruments = pl.DataFrame({"instrument_id": instrument_ids})
     history_df = data_feed.get_history(

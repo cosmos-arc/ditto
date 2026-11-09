@@ -13,12 +13,14 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+import polars as pl
 from ditto_backtest.config import (
     validate_canonical_sha256,
     validate_effective_parameter_identity,
     validate_research_snapshot_identity,
     validate_spec_hash,
 )
+from ditto_backtest.data_feed import DataFeed, ProviderBackedDataFeed
 from ditto_backtest.manifest import RunManifest
 from ditto_backtest.statistics import BacktestReport
 from ditto_execution.audit import ExecutionAuditService
@@ -378,3 +380,44 @@ def _resume_artifact_metadata(
         "resume_settlement_state_hash": provenance.get("settlement_state_hash", ""),
         "resume_runtime_state_hash": provenance.get("runtime_state_hash", ""),
     }
+
+
+def persist_daily_participation(
+    data_feed: DataFeed,
+    artifact_service: StrategyArtifactService | None,
+    *,
+    strategy_id: str,
+    run_id: str,
+    start_date: str,
+    completed_days: set[str],
+) -> None:
+    """Keep completed session evidence distinct from unexecuted preflight rows."""
+    if artifact_service is None or not isinstance(data_feed, ProviderBackedDataFeed):
+        return
+    participation = data_feed.participation
+    if participation is None:
+        return
+    rows = (
+        participation.filter(pl.col("trade_date") >= start_date)
+        .select(
+            "instrument_id",
+            "symbol",
+            "trade_date",
+            "status",
+            "warmup_available",
+            "warmup_required",
+            pl.col("trade_date").is_in(sorted(completed_days)).alias("evaluated"),
+        )
+        .to_dicts()
+    )
+    artifact_service.save_artifact(
+        StrategyArtifactRecord(
+            artifact_id=f"{run_id}:daily_participation",
+            strategy_id=strategy_id,
+            run_id=run_id,
+            artifact_type=ArtifactKind.DAILY_PARTICIPATION,
+            file_path="",
+            metadata={"participation": rows},
+            created_at=datetime.now(UTC).isoformat(),
+        )
+    )

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 367f6af9893d9a1e271efe278d0711c3485b42f279549434e6dc188f6f49f458
+ * Schema SHA-256: a3246676bf04b3aa52a46dc0b9537bd7150b5818eac2d5425a5e26b48bcd352e
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -7462,6 +7462,8 @@ export interface components {
             limitations?: string[];
             /** Members */
             members?: string[];
+            /** Participation */
+            participation?: components["schemas"]["DailyParticipationResponse"][];
             /**
              * Purpose
              * @enum {string}
@@ -9299,6 +9301,32 @@ export interface components {
             monte_carlo_var99: number | null;
             /** Parametric Var99 */
             parametric_var99: number | null;
+        };
+        /**
+         * DailyParticipationResponse
+         * @description Saved daily eligibility, with completed sessions explicitly distinguished.
+         */
+        DailyParticipationResponse: {
+            /**
+             * Evaluated
+             * @default false
+             */
+            evaluated: boolean;
+            /** Instrument Id */
+            instrument_id: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "eligible" | "outside_universe" | "not_listed" | "delisted" | "warmup" | "listing_rule_unavailable";
+            /** Symbol */
+            symbol: string;
+            /** Trade Date */
+            trade_date: string;
+            /** Warmup Available */
+            warmup_available: number;
+            /** Warmup Required */
+            warmup_required: number;
         };
         /**
          * DataCoverageInfo

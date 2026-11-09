@@ -9436,6 +9436,13 @@
             "title": "Members",
             "type": "array"
           },
+          "participation": {
+            "items": {
+              "$ref": "#/components/schemas/DailyParticipationResponse"
+            },
+            "title": "Participation",
+            "type": "array"
+          },
           "purpose": {
             "enum": [
               "historical_reconstruction",
@@ -13108,6 +13115,59 @@
           "monte_carlo_seed"
         ],
         "title": "DailyDecisionV3TailRiskResponse",
+        "type": "object"
+      },
+      "DailyParticipationResponse": {
+        "additionalProperties": false,
+        "description": "Saved daily eligibility, with completed sessions explicitly distinguished.",
+        "properties": {
+          "evaluated": {
+            "default": false,
+            "title": "Evaluated",
+            "type": "boolean"
+          },
+          "instrument_id": {
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "eligible",
+              "outside_universe",
+              "not_listed",
+              "delisted",
+              "warmup",
+              "listing_rule_unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "trade_date": {
+            "title": "Trade Date",
+            "type": "string"
+          },
+          "warmup_available": {
+            "title": "Warmup Available",
+            "type": "integer"
+          },
+          "warmup_required": {
+            "title": "Warmup Required",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "symbol",
+          "trade_date",
+          "status",
+          "warmup_available",
+          "warmup_required"
+        ],
+        "title": "DailyParticipationResponse",
         "type": "object"
       },
       "DataCoverageInfo": {

@@ -171,3 +171,72 @@ it("shows an old request without optional scope evidence as unrecorded", async (
 	expect(screen.getByText("尚无已保存的冻结来源。")).toBeVisible();
 	expect(screen.queryByText(/载荷校验通过/)).not.toBeInTheDocument();
 });
+
+it("reads saved daily exclusions with keyboard selection and explicit trading-day units", async () => {
+	server.use(
+		http.get("/api/v1/backtests/runs/:id/request", () =>
+			HttpResponse.json({
+				data: {
+					...request,
+					participation: [
+						{
+							instrument_id: 1,
+							symbol: "510300.SH",
+							trade_date: "2014-10-13",
+							status: "warmup",
+							warmup_available: 3,
+							warmup_required: 60,
+							evaluated: false,
+						},
+						{
+							instrument_id: 1,
+							symbol: "510300.SH",
+							trade_date: "2014-10-14",
+							status: "outside_universe",
+							warmup_available: 4,
+							warmup_required: 60,
+							evaluated: true,
+						},
+					],
+				},
+			}),
+		),
+	);
+	const user = userEvent.setup();
+	render(<BacktestRequestPanel run={run} />, { wrapper });
+	const select = await screen.findByLabelText("逐日参与日期");
+	expect(screen.getByText("交易日预热不足")).toBeVisible();
+	expect(screen.getByText("3 / 60 交易日")).toBeVisible();
+	expect(screen.getByText("预检；尚无执行证据")).toBeVisible();
+	select.focus();
+	await user.selectOptions(select, "2014-10-14");
+	expect(select).toHaveFocus();
+	expect(screen.getByText("当日不在证券池")).toBeVisible();
+	expect(screen.getByText("当日已执行")).toBeVisible();
+});
+
+it("rejects malformed saved eligibility instead of presenting it as executed", async () => {
+	server.use(
+		http.get("/api/v1/backtests/runs/:id/request", () =>
+			HttpResponse.json({
+				data: {
+					...request,
+					participation: [
+						{
+							instrument_id: 1,
+							symbol: "510300.SH",
+							trade_date: "2014-10-13",
+							status: "eligible",
+							warmup_available: 60,
+							warmup_required: 60,
+							evaluated: "false",
+						},
+					],
+				},
+			}),
+		),
+	);
+	render(<BacktestRequestPanel run={run} />, { wrapper });
+	expect(await screen.findByRole("alert")).toHaveTextContent("逐日参与记录无效");
+	expect(screen.queryByText("当日已执行")).not.toBeInTheDocument();
+});

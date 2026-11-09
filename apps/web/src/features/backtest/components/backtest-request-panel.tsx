@@ -11,6 +11,14 @@ const purposes: Readonly<Record<string, string>> = {
 	strict_snapshot_replay: "严格快照重放请求（资格以原证据为准）",
 	unclassified: "旧请求未记录用途",
 };
+const participationReasons: Readonly<Record<string, string>> = {
+	eligible: "可参与选股",
+	outside_universe: "当日不在证券池",
+	not_listed: "尚未上市",
+	delisted: "已退出上市",
+	warmup: "交易日预热不足",
+	listing_rule_unavailable: "上市初期规则未覆盖",
+};
 const statuses: Readonly<Record<string, string>> = {
 	ready: "输入预检通过；运行结果以运行状态为准",
 	blocked: "输入预检未通过",
@@ -22,6 +30,7 @@ export function BacktestRequestPanel({ run }: { readonly run: BacktestRun }) {
 	const recoverable = run.status === "failed" || run.status === "cancelled";
 	const [open, setOpen] = useState(recoverable);
 	const [storageError, setStorageError] = useState("");
+	const [participationDate, setParticipationDate] = useState("");
 	const storageKey = `ditto:backtest-recovery:${run.runId}`;
 	const [savedRun, setSavedRun] = useState(() => {
 		try {
@@ -85,6 +94,51 @@ export function BacktestRequestPanel({ run }: { readonly run: BacktestRun }) {
 						{request.limitations.map((text) => (
 							<p key={text}>{text}</p>
 						))}
+						{request.participation.length ? (
+							<div className="space-y-2">
+								<label className="flex items-center gap-2">
+									逐日参与日期
+									<select
+										value={participationDate || request.participation[0]?.tradeDate}
+										onChange={(event) => setParticipationDate(event.target.value)}
+									>
+										{[...new Set(request.participation.map((row) => row.tradeDate))].map((day) => (
+											<option key={day} value={day}>
+												{day}
+											</option>
+										))}
+									</select>
+								</label>
+								<p>可参与表示当日选股资格，不代表已买入；预热单位为交易日。退出池后仍保留持仓估值与卖出行情。</p>
+								<table className="w-full text-left">
+									<caption className="text-left font-medium">逐日参与与排除</caption>
+									<thead>
+										<tr>
+											<th scope="col">证券</th>
+											<th scope="col">参与原因</th>
+											<th scope="col">预热（已有 / 所需）</th>
+											<th scope="col">执行证据</th>
+										</tr>
+									</thead>
+									<tbody>
+										{request.participation
+											.filter((row) => row.tradeDate === (participationDate || request.participation[0]?.tradeDate))
+											.map((row) => (
+												<tr key={row.instrumentId}>
+													<th scope="row">{row.symbol}</th>
+													<td>{participationReasons[row.status] ?? "参与状态未确认"}</td>
+													<td>
+														{row.warmupAvailable} / {row.warmupRequired} 交易日
+													</td>
+													<td>{row.evaluated ? "当日已执行" : "预检；尚无执行证据"}</td>
+												</tr>
+											))}
+									</tbody>
+								</table>
+							</div>
+						) : (
+							<p>尚无已保存的逐日参与记录。</p>
+						)}
 						{request.sources.length ? (
 							<ul className="space-y-2">
 								{request.sources.map((source) => (

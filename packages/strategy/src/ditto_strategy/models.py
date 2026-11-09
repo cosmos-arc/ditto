@@ -34,6 +34,7 @@ class ArtifactKind(StrEnum):
     TRADE_LOG = "trade_log"
     BACKTEST_REPORT = "backtest_report"
     HISTORICAL_INPUTS = "historical_inputs"
+    DAILY_PARTICIPATION = "daily_participation"
     REPLAY_PROOF = "replay_proof"
     # 审计日志
     RISK_LOG = "risk_log"

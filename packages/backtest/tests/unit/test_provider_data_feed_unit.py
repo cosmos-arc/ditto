@@ -525,3 +525,58 @@ class TestProviderBackedDataFeedClassificationSnapshot:
 
         assert df.is_empty()
         assert called["count"] == 1
+
+
+@pytest.mark.pit
+def test_daily_membership_keeps_exit_quotes_and_blocks_real_quote_gaps() -> None:
+    """Late listing is explicit; membership exit cannot erase valuation quotes."""
+    from ditto_backtest.data_feed import FeedInputRequirements
+
+    days = ["2026-03-02", "2026-03-03", "2026-03-04", "2026-03-05"]
+    bars = _make_bars_df(1, days).with_columns(
+        pl.col("trade_date").str.to_date().alias("knowledge_date"),
+        pl.lit("source-1").alias("source_snapshot_id"),
+        pl.lit("adjustment-1").alias("adjustment_source_snapshot_id"),
+        pl.lit("baseline-1").alias("adjustment_baseline_source_snapshot_id"),
+    )
+    participation = pl.DataFrame(
+        {
+            "instrument_id": [1] * 4 + [2] * 4,
+            "trade_date": days * 2,
+            "status": ["warmup", "eligible", "outside_universe", "outside_universe"]
+            + ["not_listed"] * 4,
+            "requires_quote": [True] * 4 + [False] * 4,
+            "execution_available": [True] * 4 + [False] * 4,
+        }
+    )
+    provider = _StubProvider(bars, _make_schedule_df(days))
+    feed = ProviderBackedDataFeed(
+        provider,
+        tickers=("000001.SZ", "600000.SH"),
+        start_date=days[0],
+        end_date=days[-1],
+        id_map={"000001.SZ": InstrumentId(1), "600000.SH": InstrumentId(2)},
+        snapshot_providers=SnapshotProviders(
+            require_source_snapshot_lineage=True,
+            requirements=FeedInputRequirements(days[1], 0),
+            participation=participation,
+        ),
+    )
+    feed.validate_inputs()
+    assert set(feed.get_slice(days[1]).strategy_bars) == {1}
+    assert feed.get_slice(days[2]).strategy_bars == {}
+    assert set(feed.get_slice(days[2]).bars) == {1}
+    provider._bars_df = bars.filter(pl.col("trade_date") != days[2])
+    missing_feed = ProviderBackedDataFeed(
+        provider,
+        tickers=("000001.SZ", "600000.SH"),
+        start_date=days[0],
+        end_date=days[-1],
+        id_map={"000001.SZ": InstrumentId(1), "600000.SH": InstrumentId(2)},
+        snapshot_providers=SnapshotProviders(
+            requirements=FeedInputRequirements(days[1], 0),
+            participation=participation,
+        ),
+    )
+    with pytest.raises(ValueError, match="missing backtest member/date"):
+        missing_feed.validate_inputs()

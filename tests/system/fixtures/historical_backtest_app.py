@@ -112,6 +112,7 @@ def _daily(tickers: tuple[str, ...]) -> pl.DataFrame:
             }
             for ticker in tickers
             for i, day in enumerate(dates)
+            if ticker != "510050.SH" or day >= date(2014, 10, 14)
         ]
     )
 
@@ -131,6 +132,17 @@ def _seed_history() -> None:
                 list_date="2005-04-08",
             ),
         )
+        InstrumentWriter(client=client, cache=None).register(
+            2_001_004,
+            InstrumentRegistration(
+                source_ticker="510050.SH",
+                ticker="510050",
+                name="晚上市-固定样例",
+                exchange="SSE",
+                asset_class="etf",
+                list_date="2014-10-14",
+            ),
+        )
         universe = UniverseWriter(client, DataCache())
         universe.create_universe(
             "csi_etf_broad",
@@ -141,16 +153,31 @@ def _seed_history() -> None:
             "csi_etf_broad",
             [
                 {
-                    "instrument_id": iid,
+                    "instrument_id": 2_001_001,
                     "effective_from": "2014-01-01",
                     "source": "synthetic",
-                }
-                for iid in [2_001_001, 2_001_002]
+                },
+                {
+                    "instrument_id": 2_001_002,
+                    "effective_from": "2014-01-01",
+                    "effective_to": "2014-10-20",
+                    "source": "synthetic",
+                },
+                {
+                    "instrument_id": 2_001_002,
+                    "effective_from": "2014-11-03",
+                    "source": "synthetic",
+                },
+                {
+                    "instrument_id": 2_001_004,
+                    "effective_from": "2014-01-01",
+                    "source": "synthetic",
+                },
             ],
         )
     finally:
         pool.close_all()
-    _retain("etf_daily", _daily(("510300.SH", "510500.SH")))
+    _retain("etf_daily", _daily(("510300.SH", "510500.SH", "510050.SH")))
     _retain("index_daily", _daily(("000300.SH",)))
     dates = pl.date_range(date(2014, 1, 1), date(2014, 12, 31), eager=True)
     _retain(
@@ -165,7 +192,7 @@ _seed_history()
 @app.post("/system-fixture/history/repair")
 def repair() -> dict[str, bool]:
     """Install the missing synthetic input only in this isolated fixture."""
-    frame = _daily(("510300.SH", "510500.SH")).select(
+    frame = _daily(("510300.SH", "510500.SH", "510050.SH")).select(
         "source_ticker", "trade_date", "knowledge_date"
     )
     _retain("fund_adj", frame.with_columns(pl.lit(1.0).alias("adj_factor")))
