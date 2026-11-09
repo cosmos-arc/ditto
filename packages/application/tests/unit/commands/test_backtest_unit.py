@@ -889,3 +889,73 @@ class TestResumeRunHandler:
 
         with pytest.raises(AppCommandError, match="Run not found"):
             handler.handle(ResumeRunCommand(run_id="missing"))
+
+
+def test_historical_retry_keeps_original_request_and_replays_one_child(
+    mock_catalog_service: Mock,
+    mock_factor_bridge: Mock,
+) -> None:
+    import orjson
+
+    records: dict[str, StrategyRunRecord] = {}
+    service = Mock(spec=RunLifecycleService)
+
+    def create_run(**kwargs: Any) -> None:
+        records.setdefault(
+            kwargs["run_id"], StrategyRunRecord(**kwargs, status="pending")
+        )
+
+    service.create_run.side_effect = create_run
+    service.get_run.side_effect = records.get
+    handler = BacktestRunHandler(
+        catalog_service=mock_catalog_service,
+        run_service=service,
+        factor_bridge=mock_factor_bridge,
+    )
+    original = handler.handle(
+        BacktestRunCommand(
+            strategy_id="momentum-etf",
+            strategy_version=7,
+            start_date="2014-01-01",
+            end_date="2026-11-08",
+            historical_reconstruction=True,
+            idempotency=build_mutation_idempotency(
+                operation_id="backtests_trigger_backtest",
+                resource_id="backtests",
+                raw_key="initial",
+                request_payload={"historical_reconstruction": True},
+            ),
+        )
+    )
+    record = replace(
+        records[original.run_id], status="failed", error_message="missing 2014 source"
+    )
+    records[record.run_id] = record
+    retry = RetryRunHandler(run_service=service)
+    command = RetryRunCommand(
+        run_id=record.run_id,
+        idempotency=build_mutation_idempotency(
+            operation_id="backtests_retry_run",
+            resource_id=record.run_id,
+            raw_key="retry-1",
+            request_payload={"run_id": record.run_id},
+        ),
+    )
+    first = retry.handle(command)
+    assert retry.handle(command) == first
+    assert len(records) == 2
+    assert records[record.run_id] == record
+    saved = orjson.loads(records[first].config_json)
+    assert saved["historical_reconstruction"] is True
+    assert (
+        saved["start_date"],
+        saved["end_date"],
+        saved["strategy_version"],
+        saved["universe"],
+    ) == (
+        "2014-01-01",
+        "2026-11-08",
+        7,
+        "csi_etf_broad",
+    )
+    assert records[first].parent_run_id == record.run_id

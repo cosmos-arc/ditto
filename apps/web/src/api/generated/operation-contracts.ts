@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 73d5114fca705ce869f139cbd106e0aefee65c29b77a7f217830c33c368af32d
+ * Schema SHA-256: 367f6af9893d9a1e271efe278d0711c3485b42f279549434e6dc188f6f49f458
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -258,6 +258,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/backtests/runs/{run_id}/report": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/backtests/runs/{run_id}/request": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -2046,6 +2056,12 @@ export const operationRequestContracts = {
       "path": ["run_id"],
     },
   },
+  "get /api/v1/backtests/runs/{run_id}/request": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["run_id"],
+    },
+  },
   "get /api/v1/backtests/runs/{run_id}/trades": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
@@ -2683,7 +2699,7 @@ export const operationRequestContracts = {
   },
   "post /api/v1/backtests/runs/{run_id}/retry": {
     parameters: {
-      "header": ["X-Ditto-API-Contract-Version"],
+      "header": ["Idempotency-Key", "X-Ditto-API-Contract-Version"],
       "path": ["run_id"],
     },
   },

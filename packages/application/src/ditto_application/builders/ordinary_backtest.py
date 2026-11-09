@@ -24,6 +24,7 @@ def build_ordinary_rules(
     commission_rate: float,
     start: str,
     end: str,
+    historical_reconstruction: bool = False,
 ) -> InMemoryRuleProvider:
     """Bind every frozen member to an explicitly covered listing."""
     rules: dict[InstrumentId, InstrumentRules] = {}
@@ -46,6 +47,7 @@ def build_ordinary_rules(
             commission_rate=commission_rate,
             start=start,
             end=end,
+            historical_reconstruction=historical_reconstruction,
         )
     return InMemoryRuleProvider(
         definitions={iid: rule[0] for iid, rule in rules.items()},
@@ -72,11 +74,14 @@ def ordinary_market_transform(
             iid = InstrumentId(int(row["instrument_id"]))
             day = str(row["trade_date"])
             try:
-                row.update(
-                    ordinary_execution_fields(
-                        row, provider.get_rules(day, [iid])[iid], start_date=start_date
+                if day >= start_date:
+                    row.update(
+                        ordinary_execution_fields(
+                            row,
+                            provider.get_rules(day, [iid])[iid],
+                            start_date=start_date,
+                        )
                     )
-                )
             except ValueError as exc:
                 raise AppBuilderError(str(exc)) from exc
             row.pop("_previous_adj")

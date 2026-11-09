@@ -174,6 +174,7 @@ test("strategy detail submits an exact ordinary version and recovers a lost resp
 		end_date: "2025-01-31",
 		initial_cash: 250000.5,
 		allow_experimental_data: true,
+        historical_reconstruction: false,
 	});
 	const runId = submissions[0]?.runId;
 	expect(runId).toBeTruthy();

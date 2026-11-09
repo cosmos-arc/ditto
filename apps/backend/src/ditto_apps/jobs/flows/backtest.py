@@ -44,6 +44,7 @@ class BacktestFlowRequest:
     participation_rate: float = 0.05
     fill_mode: FillMode = "partial"
     allow_experimental_data: bool = False
+    historical_reconstruction: bool = False
     parent_run_id: str = ""
     resume_from_run_id: str = ""
     resume_checkpoint_trade_date: str = ""
@@ -80,6 +81,9 @@ class BacktestFlowRequest:
                 params,
                 "allow_experimental_data",
                 False,
+            ),
+            historical_reconstruction=_bool_param(
+                params, "historical_reconstruction", False
             ),
             parent_run_id=_str_param(params, "parent_run_id"),
             resume_from_run_id=_str_param(params, "resume_from_run_id"),
@@ -161,6 +165,7 @@ def run_backtest_flow(
     slippage_model = build_slippage_model(cost_cfg) if cost_cfg is not None else None
 
     config = BacktestCatalogRequestConfig(
+        historical_reconstruction=flow_request.historical_reconstruction,
         strategy_id=flow_request.strategy_id,
         strategy_version=(
             str(flow_request.strategy_version)

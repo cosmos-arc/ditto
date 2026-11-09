@@ -1,6 +1,7 @@
 """Bind durable ingestion evidence to exact provider content."""
 
 from collections.abc import Iterable
+from datetime import datetime
 
 from ditto_data.catalog.source_snapshot import ProviderSnapshot
 from ditto_data.ingestion.partition_state import (
@@ -39,12 +40,16 @@ def checkpoint_matches_snapshot(
 
 
 def snapshot_completed(
-    snapshot: ProviderSnapshot, lifecycle: PartitionLifecycleReader
+    snapshot: ProviderSnapshot,
+    lifecycle: PartitionLifecycleReader,
+    *,
+    completed_before: datetime | None = None,
 ) -> bool:
     """The COMPLETE row itself pins the exact snapshot identity it attests."""
     return any(
         checkpoint_matches_snapshot(checkpoint, snapshot)
         and checkpoint.complete_evidence_id == snapshot.snapshot_id
+        and (completed_before is None or checkpoint.updated_at <= completed_before)
         for checkpoint in lifecycle.list_complete(dataset_id=snapshot.dataset_id)
     )
 

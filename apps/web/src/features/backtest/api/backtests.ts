@@ -9,6 +9,7 @@ export async function createBacktestRun(input: {
 	readonly endDate: string;
 	readonly initialCash: number;
 	readonly allowExperimental: boolean;
+	readonly historicalReconstruction?: boolean;
 }) {
 	const result = await apiClient.post("/api/v1/backtests/runs", {
 		params: { header: { "Idempotency-Key": input.idempotencyKey } },
@@ -19,6 +20,7 @@ export async function createBacktestRun(input: {
 			end_date: input.endDate,
 			initial_cash: input.initialCash,
 			allow_experimental_data: input.allowExperimental,
+			historical_reconstruction: input.historicalReconstruction ?? false,
 		},
 	});
 	if (
@@ -38,6 +40,7 @@ import type {
 	BacktestBenchmark,
 	BacktestNavPoint,
 	BacktestReport,
+	BacktestRequest,
 	BacktestRun,
 	BacktestTradeRecord,
 } from "../types";
@@ -202,4 +205,45 @@ export async function fetchBacktestAudit(runId: string): Promise<BacktestAuditRe
 		payload: row.payload ?? {},
 		createdAt: row.created_at,
 	}));
+}
+
+export async function fetchBacktestRequest(runId: string): Promise<BacktestRequest> {
+	const dto = await apiClient.get("/api/v1/backtests/runs/{run_id}/request", {
+		params: { path: { run_id: runId } },
+	});
+	return {
+		runId: dto.run_id,
+		purpose: dto.purpose,
+		startDate: dto.start_date ?? null,
+		endDate: dto.end_date ?? null,
+		initialCash: dto.initial_cash ?? null,
+		universe: dto.universe,
+		inputStatus: dto.input_status,
+		frozenAt: dto.frozen_at,
+		reason: dto.reason,
+		members: dto.members ?? [],
+		limitations: dto.limitations ?? [],
+		sources: (dto.sources ?? []).map((source) => ({
+			dataset: source.dataset,
+			source: source.source,
+			snapshotId: source.snapshot_id,
+			checksum: source.checksum,
+			startDate: source.request_start,
+			endDate: source.request_end,
+			receivedAt: source.received_at,
+			observedAt: source.observed_at,
+			rows: source.rows,
+			verified: source.verified,
+		})),
+	};
+}
+
+export async function retryBacktestRun(input: { readonly runId: string; readonly idempotencyKey: string }) {
+	const dto = await apiClient.post("/api/v1/backtests/runs/{run_id}/retry", {
+		params: { path: { run_id: input.runId }, header: { "Idempotency-Key": input.idempotencyKey } },
+	});
+	if (!/^[A-Za-z0-9._:-]+$/u.test(dto.run_id) || dto.parent_run_id !== input.runId) {
+		throw new Error("恢复响应无效；请重试核对同一次恢复。");
+	}
+	return { runId: dto.run_id };
 }

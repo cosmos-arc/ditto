@@ -15,6 +15,7 @@ import { BacktestAuditView } from "./backtest-audit-view";
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
 import { type BacktestOverlayId, BacktestOverlays, backtestActions } from "./backtest-overlays";
 import { BacktestOverview } from "./backtest-overview";
+import { BacktestRequestPanel } from "./backtest-request-panel";
 import { BacktestReturnsView } from "./backtest-returns-view";
 import { BacktestTrades } from "./backtest-trades";
 import { BacktestUsage } from "./backtest-usage";
@@ -60,7 +61,7 @@ export function BacktestPage() {
 	const { id } = useParams({ strict: false }) as { id?: string };
 	const runId = id ?? "";
 	const runQuery = useBacktestRun(runId);
-	const reportQuery = useBacktestReport(runQuery.isSuccess ? runId : "");
+	const reportQuery = useBacktestReport(runQuery.data?.status === "completed" ? runId : "");
 	const { runIds: compareIds, error: compareError, setIncluded } = useBacktestComparison();
 	const [compareNotice, setCompareNotice] = useState("");
 	const [tab, setTab] = useState<BacktestTab>("overview");
@@ -147,6 +148,7 @@ export function BacktestPage() {
 				</div>
 			</ShellHeaderExtension>
 			<BacktestUsage report={report} />
+			<BacktestRequestPanel key={run.runId} run={run} />
 			<div className="px-4 py-1 text-xs text-(--color-foreground-tertiary)">
 				{comparisonLifetime}
 				{compareError ? <p role="alert">{compareError}</p> : <p role="status">{compareNotice}</p>}
@@ -173,7 +175,11 @@ export function BacktestPage() {
 									{run.completedDays}/{run.totalDays || "—"} DAYS
 								</span>
 							</div>
-							<BacktestKpiStrip jobId={runId} />
+							{run.status === "completed" ? (
+								<BacktestKpiStrip jobId={runId} />
+							) : (
+								<p className="px-4 py-2 text-xs">{run.errorMessage || "运行尚未完成；请求与输入状态见上方。"}</p>
+							)}
 						</div>
 					}
 					tabs={
@@ -197,7 +203,11 @@ export function BacktestPage() {
 							<TabsContent value="overview" className="m-0 h-full min-h-0 overflow-y-auto">
 								<WorkbenchPanel title="净值证据" description="策略与基准资源独立加载；基准缺失不会改写策略净值。">
 									<div data-info-level="l1" data-info-unit="backtest-overview">
-										<BacktestOverview jobId={runId} />
+										{run.status === "completed" ? (
+											<BacktestOverview jobId={runId} />
+										) : (
+											<p>本次运行尚无完成的净值报告。</p>
+										)}
 									</div>
 								</WorkbenchPanel>
 							</TabsContent>

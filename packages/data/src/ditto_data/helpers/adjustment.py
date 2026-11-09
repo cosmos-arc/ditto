@@ -115,6 +115,7 @@ def apply_qfq_adj(
             "knowledge_date",
             "source",
             "source_ticker",
+            "source_snapshot_id",
             "adj_factor",
         )
         if column in baseline_df.columns

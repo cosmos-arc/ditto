@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 73d5114fca705ce869f139cbd106e0aefee65c29b77a7f217830c33c368af32d
+ * Schema SHA-256: 367f6af9893d9a1e271efe278d0711c3485b42f279549434e6dc188f6f49f458
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -752,6 +752,28 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["backtests_get_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/backtests/runs/{run_id}/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Request
+         * @description 重开原始请求与冻结来源；预检失败不需要伪造绩效报告。
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["backtests_get_request"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4292,6 +4314,18 @@ export interface components {
              */
             read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
+        /** APIResponse[BacktestRequestResponse] */
+        APIResponse_BacktestRequestResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["BacktestRequestResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
+        };
         /** APIResponse[BacktestRunTriggerResponse] */
         APIResponse_BacktestRunTriggerResponse_: {
             /** @description 响应数据 */
@@ -7406,6 +7440,51 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * BacktestRequestResponse
+         * @description Saved request remains readable even when no report can be produced.
+         */
+        BacktestRequestResponse: {
+            /** End Date */
+            end_date?: string | null;
+            /**
+             * Frozen At
+             * @default
+             */
+            frozen_at: string;
+            /** Initial Cash */
+            initial_cash?: number | null;
+            /**
+             * Input Status
+             * @enum {string}
+             */
+            input_status: "pending" | "ready" | "blocked" | "unrecorded";
+            /** Limitations */
+            limitations?: string[];
+            /** Members */
+            members?: string[];
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "historical_reconstruction" | "limited_historical_research" | "strict_snapshot_replay" | "unclassified";
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /** Run Id */
+            run_id: string;
+            /** Sources */
+            sources?: components["schemas"]["HistoricalSourceResponse"][];
+            /** Start Date */
+            start_date?: string | null;
+            /**
+             * Universe
+             * @default
+             */
+            universe: string;
+        };
+        /**
          * BacktestRunTriggerResponse
          * @description 回测触发响应.
          */
@@ -8531,6 +8610,12 @@ export interface components {
              * @description 结束日期 (YYYY-MM-DD)
              */
             end_date: string;
+            /**
+             * Historical Reconstruction
+             * @description 普通历史重建:冻结实际留存来源;不认证本地历史持有或严格快照重放
+             * @default false
+             */
+            historical_reconstruction: boolean;
             /**
              * Initial Cash
              * @description 初始资金
@@ -11584,6 +11669,32 @@ export interface components {
             status: "ok";
             /** Timestamp */
             timestamp: number;
+        };
+        /**
+         * HistoricalSourceResponse
+         * @description Verified retained identity and its actual local receipt.
+         */
+        HistoricalSourceResponse: {
+            /** Checksum */
+            checksum: string;
+            /** Dataset */
+            dataset: string;
+            /** Observed At */
+            observed_at: string;
+            /** Received At */
+            received_at: string;
+            /** Request End */
+            request_end: string;
+            /** Request Start */
+            request_start: string;
+            /** Rows */
+            rows: number;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Source */
+            source: string;
+            /** Verified */
+            verified: boolean;
         };
         /**
          * HistoricalUniverseBody
@@ -19789,6 +19900,94 @@ export interface operations {
             };
         };
     };
+    backtests_get_request: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_BacktestRequestResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     backtests_resume_run: {
         parameters: {
             query?: never;
@@ -19881,6 +20080,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "Idempotency-Key"?: string | null;
                 /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
                 "X-Ditto-API-Contract-Version"?: "v1";
             };

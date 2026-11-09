@@ -69,12 +69,26 @@ class SnapshotReadService:
         self._payloads = payloads
         self._lifecycle = lifecycle
 
-    def read(self, snapshot_id: str) -> SnapshotContents:
+    def list_snapshots(
+        self, *, dataset_id: str, source: str
+    ) -> tuple[ProviderSnapshot, ...]:
+        """Inventory retained identities without reading mutable canonical tables."""
+        return self._snapshots.list_snapshots(dataset_id=dataset_id, source=source)
+
+    def read(
+        self, snapshot_id: str, *, completed_before: datetime | None = None
+    ) -> SnapshotContents:
         """Verify the exact content identity and completion before reading bytes."""
         snapshot = self._snapshots.get_snapshot(snapshot_id)
         if snapshot is None or snapshot.snapshot_id != snapshot.expected_snapshot_id():
             raise ValueError("provider snapshot is missing or has invalid identity")
-        if not snapshot_completed(snapshot, self._lifecycle):
+        if completed_before is not None and (
+            completed_before.tzinfo is None or snapshot.created_at > completed_before
+        ):
+            raise ValueError("snapshot was not retained at the freeze cutoff")
+        if not snapshot_completed(
+            snapshot, self._lifecycle, completed_before=completed_before
+        ):
             raise ValueError("provider snapshot has no COMPLETE checkpoint")
         if not snapshot.payload_retained or snapshot.payload_uri is None:
             raise ValueError("provider snapshot has no retained payload")

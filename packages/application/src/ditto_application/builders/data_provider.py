@@ -31,7 +31,7 @@ from ditto_features.services import DerivedQueryService
 from ditto_application.catalog_freshness import dataset_namespace, observed_at
 from ditto_application.exceptions import AppBuilderError
 
-__all__ = ["ServiceBackedDataProvider"]
+__all__ = ["ServiceBackedDataProvider", "resolve_frozen_snapshot_rows"]
 
 _SOURCE_SNAPSHOT_COLUMN = "source_snapshot_id"
 
@@ -182,8 +182,9 @@ def _apply_ranged(
     matches = (
         (pl.col("_lineage_source") == window.source)
         & (
-            pl.lit(window.source_ticker is None)
-            | (pl.col("_lineage_ticker") == window.source_ticker)
+            pl.lit(True)
+            if window.source_ticker is None
+            else pl.col("_lineage_ticker") == window.source_ticker
         )
         & (pl.col("_lineage_date") >= window.start_date)
         & (pl.col("_lineage_date") <= window.end_date)
@@ -283,7 +284,7 @@ def _catalog_windows(
 
 
 def _partition_windows(
-    windows: tuple[_CatalogSnapshotWindow, ...],
+    windows: Sequence[_CatalogSnapshotWindow],
 ) -> tuple[
     dict[tuple[str, str, date], _CatalogSnapshotWindow],
     dict[tuple[str, date], _CatalogSnapshotWindow],
@@ -335,31 +336,7 @@ def _attach_catalog_source_snapshots(
         return frame.with_columns(
             pl.lit(None, dtype=pl.String).alias(_SOURCE_SNAPSHOT_COLUMN)
         )
-    # Vectorized lineage. Exact-date windows (the common snapshot shape) resolve
-    # through joins and only the few multi-date windows iterate. Ticker-specific
-    # windows (exact or ranged) form the preferred class, wildcard windows the
-    # fallback, and within a class the most recently observed snapshot wins per
-    # row;无覆盖窗口的行保持 null lineage,由下游 PIT 边界 fail-closed。
-    keyed, wildcard_date, ranged = _partition_windows(windows)
-    lineage = _lineage_frame(frame)
-    lineage = _apply_exact(
-        lineage,
-        tuple(keyed.items()),
-        ["_lineage_source", "_lineage_ticker", "_lineage_date"],
-        lineage_class="ticker",
-    )
-    for window in sorted(ranged, key=_freshness_key):
-        if window.source_ticker is not None:
-            lineage = _apply_ranged(lineage, window, lineage_class="ticker")
-    lineage = _apply_exact(
-        lineage,
-        tuple(wildcard_date.items()),
-        ["_lineage_source", "_lineage_date"],
-        lineage_class="wildcard",
-    )
-    for window in sorted(ranged, key=_freshness_key):
-        if window.source_ticker is None:
-            lineage = _apply_ranged(lineage, window, lineage_class="wildcard")
+    lineage = _resolve_snapshot_windows(frame, windows)
     # A canonical write can precede snapshot registration. Durable write intents
     # therefore also block lineage until recovery completes, even without a snapshot.
     pending = [
@@ -391,6 +368,51 @@ def _attach_catalog_source_snapshots(
         .join(resolved, on="_lineage_row", how="left")
         .drop("_lineage_row")
     )
+
+
+def resolve_frozen_snapshot_rows(
+    frame: pl.DataFrame, snapshots: Sequence[ProviderSnapshot]
+) -> pl.DataFrame:
+    """Resolve the same scope/recency policy against an already frozen catalog."""
+    windows = tuple(
+        replace(window, source_ticker=ticker)
+        for snapshot in snapshots
+        if (window := _snapshot_window(snapshot)) is not None
+        for ticker in (sorted(snapshot.source_ticker_scope) or [None])
+    )
+    resolved = _resolve_snapshot_windows(frame, windows).sort("_lineage_row")
+    return frame.with_columns(resolved["_lineage_snapshot"].alias("source_snapshot_id"))
+
+
+def _resolve_snapshot_windows(
+    frame: pl.DataFrame, windows: Sequence[_CatalogSnapshotWindow]
+) -> pl.DataFrame:
+    # Vectorized lineage. Exact-date windows (the common snapshot shape) resolve
+    # through joins and only the few multi-date windows iterate. Ticker-specific
+    # windows (exact or ranged) form the preferred class, wildcard windows the
+    # fallback, and within a class the most recently observed snapshot wins per
+    # row;无覆盖窗口的行保持 null lineage,由下游 PIT 边界 fail-closed。
+    keyed, wildcard_date, ranged = _partition_windows(windows)
+    lineage = _lineage_frame(frame)
+    lineage = _apply_exact(
+        lineage,
+        tuple(keyed.items()),
+        ["_lineage_source", "_lineage_ticker", "_lineage_date"],
+        lineage_class="ticker",
+    )
+    for window in sorted(ranged, key=_freshness_key):
+        if window.source_ticker is not None:
+            lineage = _apply_ranged(lineage, window, lineage_class="ticker")
+    lineage = _apply_exact(
+        lineage,
+        tuple(wildcard_date.items()),
+        ["_lineage_source", "_lineage_date"],
+        lineage_class="wildcard",
+    )
+    for window in sorted(ranged, key=_freshness_key):
+        if window.source_ticker is None:
+            lineage = _apply_ranged(lineage, window, lineage_class="wildcard")
+    return lineage
 
 
 class ServiceBackedDataProvider:
