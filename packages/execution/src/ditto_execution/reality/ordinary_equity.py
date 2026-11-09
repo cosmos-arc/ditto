@@ -28,6 +28,7 @@ from ditto_kernel.trading import (
 from ditto_execution.reality.price import round_to_tick
 
 __all__ = [
+    "MIN_ORDINARY_LISTED_DAYS",
     "RULES_EFFECTIVE_FROM",
     "RULES_OBSERVED_AT",
     "CashEquityListing",
@@ -37,7 +38,7 @@ __all__ = [
 
 RULES_OBSERVED_AT = "2026-11-08T06:22:22+00:00"
 RULES_EFFECTIVE_FROM = "2023-08-28"
-_MIN_LISTED_CALENDAR_DAYS = 30
+MIN_ORDINARY_LISTED_DAYS = 30
 
 # Only the explicitly selected, verified ordinary-research instruments. This is
 # deliberately not a classifier for arbitrary ETFs, STAR/BSE stocks or IPOs.
@@ -100,7 +101,7 @@ def ordinary_equity_rules(
         )
     if (
         date.fromisoformat(start) - date.fromisoformat(listing.list_date)
-    ).days < _MIN_LISTED_CALENDAR_DAYS or (
+    ).days < MIN_ORDINARY_LISTED_DAYS or (
         listing.delist_date is not None and listing.delist_date <= end
     ):
         raise ValueError(

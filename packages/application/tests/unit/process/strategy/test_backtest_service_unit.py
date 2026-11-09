@@ -1503,6 +1503,7 @@ class TestBuildFactorAwareBundleBuilder:
         )
         mock_slice = MagicMock(spec=Slice)
         mock_slice.bars = {iid1: bar1, iid2: bar2}
+        mock_slice.strategy_bars = mock_slice.bars
         mock_slice.benchmark_close = 3000.0
 
         from ditto_backtest.steps import StepContext

@@ -379,6 +379,26 @@ class HistoricalSourceResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
 
+class DailyParticipationResponse(BaseModel):
+    """Saved daily eligibility, with completed sessions explicitly distinguished."""
+
+    instrument_id: int
+    symbol: str
+    trade_date: str
+    status: Literal[
+        "eligible",
+        "outside_universe",
+        "not_listed",
+        "delisted",
+        "warmup",
+        "listing_rule_unavailable",
+    ]
+    warmup_available: int
+    warmup_required: int
+    evaluated: bool = False
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
 class BacktestRequestResponse(BaseModel):
     """Saved request remains readable even when no report can be produced."""
 
@@ -398,5 +418,6 @@ class BacktestRequestResponse(BaseModel):
     reason: str = ""
     members: list[str] = Field(default_factory=list)
     sources: list[HistoricalSourceResponse] = Field(default_factory=list)
+    participation: list[DailyParticipationResponse] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
     model_config = ConfigDict(strict=True, extra="forbid")

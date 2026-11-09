@@ -1,10 +1,12 @@
 """Assemble observed ordinary research rules and market inputs (#723)."""
 
 from collections.abc import Callable
+from datetime import date, timedelta
 
 import polars as pl
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.reality.ordinary_equity import (
+    MIN_ORDINARY_LISTED_DAYS,
     CashEquityListing,
     ordinary_equity_rules,
     ordinary_execution_fields,
@@ -24,12 +26,21 @@ def build_ordinary_rules(
     commission_rate: float,
     start: str,
     end: str,
-    historical_reconstruction: bool = False,
+    historical_roster: list[dict[str, object]] | None = None,
 ) -> InMemoryRuleProvider:
     """Bind every frozen member to an explicitly covered listing."""
     rules: dict[InstrumentId, InstrumentRules] = {}
+    frozen = (
+        {int(str(row["instrument_id"])): row for row in historical_roster}
+        if historical_roster is not None
+        else None
+    )
     for iid in instrument_ids:
-        record = metadata.instrument.get_instrument(iid)
+        record = (
+            frozen.get(iid)
+            if frozen is not None
+            else metadata.instrument.get_instrument(iid)
+        )
         if record is None or record.get("asset_class") != asset_class:
             raise AppBuilderError(f"missing or mismatched asset definition: {iid}")
         listing = CashEquityListing(
@@ -42,12 +53,23 @@ def build_ordinary_rules(
             if record.get("delist_date")
             else None,
         )
+        rule_start = start
+        if historical_roster is not None:
+            rule_start = max(
+                start,
+                (
+                    date.fromisoformat(listing.list_date)
+                    + timedelta(days=MIN_ORDINARY_LISTED_DAYS)
+                ).isoformat(),
+            )
+            if rule_start > end:
+                continue
         rules[InstrumentId(iid)] = ordinary_equity_rules(
             listing,
             commission_rate=commission_rate,
-            start=start,
+            start=rule_start,
             end=end,
-            historical_reconstruction=historical_reconstruction,
+            historical_reconstruction=historical_roster is not None,
         )
     return InMemoryRuleProvider(
         definitions={iid: rule[0] for iid, rule in rules.items()},
@@ -60,8 +82,18 @@ def ordinary_market_transform(
     provider: InMemoryRuleProvider,
     *,
     start_date: str,
+    participation: pl.DataFrame | None = None,
 ) -> Callable[[pl.DataFrame], pl.DataFrame]:
     """Use real status/limits for stocks and the verified ETF limit formula."""
+    execution_dates = (
+        set(
+            participation.filter(pl.col("execution_available"))
+            .select("instrument_id", "trade_date")
+            .iter_rows()
+        )
+        if participation is not None
+        else None
+    )
 
     def transform(frame: pl.DataFrame) -> pl.DataFrame:
         if frame.is_empty():
@@ -74,7 +106,10 @@ def ordinary_market_transform(
             iid = InstrumentId(int(row["instrument_id"]))
             day = str(row["trade_date"])
             try:
-                if day >= start_date:
+                available = (
+                    execution_dates is None or (int(iid), day) in execution_dates
+                )
+                if day >= start_date and available:
                     row.update(
                         ordinary_execution_fields(
                             row,

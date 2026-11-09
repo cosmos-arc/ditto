@@ -73,6 +73,6 @@ class StrategyStep:
             trade_date=ctx.time_context.trade_date,
             strategy_id=self._strategy_id,
             run_id=self._strategy_run_id,
-            bars=ctx.bars,
+            bars=slice_.strategy_bars,
             benchmark_close=slice_.benchmark_close,
         )

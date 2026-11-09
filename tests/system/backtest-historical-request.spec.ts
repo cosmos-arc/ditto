@@ -33,7 +33,9 @@ test("ordinary 2014 request persists its failed freeze and recovers into a new r
 	const oldRequest = (await oldResponse.json()).data;
 	expect(oldRequest.input_status).toBe("blocked");
 	expect(Date.parse(oldRequest.sources[0].received_at)).toBeGreaterThanOrEqual(Date.UTC(2026, 0, 1));
-	expect(oldRequest.sources[0].request_start).toBe("2014-01-01");
+	expect(oldRequest.sources.find((source: { dataset: string }) => source.dataset === "etf_daily").request_start).toBe(
+		"2014-01-01",
+	);
 	const repair = await page.request.post(`${apiOrigin}/system-fixture/history/repair`);
 	expect(repair.ok()).toBeTruthy();
 	const recover = page.getByRole("button", { name: "补证后沿原配置新建运行" });
@@ -59,7 +61,8 @@ test("ordinary 2014 request persists its failed freeze and recovers into a new r
 		page.request.get(`${apiOrigin}/api/v1/backtests/runs/${originalId}/request`),
 	]);
 	expect((await newRun.json()).data.parent_run_id).toBe(originalId);
-	expect((await newRequest.json()).data).toMatchObject({
+	const saved = (await newRequest.json()).data;
+	expect(saved).toMatchObject({
 		purpose: "historical_reconstruction",
 		input_status: "ready",
 		start_date: "2014-10-13",
@@ -67,6 +70,37 @@ test("ordinary 2014 request persists its failed freeze and recovers into a new r
 		initial_cash: 250000,
 		members: oldRequest.members,
 	});
+	expect(saved.participation.every((row: { evaluated: boolean }) => row.evaluated)).toBe(true);
+	expect(
+		saved.participation.find(
+			(row: { instrument_id: number; trade_date: string }) =>
+				row.instrument_id === 2001004 && row.trade_date === "2014-10-13",
+		).status,
+	).toBe("not_listed");
+	expect(
+		saved.participation.find(
+			(row: { instrument_id: number; trade_date: string }) =>
+				row.instrument_id === 2001004 && row.trade_date === "2014-10-14",
+		).status,
+	).toBe("warmup");
+	expect(
+		saved.participation.find(
+			(row: { instrument_id: number; trade_date: string }) =>
+				row.instrument_id === 2001002 && row.trade_date === "2014-10-20",
+		).status,
+	).toBe("outside_universe");
+	const dateSelector = page.getByLabel("逐日参与日期");
+	await dateSelector.focus();
+	await expect(dateSelector).toBeFocused();
+	await dateSelector.selectOption("2014-10-14");
+	await expect(dateSelector).toHaveValue("2014-10-14");
+	await expect(dateSelector).toBeFocused();
+	await expect(page.getByRole("row", { name: /510050.SH.*交易日预热不足/ })).toBeVisible();
+	await dateSelector.selectOption("2014-10-20");
+	await expect(page.getByRole("row", { name: /510500.SH.*当日不在证券池/ })).toBeVisible();
+	const tradesResponse = await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${newId}/trades`);
+	const trades = (await tradesResponse.json()).data;
+	expect(trades.some((trade: { instrument_id: number }) => trade.instrument_id === 2001004)).toBe(false);
 	expect((await nav.json()).data.length).toBeGreaterThan(0);
 	expect((await report.json()).data.aggregated_trade_stats.total_trades).toBeGreaterThan(0);
 	expect((await oldAgain.json()).data).toEqual(oldRequest);

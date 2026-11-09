@@ -166,6 +166,9 @@ class BacktestQueryFacade:
         historical = config.get("historical_reconstruction") is True
         evidence = self._artifact_service.get_artifact(f"{run_id}:historical_inputs")
         metadata = evidence.metadata if evidence is not None else {}
+        participation = self._artifact_service.get_artifact(
+            f"{run_id}:daily_participation"
+        )
         purpose = (
             "historical_reconstruction" if historical else "limited_historical_research"
         )
@@ -191,6 +194,9 @@ class BacktestQueryFacade:
             "members": metadata.get("members", []),
             "sources": metadata.get("sources", []),
             "limitations": metadata.get("limitations", []),
+            "participation": participation.metadata.get("participation", [])
+            if participation is not None
+            else metadata.get("participation", []),
         }
 
     # ------------------------------------------------------------------

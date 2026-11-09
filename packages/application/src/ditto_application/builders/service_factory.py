@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
-from typing import cast
 
+import polars as pl
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import (
     DataFeed,
@@ -73,6 +73,10 @@ from ditto_application.builders._resolution import (
     resolve_instrument_display,
 )
 from ditto_application.builders.frozen_history import FrozenHistoryProvider
+from ditto_application.builders.historical_members import (
+    daily_participation,
+    freeze_roster,
+)
 from ditto_application.builders.ordinary_backtest import (
     build_ordinary_rules,
     ordinary_market_transform,
@@ -561,7 +565,7 @@ class BacktestRuntimeBuilder:
                 "historical_availability": "not_certified",
                 "limitations": [
                     "近期留存事实按原始业务/公告日期重建;真实入库时间保持不变。",
-                    "固定起始日证券池;未认证本地历史持有、原始版本完整性或严格快照重放。",
+                    "按冻结成员区间和上市日期逐日参与;未认证本地历史持有、原始版本完整性或严格快照重放。",
                     "规则、公司行动和历史身份缺证仍阻止执行;补证后创建新运行。",
                 ],
             }
@@ -584,6 +588,8 @@ class BacktestRuntimeBuilder:
             if historical is not None and self._artifact_service is not None:
                 evidence["members"] = list(historical.members)
                 evidence["instrument_ids"] = list(historical.instrument_ids)
+                evidence["roster"] = historical.roster
+                evidence["participation"] = historical.participation
                 self._artifact_service.save_artifact(
                     StrategyArtifactRecord(
                         artifact_id=f"{config.run_id}:historical_inputs",
@@ -633,9 +639,9 @@ class BacktestRuntimeBuilder:
         settlement_state = _load_settlement_state(config)
         runtime_state = _load_runtime_state(config)
         # 解析 universe → tickers + id_map + display_map
-        universe_ids = self._resolve_historical_members(config, runtime.spec.universe)
-        if historical_provider is not None:
-            historical_provider.instrument_ids = tuple(universe_ids)
+        universe_ids = self._resolve_historical_members(
+            config, runtime.spec.universe, historical_provider, source
+        )
         _validate_resume_pool(universe_ids, account_state, runtime_state)
         resolution = resolve_instrument_display(
             universe_ids,
@@ -643,9 +649,24 @@ class BacktestRuntimeBuilder:
             source=source,
             as_of=config.start_date,
         )
-        display_map = resolution.display_map
         if historical_provider is not None:
+            identities = {
+                int(str(row["instrument_id"])): row
+                for row in historical_provider.roster
+            }
+            resolution = ResolutionResult(
+                tickers=tuple(str(row["source_ticker"]) for row in identities.values()),
+                id_map={
+                    str(row["source_ticker"]): InstrumentId(iid)
+                    for iid, row in identities.items()
+                },
+                display_map={
+                    InstrumentId(iid): f"{row['ticker']}.{row['exchange']}"
+                    for iid, row in identities.items()
+                },
+            )
             historical_provider.members = tuple(resolution.tickers)
+        display_map = resolution.display_map
         benchmark_id = resolve_benchmark(
             runtime.spec.benchmark,
             self._metadata_service,
@@ -754,43 +775,42 @@ class BacktestRuntimeBuilder:
         )
 
     def _resolve_historical_members(
-        self, config: BacktestCatalogRequestConfig, universe: str
+        self,
+        config: BacktestCatalogRequestConfig,
+        universe: str,
+        historical_provider: FrozenHistoryProvider | None,
+        source: str,
     ) -> list[int]:
-        """A repair keeps resolved members; an unresolved pool can acquire evidence."""
-        if (
-            config.historical_reconstruction
-            and config.parent_run_id
-            and self._artifact_service is not None
-        ):
-            previous = self._artifact_service.get_artifact(
-                f"{config.parent_run_id}:historical_inputs"
+        """Freeze interval/identity facts before downstream input checks can fail."""
+        if historical_provider is not None:
+            previous = (
+                self._artifact_service.get_artifact(
+                    f"{config.parent_run_id}:historical_inputs"
+                )
+                if config.parent_run_id and self._artifact_service is not None
+                else None
             )
-            if previous is not None:
-                frozen_ids = previous.metadata.get("instrument_ids", [])
-                if not isinstance(frozen_ids, list):
-                    raise AppBuilderError("invalid original historical security scope")
-                original_ids: list[int] = []
-                for iid in cast(list[object], frozen_ids):
-                    if not isinstance(iid, int) or isinstance(iid, bool) or iid <= 0:
-                        raise AppBuilderError(
-                            "invalid original historical security scope"
-                        )
-                    original_ids.append(iid)
-                if len(set(original_ids)) != len(original_ids):
-                    raise AppBuilderError("invalid original historical security scope")
-                if original_ids:
-                    return original_ids
-        universe_ids = self._metadata_service.get_universe(
-            universe, asof=config.start_date
-        )
-        if not universe_ids:
-            # 空成员放行会产出零标的的"成功"回测,静默掩盖上游数据损坏
-            # （宇宙缺失/成员区间不覆盖 start_date/物化中断残留）。
-            msg = (
-                f"universe for {config.strategy_id} 在 {config.start_date} "
-                + "解析到 0 成员; 检查宇宙存在性与成员 PIT 区间"
+            historical_provider.roster = freeze_roster(
+                self._metadata_service,
+                universe,
+                start=config.start_date,
+                end=config.end_date,
+                source=source,
+                original=previous.metadata if previous is not None else None,
             )
-            raise AppBuilderError(msg)
+            universe_ids = sorted(
+                {int(str(row["instrument_id"])) for row in historical_provider.roster}
+            )
+            historical_provider.instrument_ids = tuple(universe_ids)
+        else:
+            universe_ids = self._metadata_service.get_universe(
+                universe, asof=config.start_date
+            )
+            if not universe_ids:
+                raise AppBuilderError(
+                    f"universe for {config.strategy_id} 在 {config.start_date} "
+                    + "解析到 0 成员; 检查成员 PIT 区间"
+                )
         return universe_ids
 
     def _build_data_feed(
@@ -811,6 +831,14 @@ class BacktestRuntimeBuilder:
 
         provider: DataProvider = historical_provider or self._data_provider
         if historical_provider is not None:
+            data_start_date = historical_provider.prepare_calendar(
+                start=config.start_date,
+                end=(
+                    date.fromisoformat(config.end_date) + timedelta(days=31)
+                ).isoformat(),
+                warmup=max_lookback,
+                lag=config.knowledge_lag_days,
+            )
             historical_provider.freeze(
                 ticker_ids=resolution.id_map,
                 asset_class=runtime.spec.asset_class,
@@ -824,6 +852,35 @@ class BacktestRuntimeBuilder:
                 ).isoformat(),
                 include_fundamentals=runtime.spec.asset_class == "stock",
             )
+        participation = None
+        if historical_provider is not None:
+            participation = daily_participation(
+                historical_provider.roster,
+                provider.get_schedule(data_start_date, config.end_date)[
+                    "trade_date"
+                ].to_list(),
+                warmup_days=max_lookback,
+                knowledge_lag_days=config.knowledge_lag_days,
+            ).with_columns(
+                pl.col("instrument_id")
+                .replace_strict(
+                    {int(iid): ticker for ticker, iid in resolution.id_map.items()},
+                    return_dtype=pl.String,
+                )
+                .alias("symbol")
+            )
+            historical_provider.participation = (
+                participation.filter(pl.col("trade_date") >= config.start_date)
+                .select(
+                    "instrument_id",
+                    "symbol",
+                    "trade_date",
+                    "status",
+                    "warmup_available",
+                    "warmup_required",
+                )
+                .to_dicts()
+            )
         rule_provider = build_ordinary_rules(
             self._metadata_service,
             [int(iid) for iid in resolution.id_map.values()],
@@ -831,7 +888,9 @@ class BacktestRuntimeBuilder:
             commission_rate=runtime.spec.execution.cost_model.commission_rate,
             start=config.start_date,
             end=config.end_date,
-            historical_reconstruction=config.historical_reconstruction,
+            historical_roster=historical_provider.roster
+            if historical_provider is not None
+            else None,
         )
 
         # 基本面快照闭包:注入 DataFeed 数据通道,供 quality_roe / value_pe 等因子引用。
@@ -856,8 +915,9 @@ class BacktestRuntimeBuilder:
             classification=classification_snapshot_fn,
             require_source_snapshot_lineage=True,
             market=ordinary_market_transform(
-                rule_provider, start_date=config.start_date
+                rule_provider, start_date=config.start_date, participation=participation
             ),
+            participation=participation,
             requirements=FeedInputRequirements(
                 start_date=config.start_date,
                 warmup_days=max_lookback,

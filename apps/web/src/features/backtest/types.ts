@@ -134,6 +134,15 @@ export interface BacktestRequest {
 	readonly reason: string;
 	readonly members: readonly string[];
 	readonly limitations: readonly string[];
+	readonly participation: readonly {
+		readonly instrumentId: number;
+		readonly symbol: string;
+		readonly tradeDate: string;
+		readonly status: string;
+		readonly warmupAvailable: number;
+		readonly warmupRequired: number;
+		readonly evaluated: boolean;
+	}[];
 	readonly sources: readonly {
 		readonly dataset: string;
 		readonly source: string;

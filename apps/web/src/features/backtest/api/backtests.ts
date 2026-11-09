@@ -221,6 +221,31 @@ export async function fetchBacktestRequest(runId: string): Promise<BacktestReque
 	) {
 		throw new Error("请求来源响应无效；请重试读取本次运行。");
 	}
+	const participation = dto.participation ?? [];
+	if (
+		!Array.isArray(participation) ||
+		participation.some(
+			(row) =>
+				!row ||
+				!Number.isSafeInteger(row.instrument_id) ||
+				row.instrument_id <= 0 ||
+				typeof row.symbol !== "string" ||
+				!row.symbol ||
+				typeof row.trade_date !== "string" ||
+				!/^\d{4}-\d{2}-\d{2}$/u.test(row.trade_date) ||
+				!["eligible", "outside_universe", "not_listed", "delisted", "warmup", "listing_rule_unavailable"].includes(
+					row.status,
+				) ||
+				!Number.isSafeInteger(row.warmup_available) ||
+				row.warmup_available < 0 ||
+				!Number.isSafeInteger(row.warmup_required) ||
+				row.warmup_required < 0 ||
+				(row.evaluated !== undefined && typeof row.evaluated !== "boolean"),
+		) ||
+		new Set(participation.map((row) => `${row.trade_date}:${row.instrument_id}`)).size !== participation.length
+	) {
+		throw new Error("逐日参与记录无效；请重试读取本次运行。");
+	}
 	return {
 		runId: dto.run_id,
 		purpose: dto.purpose,
@@ -233,6 +258,15 @@ export async function fetchBacktestRequest(runId: string): Promise<BacktestReque
 		reason: dto.reason,
 		members: dto.members ?? [],
 		limitations: dto.limitations ?? [],
+		participation: participation.map((row) => ({
+			instrumentId: row.instrument_id,
+			symbol: row.symbol,
+			tradeDate: row.trade_date,
+			status: row.status,
+			warmupAvailable: row.warmup_available,
+			warmupRequired: row.warmup_required,
+			evaluated: row.evaluated ?? false,
+		})),
 		sources: (dto.sources ?? []).map((source) => ({
 			dataset: source.dataset,
 			source: source.source,

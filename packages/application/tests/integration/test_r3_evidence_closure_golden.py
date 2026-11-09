@@ -270,6 +270,7 @@ def _run_stock_golden_selection_trace(
 
     slice_ = MagicMock(spec=Slice)
     slice_.bars = bars
+    slice_.strategy_bars = slice_.bars
     slice_.benchmark_close = None
     step_context = StepContext(
         time_context=TimeContext(
@@ -394,6 +395,7 @@ def _run_etf_golden_selection_trace(
 
     slice_ = MagicMock(spec=Slice)
     slice_.bars = bars
+    slice_.strategy_bars = slice_.bars
     slice_.benchmark_close = None
     step_context = StepContext(
         time_context=TimeContext(

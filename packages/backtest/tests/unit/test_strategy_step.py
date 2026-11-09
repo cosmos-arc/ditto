@@ -99,3 +99,28 @@ class TestStrategyStep:
         ctx = self._make_ctx_with_data()
         result = step.execute(ctx)
         assert result.success is True
+
+
+def test_empty_eligible_pool_produces_cash_target_without_losing_valuation_bars():
+    from dataclasses import replace
+
+    from ditto_strategy.alpha.pipeline import StrategyPipeline
+    from ditto_strategy.alpha.templates.etf_rotation import (
+        ETFRotationConfig,
+        build_etf_rotation_pipeline,
+    )
+
+    slice_ = replace(_make_slice(), eligible_ids=frozenset())
+    ctx = _make_ctx()
+    ctx.slice_ = slice_
+    ctx.account_view = _make_account_view()
+    step = StrategyStep(
+        pipeline=StrategyPipeline(build_etf_rotation_pipeline(ETFRotationConfig())),
+        strategy_context=StrategyContext(),
+        strategy_id="late",
+        strategy_run_id="late-run",
+    )
+    step.execute(ctx)
+    assert ctx.target_portfolio is not None
+    assert ctx.target_portfolio.positions == {}
+    assert slice_.bars

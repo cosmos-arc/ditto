@@ -692,6 +692,10 @@ def test_missing_benchmark_keeps_original_security_scope_when_pool_changes():
     )
     metadata = make_metadata()
     metadata.resolve_instrument_id.return_value = None
+    metadata.universe.get_constituent_history.return_value = [
+        {"instrument_id": iid, "effective_from": "2014-01-01", "effective_to": None}
+        for iid in [2000001, 2000002]
+    ]
     saved: dict[str, StrategyArtifactRecord] = {}
     artifacts = MagicMock(spec=StrategyArtifactService)
     artifacts.get_artifact.side_effect = saved.get
@@ -722,7 +726,8 @@ def test_missing_benchmark_keeps_original_security_scope_when_pool_changes():
     assert original.metadata["instrument_ids"] == [2000001, 2000002]
     metadata.resolve_instrument_id.return_value = 3000001
     metadata.get_universe.return_value = [2000001]
-    with pytest.raises(AppBuilderError, match="missing retained etf_daily"):
+    metadata.universe.get_constituent_history.return_value = []
+    with pytest.raises(AppBuilderError, match="missing retained calendar"):
         builder.build_published_runtime(
             config=replace(request, run_id="repaired", parent_run_id="original")
         )

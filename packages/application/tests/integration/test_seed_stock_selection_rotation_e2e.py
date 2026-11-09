@@ -104,6 +104,7 @@ def _make_ctx() -> StepContext:
     }
     slice_ = MagicMock(spec=Slice)
     slice_.bars = bars
+    slice_.strategy_bars = slice_.bars
     slice_.benchmark_close = None
     return StepContext(
         time_context=TimeContext(

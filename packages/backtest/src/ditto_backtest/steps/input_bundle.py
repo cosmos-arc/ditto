@@ -55,7 +55,9 @@ def build_input_bundle(
             column_data[col_name] = col_values
         instruments = pl.DataFrame(column_data)
     else:
-        instruments = pl.DataFrame({"instrument_id": instrument_ids})
+        instruments = pl.DataFrame(
+            {"instrument_id": instrument_ids}, schema={"instrument_id": pl.Int64}
+        )
 
     market_rows: list[dict[str, object]] = []
     signal_rows: list[dict[str, object]] = []
@@ -84,8 +86,20 @@ def build_input_bundle(
         strategy_id=strategy_id,
         run_id=run_id,
         instruments=instruments,
-        market_data=pl.DataFrame(market_rows),
-        signal_values=pl.DataFrame(signal_rows),
+        market_data=pl.DataFrame(
+            market_rows,
+            schema={
+                "instrument_id": pl.Int64,
+                "open": pl.Float64,
+                "high": pl.Float64,
+                "low": pl.Float64,
+                "close": pl.Float64,
+                "volume": pl.Float64,
+            },
+        ),
+        signal_values=pl.DataFrame(
+            signal_rows, schema={"instrument_id": pl.Int64, "signal_value": pl.Float64}
+        ),
         benchmark_close=benchmark_close,
         require_canonical_target_ids=True,
     )

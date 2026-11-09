@@ -61,6 +61,7 @@ def _make_slice_with_bars() -> Slice:
     mock_bar_3.prev_close = 30.0
 
     mock_slice.bars = {1: mock_bar_1, 2: mock_bar_2, 3: mock_bar_3}
+    mock_slice.strategy_bars = mock_slice.bars
     mock_slice.benchmark_close = None
     return mock_slice
 
@@ -329,6 +330,7 @@ class TestFactorAwareBundleBuilder:
         bar.volume = 1_000.0
         slice_ = MagicMock(spec=Slice)
         slice_.bars = {InstrumentId(1): bar}
+        slice_.strategy_bars = slice_.bars
         slice_.benchmark_close = None
         ctx = StepContext(
             time_context=TimeContext(

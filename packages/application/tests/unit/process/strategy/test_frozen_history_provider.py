@@ -26,7 +26,9 @@ _RECEIPT = datetime(2026, 11, 9, tzinfo=UTC)
 _IID = InstrumentId(2_000_001)
 
 
-def _provider(*, future_close: float = 999.0, newer: str | None = None):
+def _provider(
+    *, future_close: float = 999.0, newer: str | None = None, stock: bool = False
+):
     days = [date(2014, 10, 13) + timedelta(days=i) for i in range(5)]
     bars = pl.DataFrame(
         {
@@ -67,6 +69,18 @@ def _provider(*, future_close: float = 999.0, newer: str | None = None):
             }
         ),
     }
+    if stock:
+        frames["stock_daily"] = frames.pop("etf_daily")
+        frames["adj_factor"] = frames.pop("fund_adj")
+        execution = bars.select("source_ticker", "trade_date")
+        frames["stock_status"] = execution.with_columns(
+            pl.lit(False).alias("is_suspended"),
+            pl.lit(False).alias("is_st"),
+            pl.lit("L").alias("list_status"),
+        )
+        frames["stock_limit"] = execution.with_columns(
+            pl.lit(11.0).alias("up_limit"), pl.lit(9.0).alias("down_limit")
+        )
     snapshots = []
     contents = {}
     for index, (dataset, frame) in enumerate(frames.items()):
@@ -130,7 +144,7 @@ def _provider(*, future_close: float = 999.0, newer: str | None = None):
     )
     provider.freeze(
         ticker_ids={"510300.SH": _IID},
-        asset_class="etf",
+        asset_class="stock" if stock else "etf",
         start="2014-10-13",
         end="2014-10-17",
         include_fundamentals=True,
@@ -193,3 +207,58 @@ def test_newer_missing_evidence_never_falls_back_to_older_prices(newer):
                 adj="none",
             )
         ).is_empty()
+
+
+def test_warmup_expands_calendar_until_actual_sessions_exist():
+    days = pl.date_range(date(2014, 8, 1), date(2014, 10, 17), eager=True)
+    calendar = pl.DataFrame({"trade_date": days}).with_columns(
+        pl.col("trade_date")
+        .is_in(
+            [date(2014, 8, 1), date(2014, 9, 1), date(2014, 10, 1), date(2014, 10, 16)]
+        )
+        .alias("is_open")
+    )
+    snapshot = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="calendar",
+            source="tushare",
+            request_start="2014-08-01",
+            request_end="2014-10-17",
+            schema_version="calendar.v1",
+            checksum="1" * 32,
+            canonical_asset=DataAssetRef("calendar", "market"),
+            request_parameters_hash="2" * 32,
+            response_metadata=(),
+            row_count=calendar.height,
+            payload_uri="calendar.parquet",
+            payload_retained=True,
+            created_at=_RECEIPT,
+        )
+    )
+    reader = MagicMock(spec=SnapshotReadService)
+    reader.list_snapshots.return_value = (snapshot,)
+    reader.read.return_value = SnapshotContents(snapshot, None, _RECEIPT, calendar)
+    provider = FrozenHistoryProvider(reader, frozen_at=_RECEIPT)
+    assert (
+        provider.prepare_calendar(start="2014-10-16", end="2014-10-17", warmup=3, lag=0)
+        == "2014-08-01"
+    )
+    assert len(provider.sources) == 1
+    assert provider.sources[0]["received_at"] == _RECEIPT.isoformat()
+
+
+def test_actual_stock_execution_schema_does_not_require_invented_knowledge_dates():
+    provider, _, _ = _provider(stock=True)
+    bars = provider.get_bars(
+        BarQuery(
+            instruments=("510300.SH",),
+            start="2014-10-13",
+            end="2014-10-16",
+            with_execution_state=True,
+        )
+    )
+    assert bars.height == 4
+    assert bars["limit_up"].to_list() == [11.0] * 4
+    assert bars["is_st"].to_list() == [False] * 4
+    assert bars["status_source_snapshot_id"].null_count() == 0
+    assert bars["limit_source_snapshot_id"].null_count() == 0
