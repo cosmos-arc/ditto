@@ -47,12 +47,17 @@ def etf_rule_history(
     if not trading_days or trading_days != sorted(set(trading_days)):
         raise ValueError("ETF rules require a sorted, unique trading calendar")
     history: list[InstrumentRules] = []
-    previous: tuple[dict[str, str], bool] | None = None
+    previous: tuple[dict[str, str], str, bool] | None = None
     days = [date.fromisoformat(day).isoformat() for day in trading_days]
     for day in (day for day in days if max(start, listing.list_date) <= day <= end):
-        values = _declared_values(facts, listing.instrument_id, day)
+        values, effective_from = _declared_values(facts, listing.instrument_id, day)
         closing = listing.exchange == "SZSE" or day >= "2026-07-06"
-        if (values, closing) == previous:
+        effective_from = max(
+            effective_from,
+            listing.list_date,
+            "2026-07-06" if closing and listing.exchange == "SSE" else "2014-01-01",
+        )
+        if (values, effective_from, closing) == previous:
             continue
         definition = InstrumentDefinition(
             instrument_id=listing.instrument_id,
@@ -76,7 +81,7 @@ def etf_rule_history(
                 definition,
                 TradingRuleSet(
                     instrument_id=listing.instrument_id,
-                    as_of_date=day,
+                    as_of_date=effective_from,
                     settlement_cycle=int(values["settlement_cycle"]),
                     fund_settlement_cycle=0,
                     price_limit_pct=float(values["price_limit_pct"]),
@@ -91,7 +96,7 @@ def etf_rule_history(
                 ),
                 FeeSchedule(
                     instrument_id=listing.instrument_id,
-                    as_of_date=day,
+                    as_of_date=effective_from,
                     commission_rate=commission_rate,
                     min_commission=5.0,
                     stamp_duty_rate=0.0,
@@ -99,7 +104,7 @@ def etf_rule_history(
                 ),
             )
         )
-        previous = values, closing
+        previous = values, effective_from, closing
     if not history:
         raise ValueError(
             f"no covered ETF trading session: {listing.instrument_id} {start}..{end}"
@@ -109,8 +114,9 @@ def etf_rule_history(
 
 def _declared_values(
     facts: Sequence[Mapping[str, object]], instrument_id: int, day: str
-) -> dict[str, str]:
+) -> tuple[dict[str, str], str]:
     values: dict[str, str] = {}
+    effective_from = "2014-01-01"
     for field, unit in _UNITS.items():
         active = [
             row
@@ -128,6 +134,7 @@ def _declared_values(
                 f"missing/ambiguous ETF rule: {instrument_id} {day} {field}"
             )
         values[field] = str(active[0]["value"])
+        effective_from = max(effective_from, str(active[0]["effective_from"]))
     try:
         for field in ("lot_size", "tick_size", "settlement_cycle", "price_limit_pct"):
             number = float(values[field])
@@ -143,4 +150,4 @@ def _declared_values(
         or values["price_limit_pct"] not in {"0.1", "0.2"}
     ):
         raise ValueError(f"unverified ETF rule values: {instrument_id} {day}")
-    return values
+    return values, effective_from

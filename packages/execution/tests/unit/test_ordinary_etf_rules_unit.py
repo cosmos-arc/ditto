@@ -62,9 +62,11 @@ def test_cross_border_t0_switch_and_future_rule_do_not_backfill():
     ]
     history = _history(facts, ["2015-01-16", "2015-01-19"])
     assert [(row[1].as_of_date, row[1].settlement_cycle) for row in history] == [
-        ("2015-01-16", 1),
+        ("2014-01-01", 1),
         ("2015-01-19", 0),
     ]
+    later = _history(facts, ["2020-08-21"])[0]
+    assert later[1].as_of_date == later[2].as_of_date == "2015-01-19"
     assert all(row[0].board_segment == "cross_border_etf" for row in history)
 
 
@@ -124,7 +126,7 @@ def test_chinext_band_switch_uses_membership_declaration_not_the_code():
 
 def test_sse_etf_close_auction_begins_in_2026_not_the_2018_stock_change():
     history = _history(_facts(), ["2018-08-20", "2026-07-03", "2026-07-06"])
-    assert [row[1].as_of_date for row in history] == ["2018-08-20", "2026-07-06"]
+    assert [row[1].as_of_date for row in history] == ["2014-01-01", "2026-07-06"]
     assert history[0][1].call_auction_sessions == ("09:15-09:25",)
     assert "market_on_close" not in history[0][1].order_types_supported
     assert history[-1][1].call_auction_sessions == ("09:15-09:25", "14:57-15:00")
