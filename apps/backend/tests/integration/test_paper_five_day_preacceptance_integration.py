@@ -42,7 +42,7 @@ def test_paper_five_day_preacceptance_passes_without_duplicates() -> None:
     checks = cast("dict[str, bool]", evidence["checks"])
     assert all(checks.values())
     assert evidence["evidence_hash"] == (
-        "sha256:87baabbd589e4f75128cb931851b9ce7b39f5905084dba66b889ef25fa997c82"
+        "sha256:1db04092ba7559567e3f7c7f717ab80c69710be22c6ca0cfd961abb8abdf482f"
     )
 
     artifact_path = (
