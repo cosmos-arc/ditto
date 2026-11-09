@@ -574,8 +574,16 @@ def test_ordinary_mainboard_ipo_phase_drives_fill_then_limit_rejection() -> None
     )
     assert values == {"limit_up": None, "limit_down": None}
     model = AShareFillModel()
-    filled = model.try_fill(
+    forbidden = model.try_fill(
         _order(), _market_snapshot(close=12.0, high=12.0), fifth[0], fifth[1]
+    )
+    assert isinstance(forbidden, NoFill)
+    assert forbidden.reason == "unsupported_order_type"
+    filled = model.try_fill(
+        _order(order_type=OrderType.MARKET_ON_CLOSE),
+        _market_snapshot(close=12.0, high=12.0),
+        fifth[0],
+        fifth[1],
     )
     assert isinstance(filled, Filled)
     assert filled.fill_event.fill_price == 12.0

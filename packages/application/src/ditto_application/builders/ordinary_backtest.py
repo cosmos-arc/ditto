@@ -119,6 +119,8 @@ def ordinary_rule_description(
     )
     if trading.price_limit_pct is None and (definition.ipo_date or "") < "2023-04-10":
         band = "上市首日申报价格范围"
+    if "market" not in trading.order_types_supported:
+        band += " · 不接受市价申报"
     unit = "股" if definition.asset_class == "stock" else "份"
     return (
         f"{definition.exchange}/{definition.board_segment}/{trading.as_of_date}"

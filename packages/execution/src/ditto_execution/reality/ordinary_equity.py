@@ -168,15 +168,27 @@ def mainboard_trading_history(
                 settlement_cycle=1,
                 fund_settlement_cycle=0,
                 price_limit_pct=band,
-                order_types_supported=("market", "limit", "market_on_close")
-                if closing_auction
-                else ("market", "limit"),
+                order_types_supported=_mainboard_order_types(
+                    listing.exchange, band, closing_auction
+                ),
                 call_auction_sessions=("09:15-09:25", "14:57-15:00")
                 if closing_auction
                 else ("09:15-09:25",),
             )
         )
     return tuple(history)
+
+
+def _mainboard_order_types(
+    exchange: str, band: float | None, closing_auction: bool
+) -> tuple[str, ...]:
+    """SZSE market orders require a band; close orders use the auction model."""
+    order_types = ["limit"]
+    if band is not None or exchange == "SSE":
+        order_types.insert(0, "market")
+    if closing_auction:
+        order_types.append("market_on_close")
+    return tuple(order_types)
 
 
 def _validate_mainboard_calendar(

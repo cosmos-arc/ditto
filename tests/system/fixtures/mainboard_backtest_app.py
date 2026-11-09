@@ -180,7 +180,11 @@ def _seed() -> pl.DataFrame:
             "signal_weights": [1.0],
         }
         spec["params"] = {**spec["params"], "top_k": 1, "rebalance_freq": "daily"}
-        spec["execution"] = {**spec["execution"], "frequency": "D"}
+        spec["execution"] = {
+            **spec["execution"],
+            "frequency": "D",
+            "default_order_type": "market_on_close",
+        }
         governance = container.get(GovernanceService)
         CreateStrategyHandler(governance).handle(
             CreateStrategyCommand(
@@ -191,6 +195,20 @@ def _seed() -> pl.DataFrame:
         )
         PublishStrategyHandler(governance).handle(
             PublishStrategyCommand(strategy_id="mainboard_ipo_fixture", version=1)
+        )
+        market_id = "mainboard_market_fixture"
+        market_spec = {
+            **spec,
+            "strategy_id": market_id,
+            "execution": {**spec["execution"], "default_order_type": "market"},
+        }
+        CreateStrategyHandler(governance).handle(
+            CreateStrategyCommand(
+                strategy_id=market_id, name="主板市价拒绝样例", spec_json=market_spec
+            )
+        )
+        PublishStrategyHandler(governance).handle(
+            PublishStrategyCommand(strategy_id=market_id, version=1)
         )
     finally:
         container.close()

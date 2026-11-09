@@ -215,7 +215,18 @@ class PreTradeStep:
         order: Order,
         pre_trade_context: PreTradeContext,
     ) -> OrderCheckResult:
-        """调用 pre_trade_check.check_order。"""
+        """Reject unsupported order types before submission; retain the reason."""
+        rules = pre_trade_context.rules.get(order.instrument_id)
+        if (
+            rules is not None
+            and order.order_type.value not in rules[1].order_types_supported
+        ):
+            return OrderCheckResult(
+                decision=Decision.REJECT,
+                order_id=order.order_id,
+                reason="unsupported_order_type",
+                triggered_checks=("dated_order_type",),
+            )
         return self._pre_trade_check.check_order(order, pre_trade_context)
 
     def _place_order(self, order: Order) -> None:

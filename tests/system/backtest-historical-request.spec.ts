@@ -190,3 +190,41 @@ test("main-board IPO rules survive a failed freeze, repair, fills, rejection and
 	expect(accessibility.violations.filter((v) => ["critical", "serious"].includes(v.impact ?? ""))).toEqual([]);
 	expect(errors).toEqual([]);
 });
+
+test("an unlimited SZSE IPO refuses market orders and reopens the saved reason", async ({ page }) => {
+	await page.goto(`${webOrigin}/research/strategies/mainboard_market_fixture`);
+	await page.getByRole("button", { name: "提交回测", exact: true }).click();
+	const form = page.getByRole("dialog", { name: "提交回测" });
+	await form.getByLabel("历史请求用途").selectOption("reconstruction");
+	await form.getByLabel("策略版本").selectOption("1");
+	await form.getByLabel("开始日期").fill("2026-10-08");
+	await form.getByLabel("结束日期").fill("2026-10-13");
+	await form.getByLabel("初始资金（元）").fill("250000");
+	await form.getByRole("button", { name: "提交回测", exact: true }).click();
+	const link = form.getByRole("link", { name: "查看本次回测" });
+	await expect(link).toBeVisible();
+	const id = (await link.getAttribute("href"))?.split("/").at(-1);
+	await link.click();
+	await expect(page.getByTestId("backtest-detail-meta")).toContainText("completed", { timeout: 60000 });
+	await page.reload();
+	const audit = (await (await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${id}/audit`)).json()).data;
+	expect(audit).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({
+				trade_date: "2026-10-08",
+				instrument_id: 1001002,
+				payload: expect.objectContaining({ decision: "rejected", reason: "unsupported_order_type", final_quantity: 0 }),
+			}),
+		]),
+	);
+	const report = (await (await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${id}/report`)).json()).data;
+	await page.getByRole("tab", { name: "审计证据" }).click();
+	const rejection = page.locator("details").filter({ hasText: "unsupported_order_type" }).first();
+	await rejection.locator("summary").focus();
+	await page.keyboard.press("Enter");
+	await expect(rejection.locator("pre")).toBeVisible();
+	await expect(rejection.locator("pre")).toContainText("unsupported_order_type");
+	expect(
+		report.final_account_state.positions.some((row: { instrument_id: number }) => row.instrument_id === 1001002),
+	).toBe(false);
+});
