@@ -28,45 +28,75 @@ function captureBrowserErrors(page: Page): string[] {
 	return errors;
 }
 
-test.describe.serial("backtest catalog multi-run NAV overlay", () => {
-	test("overlays two completed runs with legend toggles and a metrics diff table", async ({ page }) => {
-		const browserErrors = captureBrowserErrors(page);
-		await page.goto(`${webOrigin}/research/backtests`);
+test.describe
+	.serial("backtest catalog multi-run NAV overlay", () => {
+		test("overlays two completed runs with legend toggles and a metrics diff table", async ({ page }) => {
+			const browserErrors = captureBrowserErrors(page);
+			await page.goto(`${webOrigin}/research/backtests`);
 
-		// 勾选两个 run 进入对比集合（上限 8）
-		await page.getByRole("checkbox", { name: `加入对比 ${RUN_A}` }).check();
-		await page.getByRole("checkbox", { name: `加入对比 ${RUN_B}` }).check();
-		await expect(page.getByTestId("compare-selection-count")).toContainText("2/8");
+			// 从目录加入 B，经正式详情入口加入 A；整页导航与刷新均读取同一会话集合。
+			await page.getByRole("checkbox", { name: `加入对比 ${RUN_B}` }).check();
+			await page.getByRole("button", { name: `选择回测 ${RUN_A}` }).click();
+			await page.getByRole("link", { name: "打开回测结果" }).click();
+			await page.getByRole("button", { name: "加入对比", exact: true }).click();
+			await expect(page.getByRole("status")).toContainText("已加入对比");
+			await page.reload();
+			await expect(page.getByRole("button", { name: "移出对比", exact: true })).toBeVisible();
+			const detailCompare = page.getByRole("button", { name: "对比视图", exact: true });
+			await detailCompare.focus();
+			await page.keyboard.press("Enter");
+			const detailDialog = page.getByRole("dialog", { name: "回测对比" });
+			await expect(detailDialog.getByRole("list", { name: "对比集合" }).getByRole("listitem")).toHaveCount(2);
+			await page.keyboard.press("Escape");
+			await expect(detailDialog).not.toBeVisible();
+			await expect(detailCompare).toBeFocused();
+			await page.getByRole("button", { name: "移出对比", exact: true }).click();
+			await expect(page.getByRole("status")).toContainText("已移出对比");
+			await page.getByRole("button", { name: "加入对比", exact: true }).click();
+			await page.goto(`${webOrigin}/research/backtests`);
+			await expect(page.getByRole("checkbox", { name: `加入对比 ${RUN_A}` })).toBeChecked();
+			await expect(page.getByRole("checkbox", { name: `加入对比 ${RUN_B}` })).toBeChecked();
+			await expect(page.getByTestId("compare-selection-count")).toContainText("2/8");
 
-		await page.getByRole("button", { name: "回测对比" }).click();
-		const dialog = page.getByRole("dialog", { name: "回测对比" });
-		await expect(dialog).toBeVisible();
+			await page.getByRole("button", { name: "回测对比" }).click();
+			const dialog = page.getByRole("dialog", { name: "回测对比" });
+			await expect(dialog).toBeVisible();
 
-		// 真实 cockpit：两条归一化净值序列 + canvas
-		const compare = dialog.getByTestId("backtest-multi-run-compare");
-		await expect(compare).toBeVisible();
-		const chartHost = page.locator('[data-chart-interaction-contract="backtest-multi-run-nav"]');
-		await expect(chartHost).toBeVisible();
-		await expect(chartHost.locator("canvas").first()).toBeVisible();
+			// 真实 cockpit：两条归一化净值序列 + canvas
+			const compare = dialog.getByTestId("backtest-multi-run-compare");
+			await expect(compare).toBeVisible();
+			const chartHost = page.locator('[data-chart-interaction-contract="backtest-multi-run-nav"]');
+			await expect(chartHost).toBeVisible();
+			await expect(chartHost.locator("canvas").first()).toBeVisible();
 
-		// 图例开关：隐藏 run B 后序列退出叠加（chip aria-pressed false）
-		const legend = dialog.getByTestId("multi-run-legend");
-		await expect(legend.getByRole("button", { name: RUN_A })).toHaveAttribute("data-legend-visible", "true");
-		await legend.getByRole("button", { name: RUN_B }).click();
-		await expect(legend.getByRole("button", { name: RUN_B })).toHaveAttribute("data-legend-visible", "false");
+			// 图例开关：隐藏 run B 后序列退出叠加（chip aria-pressed false）
+			const legend = dialog.getByTestId("multi-run-legend");
+			await expect(legend.getByRole("button", { name: RUN_A })).toHaveAttribute("data-legend-visible", "true");
+			await legend.getByRole("button", { name: RUN_B }).click();
+			await expect(legend.getByRole("button", { name: RUN_B })).toHaveAttribute("data-legend-visible", "false");
 
-		// 指标差异表：两个 run 均已发布 report，行呈现引擎百分数口径
-		const table = dialog.getByTestId("multi-run-metrics");
-		for (const runId of [RUN_A, RUN_B]) {
-			await expect(table.locator(`tr[data-run-id='${runId}']`)).toHaveAttribute("data-report-published", "true");
-			await expect(table.locator(`tr[data-run-id='${runId}']`)).toContainText(/%/);
-		}
+			// 指标差异表：两个 run 均已发布 report，行呈现引擎百分数口径
+			const table = dialog.getByTestId("multi-run-metrics");
+			for (const runId of [RUN_A, RUN_B]) {
+				await expect(table.locator(`tr[data-run-id='${runId}']`)).toHaveAttribute("data-report-published", "true");
+				await expect(table.locator(`tr[data-run-id='${runId}']`)).toContainText(/%/);
+			}
 
-		const accessibility = await new AxeBuilder({ page }).analyze();
-		const serious = accessibility.violations.filter((violation) =>
-			["critical", "serious"].includes(violation.impact ?? ""),
-		);
-		expect(serious).toEqual([]);
-		expect(browserErrors).toEqual([]);
+			const accessibility = await new AxeBuilder({ page }).analyze();
+			const serious = accessibility.violations.filter((violation) =>
+				["critical", "serious"].includes(violation.impact ?? ""),
+			);
+			expect(serious).toEqual([]);
+			expect(browserErrors).toEqual([]);
+
+			// 集合内移除写回会话；再次刷新及列表重选使用同一集合。
+			await dialog.getByRole("button", { name: `移出对比 ${RUN_A}` }).click();
+			await page.keyboard.press("Escape");
+			await expect(page.getByRole("button", { name: "回测对比", exact: true })).toBeFocused();
+			await page.reload();
+			await expect(page.getByRole("checkbox", { name: `加入对比 ${RUN_A}` })).not.toBeChecked();
+			await expect(page.getByTestId("compare-selection-count")).toContainText("1/8");
+			await page.getByRole("checkbox", { name: `加入对比 ${RUN_B}` }).uncheck();
+			await expect(page.getByTestId("compare-selection-count")).toContainText("0/8");
+		});
 	});
-});

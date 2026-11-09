@@ -5,6 +5,7 @@ import { HttpResponse, http } from "msw";
 import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
+import { useBacktestComparison } from "../hooks/use-backtest-comparison";
 import { BacktestPage } from "./backtest-page";
 
 // jsdom 无法承载 fancy-canvas：stub 掉图表 shell，页面测试聚焦资源身份与信息单元。
@@ -152,14 +153,40 @@ function registerHandlers() {
 }
 
 describe("BacktestPage governed workspace", () => {
-	beforeEach(registerHandlers);
+	beforeEach(() => {
+		registerHandlers();
+		sessionStorage.clear();
+		useBacktestComparison.setState({ runIds: [], error: null });
+	});
 
-	it("does not claim a run was added before detail comparison is connected", async () => {
+	it("adds the actual run to the shared comparison and removes it from the detail", async () => {
 		const user = userEvent.setup();
 		render(<BacktestPage />, { wrapper });
 		await user.click(await screen.findByRole("button", { name: "加入对比" }));
-		expect(screen.getByRole("status", { name: "详情加入对比暂不可用" })).toBeInTheDocument();
-		expect(screen.queryByText("已加入对比")).not.toBeInTheDocument();
+		expect(screen.getByRole("status")).toHaveTextContent("已加入对比");
+		await user.click(screen.getByRole("button", { name: "对比视图" }));
+		expect(screen.getByRole("dialog", { name: "回测对比" })).toHaveTextContent("bt-live-001");
+		await user.keyboard("{Escape}");
+		await user.click(screen.getByRole("button", { name: "移出对比" }));
+		expect(screen.getByRole("status")).toHaveTextContent("已移出对比");
+	});
+
+	it("keeps the collection unchanged and offers a retry when session storage fails", async () => {
+		const user = userEvent.setup();
+		render(<BacktestPage />, { wrapper });
+		const save = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+			throw new Error("storage denied");
+		});
+		try {
+			await user.click(await screen.findByRole("button", { name: "加入对比" }));
+			expect(screen.getByRole("alert")).toHaveTextContent("本次变更未生效");
+			expect(useBacktestComparison.getState().runIds).toEqual([]);
+			expect(screen.queryByText(/已加入对比/)).not.toBeInTheDocument();
+		} finally {
+			save.mockRestore();
+		}
+		await user.click(screen.getByRole("button", { name: "加入对比" }));
+		expect(screen.getByRole("status")).toHaveTextContent("已加入对比");
 	});
 
 	it("keeps exact run identity while switching among live report, trade, and audit resources", async () => {

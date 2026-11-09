@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { useBacktestRuns } from "../hooks";
+import { comparisonLifetime, useBacktestComparison } from "../hooks/use-backtest-comparison";
 import { MAX_COMPARE_RUNS } from "../lib/multi-run-mapping";
 import type { BacktestRun } from "../types";
 import { BacktestCompareOverlay } from "./backtest-overlays";
@@ -86,7 +87,7 @@ export function BacktestListPage({ createForm }: { readonly createForm?: ReactNo
 	const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 	const [compareOpen, setCompareOpen] = useState(false);
 	const [createOpen, setCreateOpen] = useState(false);
-	const [compareIds, setCompareIds] = useState<string[]>([]);
+	const { runIds: compareIds, error: compareError, setIncluded } = useBacktestComparison();
 	const statuses = useMemo(() => [...new Set(runs.map((run) => run.status))].sort(), [runs]);
 	const filtered = useMemo(() => {
 		const needle = search.trim().toLowerCase();
@@ -102,24 +103,7 @@ export function BacktestListPage({ createForm }: { readonly createForm?: ReactNo
 	const selected = filtered.find((run) => run.runId === selectedRunId) ?? filtered[0] ?? null;
 	const completedCount = runs.filter((run) => run.status === "completed").length;
 	const runningCount = runs.filter((run) => run.status === "running").length;
-	const byId = useMemo(() => new Map(runs.map((run) => [run.runId, run])), [runs]);
-	// 勾选序即色板序；先按当前目录对账（refetch 后消失的 run 出列并释放容量），上限 8。
-	const compareRuns = useMemo(
-		() => compareIds.map((runId) => byId.get(runId)).filter((run): run is BacktestRun => Boolean(run)),
-		[compareIds, byId],
-	);
-	const compareAtCapacity = compareRuns.length >= MAX_COMPARE_RUNS;
-
-	const toggleCompare = (runId: string) => {
-		setCompareIds((previous) => {
-			// 守卫与去留都基于现存目录：先剪除 refetch 后消失的 run，
-			// 否则幽灵 id 会让已释放的容量在 mutator 里仍被占用（静默拒选）
-			const present = previous.filter((id) => byId.has(id));
-			if (present.includes(runId)) return present.filter((value) => value !== runId);
-			if (present.length >= MAX_COMPARE_RUNS) return present;
-			return [...present, runId];
-		});
-	};
+	const compareAtCapacity = compareIds.length >= MAX_COMPARE_RUNS;
 
 	return (
 		<section aria-label="受控回测目录" className="h-full min-h-0">
@@ -175,11 +159,17 @@ export function BacktestListPage({ createForm }: { readonly createForm?: ReactNo
 									className="font-data text-xs text-(--color-foreground-tertiary)"
 									data-testid="compare-selection-count"
 								>
-									{compareRuns.length}/{MAX_COMPARE_RUNS} 对比 · {completedCount} completed · {runningCount} running
+									{compareIds.length}/{MAX_COMPARE_RUNS} 对比 · {completedCount} completed · {runningCount} running
 								</span>
 							}
 						/>
 						<PanelBody className="p-0">
+							<p className="px-3 py-2 text-xs text-(--color-foreground-tertiary)">{comparisonLifetime}</p>
+							{compareError && (
+								<p role="alert" className="px-3 text-xs text-(--color-led-danger)">
+									{compareError}
+								</p>
+							)}
 							<div className="grid grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2 text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
 								<span className="sr-only">加入对比</span>
 								<span>Run</span>
@@ -221,7 +211,7 @@ export function BacktestListPage({ createForm }: { readonly createForm?: ReactNo
 															: undefined
 													}
 													disabled={!inCompare && compareAtCapacity}
-													onChange={() => toggleCompare(run.runId)}
+													onChange={(event) => setIncluded(run.runId, event.currentTarget.checked)}
 													className="h-3.5 w-3.5 accent-(--brand-accent)"
 												/>
 												<button
@@ -273,7 +263,7 @@ export function BacktestListPage({ createForm }: { readonly createForm?: ReactNo
 					</aside>
 				}
 			/>
-			<BacktestCompareOverlay open={compareOpen} onClose={() => setCompareOpen(false)} runs={compareRuns} />
+			<BacktestCompareOverlay open={compareOpen} onClose={() => setCompareOpen(false)} />
 			<Sheet open={createOpen} onOpenChange={setCreateOpen}>
 				<SheetContent className="overflow-y-auto p-5">
 					<SheetHeader>

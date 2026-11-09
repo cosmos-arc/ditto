@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectHubLayout, ShellHeaderExtension } from "@/features/shell";
 import { ContextActions } from "@/providers";
 import { useBacktestReport, useBacktestRun } from "../hooks";
+import { comparisonLifetime, useBacktestComparison } from "../hooks/use-backtest-comparison";
 import { legacyBacktestUsage } from "../types";
 import { BacktestAuditView } from "./backtest-audit-view";
 import { BacktestKpiStrip } from "./backtest-kpi-strip";
@@ -60,6 +61,8 @@ export function BacktestPage() {
 	const runId = id ?? "";
 	const runQuery = useBacktestRun(runId);
 	const reportQuery = useBacktestReport(runQuery.isSuccess ? runId : "");
+	const { runIds: compareIds, error: compareError, setIncluded } = useBacktestComparison();
+	const [compareNotice, setCompareNotice] = useState("");
 	const [tab, setTab] = useState<BacktestTab>("overview");
 	const [activeOverlay, setActiveOverlay] = useState<BacktestOverlayId | null>(null);
 
@@ -117,7 +120,24 @@ export function BacktestPage() {
 		<section aria-label="回测结果工作台" className="flex h-full min-h-0 flex-col">
 			<ShellHeaderExtension>
 				<div className="ml-auto flex min-w-0 items-center gap-2 overflow-hidden">
-					<PageActionBar ariaLabel="回测结果操作" actions={backtestActions} onOpen={setActiveOverlay} />
+					<PageActionBar
+						ariaLabel="回测结果操作"
+						actions={backtestActions.map((action) =>
+							action.id === "compare-toggle"
+								? { ...action, label: compareIds.includes(run.runId) ? "移出对比" : "加入对比" }
+								: action,
+						)}
+						onOpen={(action) => {
+							if (action === "compare-toggle") {
+								const included = !compareIds.includes(run.runId);
+								const saved = setIncluded(run.runId, included);
+								setCompareNotice(saved ? `${included ? "已加入对比" : "已移出对比"} · ${run.runId}` : "");
+							} else {
+								setCompareNotice("");
+								setActiveOverlay(action);
+							}
+						}}
+					/>
 					<ContextActions
 						className="flex shrink-0 items-center gap-1.5"
 						contextType="backtest-run"
@@ -127,6 +147,10 @@ export function BacktestPage() {
 				</div>
 			</ShellHeaderExtension>
 			<BacktestUsage report={report} />
+			<div className="px-4 py-1 text-xs text-(--color-foreground-tertiary)">
+				{comparisonLifetime}
+				{compareError ? <p role="alert">{compareError}</p> : <p role="status">{compareNotice}</p>}
+			</div>
 			<Tabs value={tab} onValueChange={(value) => setTab(value as BacktestTab)} className="min-h-0 flex-1 gap-0">
 				<ObjectHubLayout
 					className="grid-rows-[92px_45px_minmax(0,1fr)_36px]"
