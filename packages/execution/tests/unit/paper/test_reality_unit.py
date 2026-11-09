@@ -451,3 +451,39 @@ def test_paper_obeys_dated_submission_type_and_size(supported: bool) -> None:
         if supported
         else "unsupported_order_type"
     )
+
+
+@pytest.mark.parametrize(
+    ("side", "quantity", "position", "reason"),
+    [
+        (OrderSide.BUY, 199, 0, "order_quantity_below_dated_minimum"),
+        (OrderSide.BUY, 200, 0, None),
+        (OrderSide.BUY, 201, 0, None),
+        (OrderSide.SELL, 201, 300, None),
+        (OrderSide.SELL, 199, 300, "sell_below_minimum_requires_full_liquidation"),
+        (OrderSide.SELL, 199, 199, None),
+    ],
+)
+def test_star_quantity_minimum_preserves_single_shares_and_full_residual_exit(
+    side: OrderSide, quantity: int, position: int, reason: str | None
+) -> None:
+    definition, rule, fee = _rules(lot_size=1)
+    result = ASharePaperReality().execute(
+        paper_order=_paper_order(_order(side=side, quantity=quantity)),
+        lineage=_lineage(),
+        rules=(
+            replace(definition, board_segment="star"),
+            replace(rule, min_order_quantity=200),
+            fee,
+        ),
+        assumption=_assumption(),
+        context=_context(position_quantity=position, available_quantity=position),
+    )
+    if reason:
+        assert result.status is PaperRealityStatus.REJECTED
+        assert result.reason == reason
+        assert result.fill is None
+    else:
+        assert result.status is PaperRealityStatus.FILLED
+        assert result.fill is not None
+        assert result.fill.quantity == quantity

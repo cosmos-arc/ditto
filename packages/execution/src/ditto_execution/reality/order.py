@@ -1,5 +1,6 @@
 """Dated submission constraints shared by backtest and Paper execution."""
 
+from ditto_kernel.order import OrderSide as _OrderSide
 from ditto_kernel.order import OrderType as _OrderType
 from ditto_kernel.trading import TradingRuleSet as _TradingRuleSet
 
@@ -21,4 +22,19 @@ def order_rule_rejection(order: Order, rule: _TradingRuleSet) -> str | None:
             raise ValueError("maximum order quantity must be positive")
         if order.quantity > maximum:
             return "order_quantity_exceeds_dated_maximum"
+    return None
+
+
+def minimum_order_rejection(
+    order: Order, rule: _TradingRuleSet, *, position_quantity: int
+) -> str | None:
+    """Validate a new submission, never a partly filled order's remaining shares."""
+    if rule.min_order_quantity <= 0:
+        raise ValueError("minimum order quantity must be positive")
+    if order.quantity >= rule.min_order_quantity:
+        return None
+    if order.direction is _OrderSide.BUY:
+        return "order_quantity_below_dated_minimum"
+    if order.quantity != position_quantity:
+        return "sell_below_minimum_requires_full_liquidation"
     return None

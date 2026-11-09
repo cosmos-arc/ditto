@@ -551,6 +551,7 @@ def _resolve_inputs(command: OperatePaperOrderCommand) -> _ResolvedPaperInputs:
             order_types_supported=command.rules.order_types_supported,
             max_limit_order_quantity=command.rules.max_limit_order_quantity,
             max_market_order_quantity=command.rules.max_market_order_quantity,
+            min_order_quantity=command.rules.min_order_quantity,
             call_auction_sessions=(),
         ),
         FeeSchedule(

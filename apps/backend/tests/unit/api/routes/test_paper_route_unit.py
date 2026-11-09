@@ -166,18 +166,26 @@ def test_paper_request_models_accept_standard_json_wire_values() -> None:
 
 
 @pytest.mark.parametrize(
-    ("kind", "maximum", "order_types", "reason"),
+    ("kind", "maximum", "minimum", "order_types", "reason"),
     [
-        ("market", None, ["market", "limit"], None),
-        ("market", 50, ["market", "limit"], "order_quantity_exceeds_dated_maximum"),
-        ("limit", 50, ["market", "limit"], "order_quantity_exceeds_dated_maximum"),
-        ("market", None, ["limit"], "unsupported_order_type"),
+        ("market", None, 1, ["market", "limit"], None),
+        ("market", 50, 1, ["market", "limit"], "order_quantity_exceeds_dated_maximum"),
+        ("limit", 50, 1, ["market", "limit"], "order_quantity_exceeds_dated_maximum"),
+        ("market", None, 1, ["limit"], "unsupported_order_type"),
+        (
+            "market",
+            None,
+            200,
+            ["market", "limit"],
+            "order_quantity_below_dated_minimum",
+        ),
     ],
 )
 def test_paper_routes_complete_local_workflow(
     tmp_path: Path,
     kind: Literal["market", "limit"],
     maximum: int | None,
+    minimum: int,
     order_types: list[Literal["market", "limit"]],
     reason: str | None,
 ) -> None:
@@ -197,6 +205,7 @@ def test_paper_routes_complete_local_workflow(
     wire = _operate_body().model_dump(mode="json")
     wire.update(order_type=kind, price=10.0 if kind == "limit" else None)
     wire["rules"].update(
+        min_order_quantity=minimum,
         max_market_order_quantity=maximum,
         max_limit_order_quantity=maximum,
         order_types_supported=order_types,

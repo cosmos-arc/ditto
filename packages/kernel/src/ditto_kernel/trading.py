@@ -97,6 +97,7 @@ class TradingRuleSet:
     call_auction_sessions: tuple[str, ...]
     max_limit_order_quantity: int | None = None
     max_market_order_quantity: int | None = None
+    min_order_quantity: int = 1
 
 
 @dataclass(frozen=True)

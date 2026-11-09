@@ -146,6 +146,7 @@ class PaperInstrumentRulesBody(BaseModel):
     )
     max_limit_order_quantity: int | None = Field(default=None, gt=0)
     max_market_order_quantity: int | None = Field(default=None, gt=0)
+    min_order_quantity: int = Field(default=1, gt=0)
 
 
 class PaperFillAssumptionBody(BaseModel):

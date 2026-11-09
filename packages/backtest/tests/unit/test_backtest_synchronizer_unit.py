@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from unittest.mock import MagicMock
 
@@ -360,3 +361,19 @@ class TestProtocolSatisfaction:
         """BacktestSynchronizer 具有 stream() 和 clock() 方法签名."""
         assert hasattr(BacktestSynchronizer, "stream")
         assert hasattr(BacktestSynchronizer, "clock")
+
+
+def test_empty_and_nonempty_candidate_sets_preserve_quotes_for_held_assets() -> None:
+    days = ["2026-03-01", "2026-03-02"]
+    feed = _make_feed(
+        days,
+        {
+            days[0]: replace(_make_slice(days[0]), eligible_ids=frozenset()),
+            days[1]: replace(_make_slice(days[1]), eligible_ids=frozenset({IID_1})),
+        },
+    )
+    sync = BacktestSynchronizer(feed, SimulatedClock(_step_time(days[0])), days[0])
+    first, second = list(sync.stream())
+    assert first.eligible_ids == frozenset()
+    assert second.eligible_ids == frozenset({IID_1})
+    assert set(first.bars) == set(second.bars) == {IID_1}

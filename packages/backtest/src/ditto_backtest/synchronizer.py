@@ -56,6 +56,7 @@ class BacktestSynchronizer:
                 bars=slice_.bars,
                 benchmark_close=slice_.benchmark_close,
                 source_snapshot_ids=slice_.source_snapshot_ids,
+                eligible_ids=slice_.eligible_ids,
             )
 
     def clock(self) -> Clock:

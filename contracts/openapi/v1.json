@@ -22732,6 +22732,12 @@
             "title": "Min Commission",
             "type": "number"
           },
+          "min_order_quantity": {
+            "default": 1,
+            "exclusiveMinimum": 0.0,
+            "title": "Min Order Quantity",
+            "type": "integer"
+          },
           "multiplier": {
             "default": 1.0,
             "exclusiveMinimum": 0.0,

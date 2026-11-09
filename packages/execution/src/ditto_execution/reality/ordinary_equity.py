@@ -1,8 +1,8 @@
 """
-Observed cash-equity rules for limited historical research (#723, #753, #754).
+Observed cash-equity rules for limited historical research (#723, #753–#755).
 
 Authority/effective dates: docs/evidence/ordinary-backtest-20261108/rules.md.
-Stock history: docs/evidence/mainboard-rules-753.md and chinext-rules-754.md.
+Stock history: docs/evidence/{mainboard-rules-753,chinext-rules-754,star-rules-755}.md.
 These are reconstructed rules, never evidence of historical knowability.
 """
 
@@ -106,6 +106,15 @@ def cash_stock_board(asset_class: str, exchange: str, ticker: str) -> str | None
         and "300000" <= ticker <= "309799"
     ):
         return "chinext"
+    if (
+        asset_class == "stock"
+        and exchange == "SSE"
+        and len(ticker) == _A_SHARE_CODE_LENGTH
+        and ticker.isascii()
+        and ticker.isdigit()
+        and ticker.startswith("688")
+    ):
+        return "star"
     return None
 
 
@@ -145,7 +154,7 @@ def stock_rule_history(
             ),
         )
         for day in dates
-        if day <= end
+        if trading[0].as_of_date <= day <= end
     )
 
 
@@ -191,13 +200,13 @@ def stock_trading_history(
             "stock trading rules cover 2014-01-01 through the observed date"
         )
     _validate_stock_calendar(listing, start, trading_days)
-    chinext = (
-        cash_stock_board(listing.asset_class, listing.exchange, listing.ticker)
-        == "chinext"
-    )
+    board = cash_stock_board(listing.asset_class, listing.exchange, listing.ticker)
+    chinext, star = board == "chinext", board == "star"
+    if star and (listing.list_date < "2019-07-22" or end < listing.list_date):
+        raise ValueError("STAR history requires a listing on or after 2019-07-22")
     # These three already-delisting stocks retained the old mechanism throughout.
     legacy_exit = chinext and listing.ticker in {"300090", "300156", "300216"}
-    registration = "2020-08-24" if chinext else "2023-04-10"
+    registration = _registration_date(board)
     versions: dict[str, float | None] = {
         "2014-01-01": 0.1,
         "2014-06-13": 0.1,
@@ -208,23 +217,9 @@ def stock_trading_history(
         versions.update({"2020-08-24": 0.2, "2023-04-10": 0.2, "2026-07-06": 0.2})
     if listing.exchange == "SSE":
         versions["2018-08-20"] = 0.1
-    if listing.list_date >= trading_days[0]:
-        sessions = [day for day in trading_days if day >= listing.list_date]
-        initial_sessions = (
-            _IPO_NO_LIMIT_SESSIONS if listing.list_date >= registration else 1
-        )
-        versions[listing.list_date] = None
-        for effective in list(versions):
-            if (
-                listing.list_date < effective
-                and sum(day < effective for day in sessions) < initial_sessions
-            ):
-                versions[effective] = None
-        if len(sessions) > initial_sessions:
-            sixth = sessions[initial_sessions]
-            versions[sixth] = (
-                0.2 if chinext and not legacy_exit and sixth >= registration else 0.1
-            )
+    if star:
+        versions = {"2019-07-22": 0.2, "2023-04-10": 0.2, "2026-07-06": 0.2}
+    _apply_ipo_exemption(versions, listing, trading_days)
     history: list[_TradingRuleSet] = []
     for effective, band in sorted(
         (day, band) for day, band in versions.items() if day <= end
@@ -239,10 +234,15 @@ def stock_trading_history(
                 fund_settlement_cycle=0,
                 price_limit_pct=band,
                 order_types_supported=_stock_order_types(
-                    listing.exchange, effective, band, closing_auction
+                    listing.exchange, effective, band, closing_auction, star=star
                 ),
-                max_limit_order_quantity=300_000 if reformed_chinext else 1_000_000,
-                max_market_order_quantity=150_000 if reformed_chinext else 1_000_000,
+                min_order_quantity=200 if star else 1,
+                max_limit_order_quantity=100_000
+                if star
+                else (300_000 if reformed_chinext else 1_000_000),
+                max_market_order_quantity=50_000
+                if star
+                else (150_000 if reformed_chinext else 1_000_000),
                 call_auction_sessions=("09:15-09:25", "14:57-15:00")
                 if closing_auction
                 else ("09:15-09:25",),
@@ -251,12 +251,46 @@ def stock_trading_history(
     return tuple(history)
 
 
+def _apply_ipo_exemption(
+    versions: dict[str, float | None],
+    listing: CashEquityListing,
+    trading_days: list[str],
+) -> None:
+    if listing.list_date < trading_days[0]:
+        return
+    sessions = [day for day in trading_days if day >= listing.list_date]
+    registration = _registration_date(
+        cash_stock_board(listing.asset_class, listing.exchange, listing.ticker)
+    )
+    initial_sessions = (
+        _IPO_NO_LIMIT_SESSIONS if listing.list_date >= registration else 1
+    )
+    if len(sessions) > initial_sessions:
+        first_banded = sessions[initial_sessions]
+        versions[first_banded] = max(
+            ((day, band) for day, band in versions.items() if day <= first_banded),
+            key=lambda item: item[0],
+        )[1]
+    versions[listing.list_date] = None
+    for effective in list(versions):
+        if (
+            listing.list_date < effective
+            and sum(day < effective for day in sessions) < initial_sessions
+        ):
+            versions[effective] = None
+
+
 def _stock_order_types(
-    exchange: str, effective: str, band: float | None, closing_auction: bool
+    exchange: str,
+    effective: str,
+    band: float | None,
+    closing_auction: bool,
+    *,
+    star: bool,
 ) -> tuple[str, ...]:
-    """Only SSE registration-era rules allow market orders without a daily band."""
+    """STAR and SSE registration-era rules allow market orders without a daily band."""
     order_types = ["limit"]
-    if band is not None or (exchange == "SSE" and effective >= "2023-04-10"):
+    if band is not None or star or (exchange == "SSE" and effective >= "2023-04-10"):
         order_types.insert(0, "market")
     if closing_auction:
         order_types.append("market_on_close")
@@ -334,7 +368,7 @@ def ordinary_equity_rules(
             exchange={"SSE": "XSHG", "SZSE": "XSHE"}[listing.exchange],
             currency="CNY",
             tick_size=0.01 if stock else 0.001,
-            lot_size=100,
+            lot_size=1 if board == "star" else 100,
             multiplier=1.0,
             board_segment=(board or "main") if stock else "domestic_equity_etf",
             lifecycle_state="normal",
@@ -417,9 +451,7 @@ def _stock_execution_fields(
     iid, day = definition.instrument_id, str(row["trade_date"])
     if row.get("is_st") is not False:
         raise ValueError(f"unverified risk-warning rule/status: {iid} {day}")
-    registration = (
-        "2020-08-24" if definition.board_segment == "chinext" else "2023-04-10"
-    )
+    registration = _registration_date(definition.board_segment)
     if rule.price_limit_pct is None and (definition.ipo_date or "") >= registration:
         # The verified listing calendar/rule proves the exemption. A missing
         # or extreme vendor price must never independently grant this state.
@@ -449,3 +481,9 @@ def _stock_execution_fields(
                 f"stock price band disagrees with dated rule: {iid} {day} {name}"
             )
     return {}
+
+
+def _registration_date(board: str | None) -> str:
+    return {"star": "2019-07-22", "chinext": "2020-08-24"}.get(
+        board or "", "2023-04-10"
+    )

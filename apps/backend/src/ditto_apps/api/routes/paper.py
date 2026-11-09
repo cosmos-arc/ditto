@@ -439,6 +439,7 @@ def _operate_command(
             order_types_supported=tuple(body.rules.order_types_supported),
             max_limit_order_quantity=body.rules.max_limit_order_quantity,
             max_market_order_quantity=body.rules.max_market_order_quantity,
+            min_order_quantity=body.rules.min_order_quantity,
             commission_rate=body.rules.commission_rate,
             min_commission=body.rules.min_commission,
             stamp_duty_rate=body.rules.stamp_duty_rate,

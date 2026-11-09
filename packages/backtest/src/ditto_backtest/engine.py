@@ -638,6 +638,7 @@ class EngineLoop:
                 bars=time_slice.bars,
                 benchmark_close=time_slice.benchmark_close,
                 source_snapshot_ids=time_slice.source_snapshot_ids,
+                eligible_ids=time_slice.eligible_ids,
             )
             return StepContext(
                 time_context=tc,
@@ -719,6 +720,7 @@ class EngineLoop:
             bars=time_slice.bars,
             benchmark_close=time_slice.benchmark_close,
             source_snapshot_ids=time_slice.source_snapshot_ids,
+            eligible_ids=time_slice.eligible_ids,
         )
         return StepContext(
             time_context=time_slice.time_context,
