@@ -6,15 +6,18 @@ const labels: Record<string, string> = {
 	cash_payment: "分红到账",
 	tax_reserved: "预留补税",
 	tax_payment: "税款扣付",
+	share_credit: "送转计入总份额",
+	share_release: "送转股份上市可卖",
+	share_tax_payment: "送股初始扣税",
 };
 
 export function BacktestDividends({ statement }: { readonly statement: BacktestDividendStatement | null | undefined }) {
 	if (!statement)
-		return <p className="mb-3 text-xs text-(--color-foreground-secondary)">本报告没有已保存的股票现金分红事件。</p>;
+		return <p className="mb-3 text-xs text-(--color-foreground-secondary)">本报告没有已保存的股票分红与送转事件。</p>;
 	return (
 		<details className="mb-3 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-3 text-xs">
 			<summary className="cursor-pointer rounded-(--radius-sm) font-medium focus-visible:outline-2 focus-visible:outline-offset-4">
-				股票现金分红账本（{statement.events.length} 个事件）
+				股票分红与送转账本（{statement.events.length} 个事件）
 			</summary>
 			<p className="my-3">{statement.policy}</p>
 			<p>金额单位：人民币元（CNY）；日期：交易所当地日期。净资产 = 现金 + 应收 + 持仓市值 − 待扣税款。</p>
@@ -24,8 +27,17 @@ export function BacktestDividends({ statement }: { readonly statement: BacktestD
 						{event.symbol} · 登记 {event.record} · {event.quantity} 股 · 税前每股 {money(event.grossPerShare)} 元
 					</summary>
 					<p>
-						实施公告 {event.announcement}；除息 {event.ex}；派息 {event.pay}。
+						实施公告 {event.announcement}；除息 {event.ex}；派息 {event.pay ?? "无现金分派"}。
 					</p>
+					{event.shareRatio > 0 && (
+						<>
+							<p>
+								每股送转 {money(event.shareRatio)} 股；新增股份上市 {event.listing}；每原股送转应税所得{" "}
+								{money(event.taxableShareIncome)} 元。
+							</p>
+							<p className="break-all">送转税务依据：{event.shareTaxBasis}</p>
+						</>
+					)}
 					<p className="break-all">来源：{event.source}</p>
 				</details>
 			))}
@@ -63,6 +75,36 @@ export function BacktestDividends({ statement }: { readonly statement: BacktestD
 								))}
 							</tr>
 						))}
+					</tbody>
+				</table>
+				<table aria-label="送转每日份额与成本" className="mt-3 w-full whitespace-nowrap text-left font-data">
+					<thead>
+						<tr>
+							{["日期", "证券", "总份额（股）", "可卖（股）", "未可卖（股）", "平均成本（元/股）", "总成本（元）"].map(
+								(label) => (
+									<th key={label} scope="col" className="p-2">
+										{label}
+									</th>
+								),
+							)}
+						</tr>
+					</thead>
+					<tbody>
+						{statement.balances.flatMap((row) =>
+							row.positions.map((position) => (
+								<tr key={`${row.day}-${position.instrumentId}`}>
+									<th scope="row" className="p-2">
+										{row.day}
+									</th>
+									<td className="p-2">{position.symbol}</td>
+									<td className="p-2">{position.quantity}</td>
+									<td className="p-2">{position.availableQuantity}</td>
+									<td className="p-2">{position.lockedQuantity}</td>
+									<td className="p-2">{money(position.averageCost)}</td>
+									<td className="p-2">{money(position.totalCost)}</td>
+								</tr>
+							)),
+						)}
 					</tbody>
 				</table>
 			</section>

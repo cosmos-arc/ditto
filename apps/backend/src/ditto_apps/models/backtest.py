@@ -372,22 +372,46 @@ class DividendEventResponse(BaseModel):
     announcement_date: str
     record_date: str
     ex_date: str
-    pay_date: str
+    pay_date: str | None
     gross_per_share: float
     registered_quantity: int
+    share_ratio: float
+    listing_date: str | None
+    taxable_share_income: float
+    share_tax_basis: str
 
 
 class DividendEntryResponse(BaseModel):
     event_id: str
     day: str
-    kind: Literal["receivable", "cash_payment", "tax_reserved", "tax_payment"]
+    kind: Literal[
+        "receivable",
+        "cash_payment",
+        "tax_reserved",
+        "tax_payment",
+        "share_credit",
+        "share_release",
+        "share_tax_payment",
+    ]
     amount: float
     quantity: int
     acquired: str
 
 
+class DividendPositionResponse(BaseModel):
+    source_ticker: str
+    locked_quantity: int
+    total_cost: float
+    instrument_id: int
+    quantity: int
+    available_quantity: int
+    average_cost: float
+    market_value: float
+
+
 class DividendBalanceResponse(BaseModel):
     trade_date: str
+    positions: list[DividendPositionResponse]
     cash: float
     available_cash: float
     receivable: float

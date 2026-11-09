@@ -215,7 +215,7 @@ class TestDefaultMetadataScheduleAssignments:
     ) -> None:
         registry = default_dataset_metadata()
 
-        assert registry["dividend"].schema_version == "fundamental.dividend.v3"
+        assert registry["dividend"].schema_version == "fundamental.dividend.v4"
 
     def test_corporate_action_schema_versions_announcement_query_semantics(
         self,
@@ -621,7 +621,7 @@ class TestR2DataProductContracts:
             assert spec.primary_key
             assert spec.partition_keys
             assert spec.provider_datasets
-            assert spec.schema_version.endswith((".v1", ".v2", ".v3"))
+            assert spec.schema_version.endswith((".v1", ".v2", ".v3", ".v4"))
             assert spec.frequency in {
                 "static",
                 "trading_daily",

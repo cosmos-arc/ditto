@@ -11,7 +11,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.dividends import CashDividend, DividendBook
+from ditto_portfolio.accounting.dividends import DividendBook, StockDistribution
 from ditto_portfolio.accounting.fills import FillEvent
 from ditto_portfolio.accounting.position import Position
 from ditto_portfolio.events import PositionChanged
@@ -65,7 +65,7 @@ class Account:
         positions: dict[InstrumentId, Position] | None = None,
         cash: CashBook | None = None,
         event_bus: EventBus | None = None,
-        dividends: tuple[CashDividend, ...] = (),
+        dividends: tuple[StockDistribution, ...] = (),
         dividend_state: DividendBook | None = None,
     ) -> None:
         """
@@ -166,17 +166,39 @@ class Account:
             for right in state.rights
             if right.accrued and right.event.identity not in previously_accrued
         }
-        # The carried quote is cum-dividend. Remove the entitlement before the
-        # strategy sees both the old market value and the new receivable.
+        positions = dict(self._positions)
+        # Credit economic shares at ex date, but unlock only on their own listing
+        # date. Preserve the total acquisition cost and the ex-cash market value.
+        new_entries = state.entries[len(self._dividends.entries) :]
         for event in newly_accrued:
-            position = self._positions.get(event.instrument_id)
+            position = positions.get(event.instrument_id)
             if position is not None:
-                reduction = position.quantity * event.gross_per_share
-                self._positions[event.instrument_id] = replace(
-                    position,
-                    market_value=position.market_value - reduction,
-                    unrealized_pnl=position.unrealized_pnl - reduction,
+                credited = sum(
+                    e.quantity
+                    for e in new_entries
+                    if e.event_id == event.identity and e.kind == "share_credit"
                 )
+                quantity = position.quantity + credited
+                cost = position.quantity * position.average_cost
+                value = (
+                    position.market_value - position.quantity * event.gross_per_share
+                )
+                positions[event.instrument_id] = replace(
+                    position,
+                    quantity=quantity,
+                    average_cost=cost / quantity,
+                    market_value=value,
+                    unrealized_pnl=value - cost,
+                )
+        for entry in new_entries:
+            if entry.kind == "share_release":
+                event = next(e for e in state.events if e.identity == entry.event_id)
+                position = positions[event.instrument_id]
+                positions[event.instrument_id] = replace(
+                    position,
+                    available_quantity=position.available_quantity + entry.quantity,
+                )
+        self._positions = positions
         released = self._dividends.tax_payable - state.tax_payable
         self._cash = replace(
             self._cash,

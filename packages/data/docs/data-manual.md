@@ -708,7 +708,11 @@ class IndustryMapping:
 | `pay_date` | Date | 派息日 |
 | `implementation_date` | Date | 实施公告日；与原公告知识日期分开 |
 | `report_date` | Date | 分红所属报告年度/期间 |
-| `stock_dividend_ratio` | Float64 | 每股送转比例；现金增量不处理份额变化 |
+| `stock_dividend_ratio` | Float64 | 每旧股送转总比例，须等于送股与转增之和 |
+| `bonus_ratio` / `capitalization_ratio` | Float64 | 每旧股送股 / 转增比例；不把缺失值自动当作零 |
+| `share_listing_date` | Date | 新增无限售条件股份实际上市日，独立于除权日 |
+| `taxable_share_income` | Float64 | 公告确认的送转应税所得，元/登记旧股；零税基也须有依据 |
+| `share_tax_basis` / `share_tax_knowledge_date` | String / Date | 匹配本次事件的发行人声明及其公告日 |
 | `div_proc` | String | 实施进度，只有明确实施的事实可生成权益 |
 | `dividend_yield` | Float64 | 股息率 |
 
@@ -716,7 +720,7 @@ class IndustryMapping:
 
 **主键**：`(instrument_id, ex_dividend_date, effective_from)`
 
-普通历史现金记账使用 v3 留存载荷，不从复权因子推断现金。登记持仓、除息应收、到账现金及个人流通股税务假设见 [股票现金分红](../../../docs/evidence/stock-cash-dividends-759.md)。旧载荷缺少实施字段时重新采集，原报告保持原事实。
+普通历史分派记账使用 v4 留存载荷，不从复权因子推断权益。登记持仓、除息应收、到账现金见 [股票现金分红](../../../docs/evidence/stock-cash-dividends-759.md)；总份额、成本、上市日及发行人税务证据配置见 [股票送转](../../../docs/evidence/stock-distributions-760.md)。缺少必需事实时重新采集并新建运行，原报告保持原事实。
 
 ---
 

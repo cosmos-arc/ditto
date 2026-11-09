@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 6942efd181ed14571340a95331cfa53f67151e632b00985aeda0411fa565cb2e
+ * Schema SHA-256: a3c038b6b79625a4dcb19744237c8098d5a71d41b6c7fbcc75411ece08d59129
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -9967,6 +9967,8 @@ export interface components {
             market_value: number;
             /** Nav */
             nav: number;
+            /** Positions */
+            positions: components["schemas"]["DividendPositionResponse"][];
             /** Receivable */
             receivable: number;
             /** Tax Payable */
@@ -9988,7 +9990,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "receivable" | "cash_payment" | "tax_reserved" | "tax_payment";
+            kind: "receivable" | "cash_payment" | "tax_reserved" | "tax_payment" | "share_credit" | "share_release" | "share_tax_payment";
             /** Quantity */
             quantity: number;
         };
@@ -10007,16 +10009,43 @@ export interface components {
             gross_per_share: number;
             /** Instrument Id */
             instrument_id: number;
+            /** Listing Date */
+            listing_date: string | null;
             /** Pay Date */
-            pay_date: string;
+            pay_date: string | null;
             /** Record Date */
             record_date: string;
             /** Registered Quantity */
             registered_quantity: number;
+            /** Share Ratio */
+            share_ratio: number;
+            /** Share Tax Basis */
+            share_tax_basis: string;
             /** Source Snapshot Id */
             source_snapshot_id: string;
             /** Source Ticker */
             source_ticker: string;
+            /** Taxable Share Income */
+            taxable_share_income: number;
+        };
+        /** DividendPositionResponse */
+        DividendPositionResponse: {
+            /** Available Quantity */
+            available_quantity: number;
+            /** Average Cost */
+            average_cost: number;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Locked Quantity */
+            locked_quantity: number;
+            /** Market Value */
+            market_value: number;
+            /** Quantity */
+            quantity: number;
+            /** Source Ticker */
+            source_ticker: string;
+            /** Total Cost */
+            total_cost: number;
         };
         /** DividendStatementResponse */
         DividendStatementResponse: {

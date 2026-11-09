@@ -50,6 +50,8 @@ class AuditStep:
             account_view,
         )
 
+        self._trade_builder.apply_distributions(account_view.dividends)
+
         # 记录每个 fill + 传给 trade_builder
         for fill in ctx.step_fills:
             self._audit_collector.record_fill(fill)

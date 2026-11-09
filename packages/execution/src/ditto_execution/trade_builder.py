@@ -8,6 +8,7 @@ produces TradeRecord (open or closed).
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
@@ -16,6 +17,7 @@ from typing import Protocol
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import AccountView, FillEvent
+from ditto_portfolio.accounting.dividends import DividendBook, StockDistribution
 
 __all__ = [
     "FifoOpenEntrySnapshot",
@@ -80,6 +82,7 @@ class FifoOpenEntrySnapshot:
     original_quantity: int
     remaining_quantity: int
     entry_order_id: str
+    available_from: date | None = None
 
 
 @dataclass(frozen=True)
@@ -108,6 +111,7 @@ class TradeBuilderStateSnapshot:
 
     method: TradeMatchingMethod
     counter: int
+    applied_distributions: tuple[str, ...] = ()
     fifo_open_entries: tuple[FifoOpenEntrySnapshot, ...] = ()
     flat_to_flat_accumulators: tuple[FlatToFlatAccumulatorSnapshot, ...] = ()
 
@@ -116,6 +120,12 @@ class TradeBuilderStateSnapshot:
         if type(self.counter) is not int or self.counter < 0:
             msg = "trade builder counter must be a non-negative integer"
             raise ValueError(msg)
+        if len(set(self.applied_distributions)) != len(
+            self.applied_distributions
+        ) or any(not identity for identity in self.applied_distributions):
+            raise ValueError(
+                "trade builder distribution identities must be unique strings"
+            )
         invalid_variant = (
             bool(self.flat_to_flat_accumulators)
             if self.method is TradeMatchingMethod.FIFO
@@ -136,6 +146,10 @@ class TradeBuilder(Protocol):
 
     def on_fill(self, fill: FillEvent, account_view: AccountView) -> None:
         """处理成交事件，更新开仓/平仓记录。"""
+        ...
+
+    def apply_distributions(self, book: DividendBook) -> None:
+        """Synchronize credited shares before matching the session fills."""
         ...
 
     def get_open_trades(self) -> tuple[TradeRecord, ...]:
@@ -177,6 +191,7 @@ class _OpenEntry:
     original_quantity: int
     remaining_quantity: int
     entry_order_id: str
+    available_from: date | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +207,7 @@ class FifoTradeBuilder:
         self._open: dict[InstrumentId, deque[_OpenEntry]] = {}
         self._closed: list[TradeRecord] = []
         self._counter = 0
+        self._applied_distributions: set[str] = set()
 
     # -- public API ---------------------------------------------------------
 
@@ -217,6 +233,18 @@ class FifoTradeBuilder:
 
         elif fill.direction == OrderSide.SELL:
             self._match_sell(iid, fill_date, fill)
+
+    def apply_distributions(self, book: DividendBook) -> None:
+        """Retain remaining costs/fees while separating newly unlisted shares."""
+        for event, quantity in _pending_distributions(
+            book, self._applied_distributions
+        ):
+            queue = self._open.get(event.instrument_id, deque())
+            _distribute_fifo(queue, event, quantity, self._next_id)
+            self._open[event.instrument_id] = deque(
+                sorted(queue, key=lambda e: e.entry_date)
+            )
+            self._applied_distributions.add(event.identity)
 
     def get_open_trades(self) -> tuple[TradeRecord, ...]:
         """获取当前未平仓交易。"""
@@ -267,6 +295,7 @@ class FifoTradeBuilder:
                 original_quantity=entry.original_quantity,
                 remaining_quantity=entry.remaining_quantity,
                 entry_order_id=entry.entry_order_id,
+                available_from=entry.available_from,
             )
             for queue in self._open.values()
             for entry in queue
@@ -274,6 +303,7 @@ class FifoTradeBuilder:
         return TradeBuilderStateSnapshot(
             method=TradeMatchingMethod.FIFO,
             counter=self._counter,
+            applied_distributions=tuple(sorted(self._applied_distributions)),
             fifo_open_entries=entries,
         )
 
@@ -306,11 +336,13 @@ class FifoTradeBuilder:
                     original_quantity=entry.original_quantity,
                     remaining_quantity=entry.remaining_quantity,
                     entry_order_id=entry.entry_order_id,
+                    available_from=entry.available_from,
                 )
             )
         self._open = restored
         self._closed = []
         self._counter = snapshot.counter
+        self._applied_distributions = set(snapshot.applied_distributions)
 
     # -- internals ----------------------------------------------------------
 
@@ -329,8 +361,11 @@ class FifoTradeBuilder:
             return
 
         remaining = fill.filled_quantity
-        while remaining > 0 and queue:
-            entry = queue[0]
+        for entry in tuple(queue):
+            if not remaining:
+                break
+            if entry.available_from is not None and fill_date < entry.available_from:
+                continue
             match_qty = min(remaining, entry.remaining_quantity)
 
             # Proportional fee allocation
@@ -368,7 +403,7 @@ class FifoTradeBuilder:
             )
 
             if entry.remaining_quantity == 0:
-                queue.popleft()
+                queue.remove(entry)
 
 
 # ---------------------------------------------------------------------------
@@ -408,6 +443,7 @@ class FlatToFlatTradeBuilder:
         self._accumulators: dict[InstrumentId, _InstrumentAccumulator] = {}
         self._closed: list[TradeRecord] = []
         self._counter = 0
+        self._applied_distributions: set[str] = set()
 
     # -- public API ---------------------------------------------------------
 
@@ -451,6 +487,18 @@ class FlatToFlatTradeBuilder:
             if acc.net_quantity == 0:
                 self._emit_closed(acc)
                 del self._accumulators[iid]
+
+    def apply_distributions(self, book: DividendBook) -> None:
+        """Add credited shares to the open cycle without inventing purchase cost."""
+        for event, quantity in _pending_distributions(
+            book, self._applied_distributions
+        ):
+            acc = self._accumulators.get(event.instrument_id)
+            if acc is None:
+                raise ValueError("distribution has no open trade-matching position")
+            acc.net_quantity += quantity
+            acc.buy_quantity += quantity
+            self._applied_distributions.add(event.identity)
 
     def get_open_trades(self) -> tuple[TradeRecord, ...]:
         """获取当前未平仓交易（按品种 VWAP entry price）。"""
@@ -516,6 +564,7 @@ class FlatToFlatTradeBuilder:
         return TradeBuilderStateSnapshot(
             method=TradeMatchingMethod.FLAT_TO_FLAT,
             counter=self._counter,
+            applied_distributions=tuple(sorted(self._applied_distributions)),
             flat_to_flat_accumulators=accumulators,
         )
 
@@ -553,6 +602,7 @@ class FlatToFlatTradeBuilder:
         self._accumulators = restored
         self._closed = []
         self._counter = snapshot.counter
+        self._applied_distributions = set(snapshot.applied_distributions)
 
     # -- internals ----------------------------------------------------------
 
@@ -625,3 +675,56 @@ def _require_counter_covers_trade_ids(counter: int, trade_ids: tuple[str, ...]) 
     if counter < highest:
         msg = "trade builder counter is behind an open trade ID"
         raise ValueError(msg)
+
+
+def _pending_distributions(
+    book: DividendBook, applied: set[str]
+) -> tuple[tuple[StockDistribution, int], ...]:
+    events = {event.identity: event for event in book.events}
+    return tuple(
+        (events[entry.event_id], entry.quantity)
+        for entry in book.entries
+        if entry.kind == "share_credit" and entry.event_id not in applied
+    )
+
+
+def _distribute_fifo(
+    queue: deque[_OpenEntry],
+    event: StockDistribution,
+    quantity: int,
+    next_id: Callable[[], str],
+) -> None:
+    """Attribute whole credited shares across cost lots; never round account rights."""
+    entries = tuple(queue)
+    total = sum(e.remaining_quantity for e in entries)
+    if not total:
+        raise ValueError("distribution has no open trade-matching position")
+    allocations = [divmod(quantity * e.remaining_quantity, total) for e in entries]
+    quantities = [amount for amount, _ in allocations]
+    # Internal cost attribution only: largest remainder, stable FIFO tie break.
+    # The account entitlement itself must already be an exact whole-share amount.
+    remainder_order = sorted(range(len(entries)), key=lambda i: -allocations[i][1])
+    for i in remainder_order[: quantity - sum(quantities)]:
+        quantities[i] += 1
+    for entry, extra in zip(entries, quantities, strict=True):
+        if not extra:
+            continue
+        old = entry.remaining_quantity
+        fee = entry.entry_fee * old / entry.original_quantity
+        entry.entry_price *= old / (old + extra)
+        entry.original_quantity = old
+        entry.entry_fee = fee * old / (old + extra)
+        queue.append(
+            _OpenEntry(
+                trade_id=next_id(),
+                instrument_id=entry.instrument_id,
+                direction=entry.direction,
+                entry_date=entry.entry_date,
+                entry_price=entry.entry_price,
+                entry_fee=fee * extra / (old + extra),
+                original_quantity=extra,
+                remaining_quantity=extra,
+                entry_order_id=entry.entry_order_id,
+                available_from=event.listing_date,
+            )
+        )

@@ -485,6 +485,12 @@ CREATE TABLE IF NOT EXISTS dividend (
     implementation_date DATE,
     report_date DATE,
     stock_dividend_ratio REAL,
+    bonus_ratio REAL,
+    capitalization_ratio REAL,
+    share_listing_date TEXT,
+    taxable_share_income REAL,
+    share_tax_basis TEXT,
+    share_tax_knowledge_date TEXT,
     PRIMARY KEY (instrument_id, effective_from, ex_dividend_date),  -- 调整主键顺序
     FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id)
 );

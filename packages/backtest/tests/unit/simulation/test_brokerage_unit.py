@@ -1466,7 +1466,10 @@ def test_star_submission_minimum_does_not_block_partial_fill_remainder(
         assert account.positions[InstrumentId(1)].quantity == 201
 
 
-def test_daily_st_buy_cap_counts_prior_fills_without_resetting_for_another_order():
+@pytest.mark.parametrize("unlisted", [False, True])
+def test_daily_st_buy_cap_counts_prior_fills_without_resetting_for_another_order(
+    unlisted,
+):
     definition, rule, fee = ordinary_equity_rules(
         CashEquityListing(
             InstrumentId(1), "000001", "stock", "SZSE", "1991-04-03", None
@@ -1477,6 +1480,37 @@ def test_daily_st_buy_cap_counts_prior_fills_without_resetting_for_another_order
     )
     rules = definition, replace(rule, max_daily_buy_quantity=500_000), fee
     account, book = _account(10_000_000), _order_book()
+    if unlisted:
+        from datetime import date
+
+        from ditto_portfolio.accounting.dividends import DividendBook, StockDistribution
+        from ditto_portfolio.accounting.position import Position
+
+        event = StockDistribution(
+            InstrumentId(1),
+            date(2026, 10, 7),
+            date(2026, 10, 8),
+            None,
+            0,
+            date(2026, 9, 30),
+            "source:st-shares",
+            share_ratio=0.5,
+            listing_date=date(2026, 10, 12),
+            share_tax_basis="issuer",
+        )
+        state = DividendBook.start((event,)).close(
+            "2026-10-07", {InstrumentId(1): 1_000_000}
+        )
+        account = Account(
+            cash=account.cash,
+            positions={
+                InstrumentId(1): Position(
+                    InstrumentId(1), 1_000_000, 1_000_000, 10, 10_000_000, 0, 0, 0
+                )
+            },
+            dividend_state=state,
+        )
+        account.settle_dividends("2026-10-08")
     broker = BacktestBrokerage(
         account=account,
         order_book=book,
@@ -1502,7 +1536,9 @@ def test_daily_st_buy_cap_counts_prior_fills_without_resetting_for_another_order
     )
     fills = broker.process_pending(inputs)
     assert [fill.filled_quantity for fill in fills] == [300_000, 200_000]
-    assert account.positions[InstrumentId(1)].quantity == 500_000
+    assert account.positions[InstrumentId(1)].quantity == (
+        2_000_000 if unlisted else 500_000
+    )
     blocked = book.get(ClientOrderId("2"))
     assert blocked is not None
     assert (

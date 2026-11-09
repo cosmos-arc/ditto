@@ -7,11 +7,11 @@ from typing import cast
 import orjson
 from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.accounting.dividends import (
-    CashDividend,
     DividendBook,
     DividendEntry,
     DividendLot,
     DividendRight,
+    StockDistribution,
 )
 
 from ditto_backtest._checkpoint_codec import (
@@ -28,17 +28,25 @@ def dividend_payload(book: DividendBook) -> dict[str, object]:
     return cast(dict[str, object], orjson.loads(orjson.dumps(asdict(book))))
 
 
-def _event(payload: object) -> CashDividend:
+def _event(payload: object) -> StockDistribution:
     row = payload_mapping(payload)
-    return CashDividend(
+    return StockDistribution(
         instrument_id=InstrumentId(payload_int(row, "instrument_id")),
         record_date=date.fromisoformat(payload_str(row, "record_date")),
         ex_date=date.fromisoformat(payload_str(row, "ex_date")),
-        pay_date=date.fromisoformat(payload_str(row, "pay_date")),
+        pay_date=date.fromisoformat(payload_str(row, "pay_date"))
+        if row["pay_date"] is not None
+        else None,
         gross_per_share=payload_float(row, "gross_per_share"),
         announcement_date=date.fromisoformat(payload_str(row, "announcement_date")),
         source_snapshot_id=payload_str(row, "source_snapshot_id"),
         source_ticker=payload_str(row, "source_ticker"),
+        share_ratio=payload_float(row, "share_ratio"),
+        listing_date=date.fromisoformat(payload_str(row, "listing_date"))
+        if row["listing_date"] is not None
+        else None,
+        taxable_share_income=payload_float(row, "taxable_share_income"),
+        share_tax_basis=payload_str(row, "share_tax_basis"),
     )
 
 
@@ -53,6 +61,9 @@ def dividend_from_payload(payload: object) -> DividendBook:
                 InstrumentId(payload_int(row, "instrument_id")),
                 date.fromisoformat(payload_str(row, "acquired")),
                 payload_int(row, "quantity"),
+                date.fromisoformat(payload_str(row, "available_from"))
+                if row["available_from"] is not None
+                else None,
             )
         )
     rights: list[DividendRight] = []

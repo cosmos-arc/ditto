@@ -592,7 +592,9 @@ def _dividend_statement(report: BacktestReport) -> dict[str, object] | None:
         + "2013 起先扣 5%, 2015-09-08 起先扣 0%。"
         + "卖出日预留补税, 下一交易日扣款。"
         + "除息应收在派息日前不可再投资; 保留计算精度。"
-        + "不模拟券商分币舍入。",
+        + "不模拟券商分币舍入。送转保留总成本, 除权日起计入总份额, "
+        + "按公告上市日释放可卖份额; 新增股份以除权日记取得日。"
+        + "非整数权益需实际零碎股分配依据, 不能静默取整。",
         "events": [
             {
                 **dataclasses.asdict(event),
@@ -615,6 +617,24 @@ def _dividend_statement(report: BacktestReport) -> dict[str, object] | None:
                 "tax_payable": view.dividends.tax_payable,
                 "market_value": view.exposure,
                 "nav": view.nav,
+                "positions": [
+                    {
+                        "instrument_id": int(iid),
+                        "quantity": p.quantity,
+                        "available_quantity": p.available_quantity,
+                        "average_cost": p.average_cost,
+                        "market_value": p.market_value,
+                        "locked_quantity": p.quantity - p.available_quantity,
+                        "total_cost": p.quantity * p.average_cost,
+                        "source_ticker": next(
+                            e.source_ticker
+                            for e in book.events
+                            if e.instrument_id == iid
+                        ),
+                    }
+                    for iid, p in sorted(view.positions.items())
+                    if any(e.instrument_id == iid for e in book.events)
+                ],
             }
             for day, view in report.account_series
         ],

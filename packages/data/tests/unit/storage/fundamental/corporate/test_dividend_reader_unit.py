@@ -34,6 +34,8 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
         gross_dividend_per_share REAL,
         record_date DATE, pay_date DATE, implementation_date DATE,
         report_date DATE, stock_dividend_ratio REAL,
+        bonus_ratio REAL, capitalization_ratio REAL, share_listing_date DATE,
+        taxable_share_income REAL, share_tax_basis TEXT, share_tax_knowledge_date DATE,
         div_proc TEXT,
         PRIMARY KEY (instrument_id, ex_dividend_date, effective_from)
     )"""
@@ -50,6 +52,26 @@ def dividend_reader(in_memory_db: SQLitePool) -> DividendReader:
 @pytest.mark.unit
 class TestDividendReader:
     """Test cases for DividendReader."""
+
+    @pytest.mark.pit
+    def test_later_issuer_tax_evidence_cannot_leak_through_earlier_announcement(
+        self, dividend_reader: DividendReader, in_memory_db: SQLitePool
+    ) -> None:
+        client = SQLiteClient(in_memory_db)
+        client.execute(
+            """INSERT INTO dividend
+            (instrument_id, ex_dividend_date, knowledge_date, effective_from,
+             share_tax_basis, share_tax_knowledge_date, taxable_share_income)
+            VALUES ('600000', '2024-06-15', '2024-05-01', '2024-05-01',
+                    'issuer:future-tax', '2024-06-10', 999)"""
+        )
+        client.commit()
+        assert dividend_reader.get(600000, date(2024, 6, 9)).is_empty()
+        assert dividend_reader.get_range(600000, as_of_date=date(2024, 6, 9)).is_empty()
+        assert dividend_reader.get(600000, date(2024, 6, 10)).height == 1
+        assert (
+            dividend_reader.get_range(600000, as_of_date=date(2024, 6, 10)).height == 1
+        )
 
     def test_get_returns_data(
         self, dividend_reader: DividendReader, in_memory_db: SQLitePool

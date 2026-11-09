@@ -46,7 +46,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider, InstrumentRules
 from ditto_portfolio.accounting import Account, CashBook, Position
-from ditto_portfolio.accounting.dividends import CashDividend
+from ditto_portfolio.accounting.dividends import StockDistribution
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -307,7 +307,7 @@ def _build_account(
     *,
     initial_cash: float,
     account_state: BacktestAccountStateSnapshot | None,
-    dividends: tuple[CashDividend, ...] = (),
+    dividends: tuple[StockDistribution, ...] = (),
 ) -> Account:
     """Build a mutable Account from initial cash or checkpoint state."""
     if account_state is None:
@@ -706,7 +706,8 @@ class BacktestRuntimeBuilder:
                 + "ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。"
                 + "最低佣金 5 元为保守研究假设;拆并份或退市清算仍缺会计证据。"
                 + (
-                    "股票现金分红与适用税务假设见保存的分红账本。"
+                    "股票分红、送转份额、可卖日期与税务假设见保存的分派账本;"
+                    + "配股和零碎股分配仍需独立会计证据。"
                     if historical_provider is not None
                     and runtime.spec.asset_class == "stock"
                     else "本路径不模拟现金分配。"

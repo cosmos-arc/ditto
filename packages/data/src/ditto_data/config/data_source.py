@@ -1,6 +1,23 @@
 """Data 数据源配置."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from datetime import date
+
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, Json
+
+
+class StockDistributionTerms(BaseModel):
+    """Issuer-declared tax facts matched to one exact implemented distribution."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    source_ticker: str
+    record_date: date
+    ex_date: date
+    listing_date: date
+    bonus_ratio: float = Field(ge=0, allow_inf_nan=False)
+    capitalization_ratio: float = Field(ge=0, allow_inf_nan=False)
+    taxable_share_income: float = Field(ge=0, allow_inf_nan=False)
+    announcement_date: date
+    basis_url: HttpUrl
 
 
 class DataSourceSettings(BaseModel):
@@ -24,6 +41,11 @@ class DataSourceSettings(BaseModel):
     rate_limit_daily_rate: int | None = Field(default=None)
     # 日配额覆盖（次/天，官方直连档位默认 100000；None = 沿用档位默认）
     rate_limit_daily_quota: int | None = Field(default=None)
+
+    # Supplementary issuer evidence, captured in each dividend source payload.
+    stock_distribution_terms: (
+        Json[tuple[StockDistributionTerms, ...]] | tuple[StockDistributionTerms, ...]
+    ) = ()
 
     # Token
     tushare_token: str = Field(default="")

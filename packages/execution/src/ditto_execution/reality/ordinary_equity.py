@@ -466,7 +466,7 @@ _ADJ_FACTOR_QUANTUM = 0.001
 
 
 def _cash_factor_matches(
-    row: Mapping[str, object], cash: float | None, tick: float
+    row: Mapping[str, object], cash: float | None, shares: float, tick: float
 ) -> bool:
     """Reconcile independently declared cash against the rounded ex reference."""
     close, previous, current = (
@@ -475,7 +475,10 @@ def _cash_factor_matches(
     if not (
         cash is not None
         and isfinite(cash)
-        and cash > 0
+        and cash >= 0
+        and isfinite(shares)
+        and shares >= 0
+        and cash + shares > 0
         and isinstance(close, (int, float))
         and isfinite(close)
         and close > cash
@@ -487,7 +490,9 @@ def _cash_factor_matches(
         and current > 0
     ):
         return False
-    reference = round_to_tick(Decimal(str(close)) - Decimal(str(cash)), tick)
+    reference = round_to_tick(
+        (Decimal(str(close)) - Decimal(str(cash))) / (1 + Decimal(str(shares))), tick
+    )
     if reference <= 0:
         return False
     ratio = close / reference
@@ -503,6 +508,7 @@ def ordinary_execution_fields(
     *,
     start_date: str,
     cash_dividend: float | None = None,
+    share_ratio: float = 0.0,
 ) -> dict[str, float | bool | None]:
     """Validate daily execution state and derive verified ETF price bands."""
     definition, rule, _ = rules
@@ -513,7 +519,9 @@ def ordinary_execution_fields(
         and (cash_dividend is not None or row.get("adj_factor") != row["_previous_adj"])
         and not (
             definition.asset_class == "stock"
-            and _cash_factor_matches(row, cash_dividend, definition.tick_size)
+            and _cash_factor_matches(
+                row, cash_dividend, share_ratio, definition.tick_size
+            )
         )
     ):
         raise ValueError(

@@ -204,6 +204,9 @@ class TestTushareDataTransformer:
                 "imp_ann_date": [None],
                 "end_date": ["20151231"],
                 "stk_div": [0.0],
+                "stk_bo_rate": [0.0],
+                "stk_co_rate": [0.0],
+                "div_listdate": [None],
                 "ann_date": ["20160514"],
                 "div_proc": ["预案"],
             }

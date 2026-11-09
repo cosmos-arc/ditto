@@ -331,7 +331,8 @@ class TestFundamentalAdapterDividendAndActions:
         assert call_kwargs == {
             "api_name": "dividend",
             "fields": "ts_code,ex_date,cash_div,cash_div_tax,record_date,pay_date,"
-            + "ann_date,imp_ann_date,end_date,stk_div,div_proc",
+            + "ann_date,imp_ann_date,end_date,stk_div,stk_bo_rate,stk_co_rate,"
+            + "div_listdate,div_proc",
             "ts_code": "000001.SZ",
             "ann_date": "20240507",
             "ex_date": "20240506",
@@ -353,7 +354,8 @@ class TestFundamentalAdapterDividendAndActions:
         client.query.assert_called_once_with(
             api_name="dividend",
             fields="ts_code,ex_date,cash_div,cash_div_tax,record_date,pay_date,"
-            + "ann_date,imp_ann_date,end_date,stk_div,div_proc",
+            + "ann_date,imp_ann_date,end_date,stk_div,stk_bo_rate,stk_co_rate,"
+            + "div_listdate,div_proc",
         )
 
     def test_fetch_corporate_actions_includes_all_optional_params(self) -> None:

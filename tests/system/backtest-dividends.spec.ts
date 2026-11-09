@@ -113,7 +113,7 @@ test("cash dividend facts recover through the UI, reconcile, reopen and export",
 	await page.getByRole("tab", { name: "成交", exact: true }).click();
 	const disclosure = page
 		.locator("summary")
-		.filter({ hasText: "股票现金分红账本" });
+		.filter({ hasText: "股票分红与送转账本" });
 	await disclosure.focus();
 	await page.keyboard.press("Enter");
 	await expect(disclosure).toBeFocused();
