@@ -61,6 +61,9 @@ def dividend_from_payload(payload: object) -> DividendBook:
                 InstrumentId(payload_int(row, "instrument_id")),
                 date.fromisoformat(payload_str(row, "acquired")),
                 payload_int(row, "quantity"),
+                date.fromisoformat(payload_str(row, "available_from"))
+                if row["available_from"] is not None
+                else None,
             )
         )
     rights: list[DividendRight] = []

@@ -251,12 +251,18 @@ class PreTradeStep:
                 for item in pre_trade_context.accepted_orders
                 if item.instrument_id == order.instrument_id
             ]
-            # T+1 inventory difference is today's purchases; undo the context's
-            # temporary sell reservations, which have not changed total holdings.
+            # Remove listing locks and temporary sell reservations to isolate
+            # today's T+1 purchases, which alone consume the daily buy cap.
             bought = (
-                position.quantity - position.available_quantity if position else 0
-            ) - sum(
-                item.quantity for item in accepted if item.direction is OrderSide.SELL
+                (position.quantity - position.available_quantity if position else 0)
+                - pre_trade_context.account_view.dividends.unlisted_shares(
+                    order.instrument_id
+                )
+                - sum(
+                    item.quantity
+                    for item in accepted
+                    if item.direction is OrderSide.SELL
+                )
             )
             pending = sum(
                 item.quantity for item in accepted if item.direction is OrderSide.BUY

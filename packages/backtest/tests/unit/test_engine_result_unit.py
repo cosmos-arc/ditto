@@ -445,6 +445,7 @@ class TestBacktestCheckpoint:
             "strategy_context": {"position_costs": [], "risk_locks": []},
             "trade_builder_state": {
                 "counter": 0,
+                "applied_distributions": [],
                 "fifo_open_entries": [],
                 "method": "fifo",
             },
@@ -503,6 +504,7 @@ class TestBacktestCheckpoint:
             "strategy_context": {"position_costs": [], "risk_locks": []},
             "trade_builder_state": {
                 "counter": 0,
+                "applied_distributions": [],
                 "fifo_open_entries": [],
                 "method": "fifo",
             },

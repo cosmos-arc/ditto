@@ -116,3 +116,143 @@ def test_saved_unlisted_shares_unlock_once_after_restore():
         account.positions[InstrumentId(1)], available_quantity=150
     )
     assert resumed.get_view().nav == 2000
+
+
+@pytest.mark.parametrize("method", ["fifo", "flat_to_flat"])
+def test_trade_matching_survives_share_credit_restore_and_listing(method):
+    from datetime import datetime
+
+    from ditto_backtest._trade_builder_checkpoint import (
+        trade_builder_from_payload,
+        trade_builder_to_payload,
+    )
+    from ditto_execution.trade_builder import FifoTradeBuilder, FlatToFlatTradeBuilder
+    from ditto_kernel.order import OrderSide
+    from ditto_portfolio.accounting.dividends import DividendBook
+    from ditto_portfolio.accounting.fills import FillEvent
+
+    factory = FifoTradeBuilder if method == "fifo" else FlatToFlatTradeBuilder
+    builder = factory()
+    account = Account(cash=CashBook(5000, 5000, 0))
+
+    def fill(day, side, quantity, price):
+        item = FillEvent(
+            day,
+            day,
+            InstrumentId(1),
+            side,
+            quantity,
+            price,
+            6 if day == "2020-06-02" else 0,
+            0,
+            datetime.fromisoformat(day),
+            quantity,
+            0,
+        )
+        builder.on_fill(item, account.get_view())
+
+    fill("2020-06-02", OrderSide.BUY, 100, 12)
+    event = StockDistribution(
+        InstrumentId(1),
+        date(2020, 6, 2),
+        date(2020, 6, 3),
+        None,
+        0,
+        date(2020, 5, 20),
+        "source:shares",
+        share_ratio=0.5,
+        listing_date=date(2020, 6, 5),
+        share_tax_basis="issuer",
+    )
+    book, _ = (
+        DividendBook.start((event,))
+        .close("2020-06-02", {InstrumentId(1): 100})
+        .settle("2020-06-03")
+    )
+    builder.apply_distributions(book)
+    saved = trade_builder_from_payload(
+        trade_builder_to_payload(builder.snapshot_state()), strict=True
+    )
+    builder = factory()
+    builder.restore_state(saved)
+    builder.apply_distributions(book)
+    assert sum(t.quantity for t in builder.get_open_trades()) == 150
+    fill("2020-06-03", OrderSide.BUY, 100, 8)
+    fill("2020-06-03", OrderSide.SELL, 100, 8)
+    fill("2020-06-04", OrderSide.SELL, 100, 8)
+    if method == "fifo":
+        locked = builder.snapshot_state().fifo_open_entries
+        assert len(locked) == 1
+        assert locked[0].available_from == date(2020, 6, 5)
+    fill("2020-06-05", OrderSide.SELL, 50, 8)
+    assert sum(t.quantity for t in builder.get_closed_trades()) == 250
+    assert sum(t.gross_pnl for t in builder.get_closed_trades()) == pytest.approx(0)
+    assert builder.get_open_trades() == ()
+    assert sum(t.fees for t in builder.get_closed_trades()) == pytest.approx(6)
+
+
+def test_fifo_attributes_whole_share_credit_across_fractional_cost_lots():
+    from datetime import datetime
+
+    from ditto_execution.trade_builder import FifoTradeBuilder
+    from ditto_kernel.order import OrderSide
+    from ditto_portfolio.accounting.dividends import DividendBook
+    from ditto_portfolio.accounting.fills import FillEvent
+
+    builder = FifoTradeBuilder()
+    account = Account(cash=CashBook(100, 100, 0))
+    for day, price, fee in [("2020-06-01", 10, 1), ("2020-06-02", 20, 2)]:
+        builder.on_fill(
+            FillEvent(
+                day,
+                day,
+                InstrumentId(1),
+                OrderSide.BUY,
+                1,
+                price,
+                fee,
+                0,
+                datetime.fromisoformat(day),
+                1,
+                0,
+            ),
+            account.get_view(),
+        )
+    event = StockDistribution(
+        InstrumentId(1),
+        date(2020, 6, 2),
+        date(2020, 6, 3),
+        None,
+        0,
+        date(2020, 5, 20),
+        "source:shares",
+        share_ratio=0.5,
+        listing_date=date(2020, 6, 5),
+        share_tax_basis="issuer",
+    )
+    book, _ = (
+        DividendBook.start((event,))
+        .close("2020-06-02", {InstrumentId(1): 2})
+        .settle("2020-06-03")
+    )
+    builder.apply_distributions(book)
+    assert sum(t.quantity for t in builder.get_open_trades()) == 3
+    builder.on_fill(
+        FillEvent(
+            "sell",
+            "sell",
+            InstrumentId(1),
+            OrderSide.SELL,
+            3,
+            10,
+            0,
+            0,
+            datetime(2020, 6, 5),
+            3,
+            0,
+        ),
+        account.get_view(),
+    )
+    assert sum(t.quantity for t in builder.get_closed_trades()) == 3
+    assert sum(t.gross_pnl for t in builder.get_closed_trades()) == pytest.approx(0)
+    assert sum(t.fees for t in builder.get_closed_trades()) == pytest.approx(3)

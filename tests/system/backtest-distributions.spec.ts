@@ -62,6 +62,20 @@ test("share distribution facts recover through the UI, reconcile, reopen and exp
 	).data;
 	const statement = report.dividend_statement;
 	expect(statement.events).toHaveLength(2);
+	const trades = (
+		await (
+			await page.request.get(
+				`${apiOrigin}/api/v1/backtests/runs/${runId}/trades`,
+			)
+		).json()
+	).data;
+	const adjusted = trades.filter(
+		(trade: { entry_date: string; exit_date: string }) =>
+			trade.entry_date < "2014-01-22" && trade.exit_date >= "2014-01-22",
+	);
+	expect(adjusted.length).toBeGreaterThan(0);
+	for (const trade of adjusted)
+		expect(trade.entry_price).toBeCloseTo(10 / 1.5, 6);
 	let cash = 250000;
 	const positions = new Map<number, number>();
 	for (const day of statement.balances) {

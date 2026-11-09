@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
+import pytest
 from ditto_backtest.steps import PreTradeStep, StepContext, TradingStep
 from ditto_risk.pre_trade import Decision
 from packages.backtest.tests.unit._helpers import (
@@ -311,7 +312,10 @@ def test_dated_minimum_is_rechecked_after_risk_resizes_an_order() -> None:
     assert ctx.pre_trade_decisions[0].final_quantity == 0
 
 
-def test_st_submission_cap_includes_unfilled_orders_and_releases_cancellations():
+@pytest.mark.parametrize("unlisted", [False, True])
+def test_st_submission_cap_includes_unfilled_orders_and_releases_cancellations(
+    unlisted,
+):
     from dataclasses import replace
 
     from ditto_execution.orders.book import OrderBook
@@ -334,8 +338,39 @@ def test_st_submission_cap_includes_unfilled_orders_and_releases_cancellations()
     book = OrderBook(InMemoryOrderEventJournal())
     pending = _make_order(order_id="pending", instrument_id=iid, quantity=400_000)
     book.submit(pending)
+    view = _make_account_view()
+    if unlisted:
+        from datetime import date
+
+        from ditto_portfolio.accounting.dividends import DividendBook, StockDistribution
+        from ditto_portfolio.accounting.position import Position
+
+        event = StockDistribution(
+            iid,
+            date(2026, 10, 7),
+            date(2026, 10, 8),
+            None,
+            0,
+            date(2026, 9, 30),
+            "source:st-shares",
+            share_ratio=0.5,
+            listing_date=date(2026, 10, 12),
+            share_tax_basis="issuer",
+        )
+        state, _ = (
+            DividendBook.start((event,))
+            .close("2026-10-07", {iid: 1_000_000})
+            .settle("2026-10-08")
+        )
+        view = replace(
+            view,
+            dividends=state,
+            positions={
+                iid: Position(iid, 1_500_000, 1_000_000, 10 / 1.5, 10_000_000, 0, 0, 0)
+            },
+        )
     context = PreTradeContext(
-        account_view=_make_account_view(),
+        account_view=view,
         rules={iid: (definition, replace(rule, max_daily_buy_quantity=500_000), fee)},
         market_snapshots={},
         buying_power_model=CashAccountBuyingPower(),

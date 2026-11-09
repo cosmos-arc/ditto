@@ -32,11 +32,13 @@ def trade_builder_to_payload(state: TradeBuilderStateSnapshot) -> dict[str, obje
     """Serialize one discriminated trade-builder state without losing floats."""
     payload: dict[str, object] = {
         "counter": state.counter,
+        "applied_distributions": list(state.applied_distributions),
         "method": state.method.value,
     }
     if state.method is TradeMatchingMethod.FIFO:
         payload["fifo_open_entries"] = [
             {
+                "available_from": _optional_date_payload(entry.available_from),
                 "direction": entry.direction.value,
                 "entry_date": entry.entry_date.isoformat(),
                 "entry_fee": finite_float(entry.entry_fee, "entry_fee"),
@@ -73,7 +75,7 @@ def trade_builder_from_payload(
         if strict:
             require_exact_keys(
                 data,
-                ("counter", "fifo_open_entries", "method"),
+                ("counter", "fifo_open_entries", "method", "applied_distributions"),
                 subject="trade builder",
             )
         entries = tuple(
@@ -84,12 +86,13 @@ def trade_builder_from_payload(
         return TradeBuilderStateSnapshot(
             method=method,
             counter=counter,
+            applied_distributions=_payload_str_tuple(data, "applied_distributions"),
             fifo_open_entries=entries,
         )
     if strict:
         require_exact_keys(
             data,
-            ("counter", "flat_to_flat_accumulators", "method"),
+            ("counter", "flat_to_flat_accumulators", "method", "applied_distributions"),
             subject="trade builder",
         )
     accumulators = tuple(
@@ -103,6 +106,7 @@ def trade_builder_from_payload(
     return TradeBuilderStateSnapshot(
         method=method,
         counter=counter,
+        applied_distributions=_payload_str_tuple(data, "applied_distributions"),
         flat_to_flat_accumulators=accumulators,
     )
 
@@ -117,6 +121,7 @@ def _fifo_entry_from_payload(
         require_exact_keys(
             data,
             (
+                "available_from",
                 "direction",
                 "entry_date",
                 "entry_fee",
@@ -139,6 +144,7 @@ def _fifo_entry_from_payload(
         original_quantity=payload_int(data, "original_quantity"),
         remaining_quantity=payload_int(data, "remaining_quantity"),
         entry_order_id=payload_str(data, "entry_order_id"),
+        available_from=_payload_optional_date(data, "available_from"),
     )
 
 

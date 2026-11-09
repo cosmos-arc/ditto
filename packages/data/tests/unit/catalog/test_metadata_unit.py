@@ -621,7 +621,7 @@ class TestR2DataProductContracts:
             assert spec.primary_key
             assert spec.partition_keys
             assert spec.provider_datasets
-            assert spec.schema_version.endswith((".v1", ".v2", ".v3"))
+            assert spec.schema_version.endswith((".v1", ".v2", ".v3", ".v4"))
             assert spec.frequency in {
                 "static",
                 "trading_daily",

@@ -311,3 +311,53 @@ def test_fractional_entitlement_refuses_atomically_and_revised_close_can_retry()
     account.close_dividend_day("2020-06-02")
     account.settle_dividends("2020-06-03")
     assert account.positions[InstrumentId(1)].quantity == 3
+
+
+@pytest.mark.parametrize("buy_day", ["2020-06-04", "2020-06-08"])
+def test_tax_fifo_cannot_dispose_unlisted_shares_before_later_buys(buy_day):
+    first = StockDistribution(
+        InstrumentId(1),
+        date(2020, 6, 3),
+        date(2020, 6, 4),
+        None,
+        0,
+        date(2020, 5, 28),
+        "source:locked",
+        share_ratio=1,
+        listing_date=date(2020, 6, 12),
+        share_tax_basis="issuer",
+    )
+    second = StockDistribution(
+        InstrumentId(1),
+        date(2020, 6, 30),
+        date(2020, 7, 1),
+        date(2020, 7, 1),
+        1,
+        date(2020, 6, 20),
+        "source:cash",
+    )
+    account = Account(cash=CashBook(5000, 5000, 0), dividends=(first, second))
+    trade(account, "2020-06-03", OrderSide.BUY, 100, 10)
+    account.close_dividend_day("2020-06-03")
+    account.settle_dividends("2020-06-04")
+    trade(account, "2020-06-04", OrderSide.SELL, 100, 5)
+    account.close_dividend_day("2020-06-04")
+    account.settle_dividends(buy_day)
+    trade(account, buy_day, OrderSide.BUY, 100, 5)
+    account.close_dividend_day(buy_day)
+    account.settle_dividends("2020-06-09")
+    trade(account, "2020-06-09", OrderSide.SELL, 100, 5)
+    account.close_dividend_day("2020-06-09")
+    book = account.get_view().dividends
+    assert [(lot.acquired, lot.quantity) for lot in book.lots] == [
+        (date(2020, 6, 4), 100)
+    ]
+    assert book.lots[0].available_from == date(2020, 6, 12)
+    assert book.unlisted_shares(InstrumentId(1)) == 100
+    account.settle_dividends("2020-06-12")
+    assert account.get_view().dividends.unlisted_shares(InstrumentId(1)) == 0
+    account.close_dividend_day("2020-06-30")
+    account.settle_dividends("2020-07-01")
+    trade(account, "2020-07-06", OrderSide.SELL, 100, 4)
+    account.close_dividend_day("2020-07-06")
+    assert account.get_view().dividends.tax_payable == 10

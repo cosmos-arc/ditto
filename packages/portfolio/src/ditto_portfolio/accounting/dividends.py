@@ -75,7 +75,7 @@ class StockDistribution:
         if shares != shares.to_integral_value():
             raise ValueError(
                 f"fractional share allocation requires evidence: {self.identity} "
-                f"({registered} registered shares * {self.share_ratio})"
+                + f"({registered} registered shares * {self.share_ratio})"
             )
         return int(shares)
 
@@ -113,6 +113,7 @@ class DividendLot:
     instrument_id: InstrumentId
     acquired: date
     quantity: int
+    available_from: date | None = None
 
 
 @dataclass(frozen=True)
@@ -154,6 +155,17 @@ class DividendBook:
     tax_payable: float = 0.0
     closed_day: str = ""
     settled_day: str = ""
+
+    def unlisted_shares(self, instrument_id: InstrumentId) -> int:
+        """Exclude independent listing locks from ordinary daily-buy inventory."""
+        event_ids = {
+            e.identity for e in self.events if e.instrument_id == instrument_id
+        }
+        return sum(
+            e.quantity * (1 if e.kind == "share_credit" else -1)
+            for e in self.entries
+            if e.event_id in event_ids and e.kind in {"share_credit", "share_release"}
+        )
 
     @classmethod
     def start(cls, events: tuple[StockDistribution, ...]) -> DividendBook:
@@ -267,7 +279,11 @@ class DividendBook:
                 entries.append(
                     DividendEntry(event.identity, day, "share_credit", 0, quantity)
                 )
-                lots.append(DividendLot(event.instrument_id, event.ex_date, quantity))
+                lots.append(
+                    DividendLot(
+                        event.instrument_id, event.ex_date, quantity, event.listing_date
+                    )
+                )
             if (
                 event.listing_date is not None
                 and current >= event.listing_date
@@ -297,29 +313,18 @@ class DividendBook:
                 lots.append(DividendLot(iid, current, change))
             elif change < 0:
                 payable += _dispose_lots(lots, rights, entries, iid, -change, current)
-        quantities: dict[tuple[InstrumentId, date], int] = {}
+        quantities: dict[tuple[InstrumentId, date, date | None], int] = {}
         for lot in lots:
-            key = (lot.instrument_id, lot.acquired)
+            key = (lot.instrument_id, lot.acquired, lot.available_from)
             quantities[key] = quantities.get(key, 0) + lot.quantity
         lots = [
-            DividendLot(iid, acquired, quantity)
-            for (iid, acquired), quantity in quantities.items()
+            DividendLot(iid, acquired, quantity, available_from)
+            for (iid, acquired, available_from), quantity in quantities.items()
             if quantity
         ]
         for event in self.events:
             if event.record_date == current:
-                event.shares_for(
-                    sum(
-                        lot.quantity
-                        for lot in lots
-                        if lot.instrument_id == event.instrument_id
-                    )
-                )
-                rights.extend(
-                    DividendRight(event, lot.acquired, lot.quantity, lot.quantity)
-                    for lot in lots
-                    if lot.instrument_id == event.instrument_id
-                )
+                rights.extend(_record_rights(event, lots))
             elif (
                 event.record_date < current
                 and (
@@ -357,7 +362,11 @@ def _dispose_lots(
     payable = 0.0
     day = current.isoformat()
     for index, lot in enumerate(lots):
-        if lot.instrument_id != iid or not remaining:
+        if (
+            lot.instrument_id != iid
+            or not remaining
+            or (lot.available_from is not None and current < lot.available_from)
+        ):
             continue
         sold = min(lot.quantity, remaining)
         remaining -= sold
@@ -385,4 +394,21 @@ def _dispose_lots(
                         lot.acquired.isoformat(),
                     )
                 )
+    if remaining:
+        raise ValueError("disposed shares exceed listed tax lots")
     return payable
+
+
+def _record_rights(
+    event: StockDistribution, lots: list[DividendLot]
+) -> tuple[DividendRight, ...]:
+    """One entitlement per acquisition date, regardless of independent listing locks."""
+    registered: dict[date, int] = {}
+    for lot in lots:
+        if lot.instrument_id == event.instrument_id:
+            registered[lot.acquired] = registered.get(lot.acquired, 0) + lot.quantity
+    event.shares_for(sum(registered.values()))
+    return tuple(
+        DividendRight(event, acquired, quantity, quantity)
+        for acquired, quantity in registered.items()
+    )

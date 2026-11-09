@@ -312,7 +312,9 @@ class BacktestBrokerage:
         reason = reason or daily_buy_rejection(
             remaining_order,
             trading_rule,
-            bought_quantity=position.quantity - position.available_quantity
+            bought_quantity=position.quantity
+            - position.available_quantity
+            - self._account.get_view().dividends.unlisted_shares(iid)
             if position
             else 0,
             pending_quantity=0,
