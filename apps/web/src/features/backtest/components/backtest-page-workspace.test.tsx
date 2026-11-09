@@ -257,6 +257,7 @@ describe("BacktestPage governed workspace", () => {
 });
 
 it("rejects an invalid bill and recovers by rereading the saved report", async () => {
+	registerHandlers();
 	let repaired = false;
 	server.use(
 		http.get("/api/v1/backtests/runs/bt-live-001/report", () =>
