@@ -170,6 +170,7 @@ def _seed() -> pl.DataFrame:
         record = container.get(StrategyCatalogService).get_spec(
             "seed_stock_selection_rotation", 1
         )
+        assert record is not None, "the published stock seed must exist"
         spec = {
             **record.spec_json,
             "strategy_id": "mainboard_ipo_fixture",
