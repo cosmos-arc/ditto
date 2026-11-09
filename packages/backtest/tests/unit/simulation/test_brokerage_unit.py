@@ -1146,7 +1146,7 @@ def test_dated_cross_border_etf_rules_control_same_day_sell(day):
         order_book=_order_book(),
         model=BrokerageModel(
             slippage_model=FixedBpsSlippage(bps=0),
-            settlement_model=AShareSettlementModel(trading_calendar=calendar),
+            settlement_model=AShareSettlementModel(trading_calendar=tuple(calendar)),
         ),
         rules_getter=lambda _iid, date: next(
             rules for rules in reversed(history) if rules[1].as_of_date <= date
