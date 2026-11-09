@@ -120,7 +120,7 @@ class FrozenHistoryProvider:
         if not scope:
             return
         candidates = [
-            s.request_start
+            s
             for s in self._reader.list_snapshots(
                 dataset_id="stock_daily", source=self._source
             )
@@ -128,24 +128,32 @@ class FrozenHistoryProvider:
         ]
         if not candidates:
             return
-        earliest = min(candidates)
+        earliest = min(s.request_start for s in candidates)
         end = (date.fromisoformat(start) - timedelta(days=1)).isoformat()
         span = 31
         while scope:
             first = max(
                 earliest, (date.fromisoformat(start) - timedelta(days=span)).isoformat()
             )
-            quotes = self._freeze_dataset(
-                "stock_daily", scope, start=first, end=end, date_column="trade_date"
-            )
-            anchors = quotes.sort("trade_date").group_by("source_ticker").tail(1)
-            self._frames["stock_daily"] = pl.concat(
-                [self._frames["stock_daily"], anchors], how="diagonal_relaxed"
-            )
-            found = set(anchors["source_ticker"])
-            scope = {
-                ticker: iid for ticker, iid in scope.items() if ticker not in found
-            }
+            if any(
+                s.request_end >= first
+                and (
+                    not s.source_ticker_scope
+                    or s.source_ticker_scope.intersection(scope)
+                )
+                for s in candidates
+            ):
+                quotes = self._freeze_dataset(
+                    "stock_daily", scope, start=first, end=end, date_column="trade_date"
+                )
+                anchors = quotes.sort("trade_date").group_by("source_ticker").tail(1)
+                self._frames["stock_daily"] = pl.concat(
+                    [self._frames["stock_daily"], anchors], how="diagonal_relaxed"
+                )
+                found = set(anchors["source_ticker"])
+                scope = {
+                    ticker: iid for ticker, iid in scope.items() if ticker not in found
+                }
             if first == earliest:
                 break
             span *= 2

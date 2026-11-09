@@ -350,3 +350,81 @@ def test_long_halt_retains_frozen_quote_before_warmup_without_adding_signal_hist
     )
     assert history.is_empty()
     assert all(row["verified"] for row in provider.sources)
+
+
+@pytest.mark.parametrize("incomplete", [False, True])
+def test_long_halt_search_crosses_empty_snapshot_windows_but_not_invalid_evidence(
+    incomplete,
+):
+    _, snapshots, contents = _provider(stock=True, halted=True, prior_quote=False)
+    original = next(s for s in snapshots if s.dataset_id == "stock_daily")
+    current = contents[original.snapshot_id].frame
+    snapshots.remove(original)
+    anchor = current.head(1).with_columns(
+        pl.lit(date(2014, 8, 1)).alias("trade_date"),
+        pl.lit(date(2014, 8, 2)).alias("knowledge_date"),
+    )
+    anchor_id = ""
+    for first, last, frame, checksum in [
+        ("2014-10-14", "2014-10-17", current, "c" * 32),
+        ("2014-08-01", "2014-08-01", anchor, "a" * 32),
+    ]:
+        snapshot = ProviderSnapshot.create(
+            ProviderSnapshotDraft(
+                dataset_id="stock_daily",
+                source="tushare",
+                request_start=first,
+                request_end=last,
+                schema_version=original.schema_version,
+                checksum=checksum,
+                canonical_asset=original.canonical_asset,
+                request_parameters_hash="f" * 32,
+                response_metadata=(),
+                row_count=frame.height,
+                payload_uri="quotes.parquet",
+                payload_retained=True,
+                created_at=_RECEIPT,
+            )
+        )
+        snapshots.append(snapshot)
+        contents[snapshot.snapshot_id] = SnapshotContents(
+            snapshot, None, _RECEIPT, frame
+        )
+        anchor_id = snapshot.snapshot_id
+    reader = MagicMock(spec=SnapshotReadService)
+    reader.list_snapshots.side_effect = lambda **kw: tuple(
+        s for s in snapshots if s.dataset_id == kw["dataset_id"]
+    )
+
+    def read(identity, **_):
+        if incomplete and identity == anchor_id:
+            raise ValueError("provider snapshot has no COMPLETE checkpoint")
+        return contents[identity]
+
+    reader.read.side_effect = read
+    provider = FrozenHistoryProvider(reader, frozen_at=_RECEIPT)
+    if incomplete:
+        with pytest.raises(AppBuilderError, match="no COMPLETE checkpoint"):
+            provider.freeze(
+                ticker_ids={"000001.SZ": _IID},
+                asset_class="stock",
+                start="2014-10-14",
+                end="2014-10-17",
+            )
+        return
+    provider.freeze(
+        ticker_ids={"000001.SZ": _IID},
+        asset_class="stock",
+        start="2014-10-14",
+        end="2014-10-17",
+    )
+    execution = provider.get_bars(
+        BarQuery(
+            instruments=("000001.SZ",),
+            start="2014-10-14",
+            end="2014-10-15",
+            with_execution_state=True,
+        )
+    )
+    assert execution["valuation_date"].to_list() == [date(2014, 8, 1)] * 2
+    assert execution["source_snapshot_id"].to_list() == [anchor_id] * 2
