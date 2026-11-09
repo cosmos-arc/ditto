@@ -113,3 +113,35 @@ it("keeps an unreadable request explicit and lets the user retry reading", async
 	await user.click(await screen.findByRole("button", { name: "重试请求读取" }));
 	expect(await screen.findByText(/请求区间 2014-10-13/)).toBeVisible();
 });
+
+it.each([
+	{ parent_run_id: run.runId, status: "pending" },
+	{ run_id: 123, parent_run_id: run.runId, status: "pending" },
+	{ run_id: "", parent_run_id: run.runId, status: "pending" },
+	{ run_id: "new", parent_run_id: "different", status: "pending" },
+	{ run_id: "new", parent_run_id: run.runId, status: "unknown" },
+])("rejects malformed recovery receipts without saving a successful link: %j", async (receipt) => {
+	server.use(
+		http.post("/api/v1/backtests/runs/:id/retry", () => HttpResponse.json({ data: receipt }, { status: 202 })),
+	);
+	render(<BacktestRequestPanel run={run} />, { wrapper });
+	await userEvent.setup().click(await screen.findByRole("button", { name: "补证后沿原配置新建运行" }));
+	await screen.findByText(/恢复响应无效/);
+	expect(screen.queryByRole("link", { name: "打开补证后的新运行" })).not.toBeInTheDocument();
+	expect(new URLSearchParams(sessionStorage.getItem(`ditto:backtest-recovery:${run.runId}`) ?? "").has("runId")).toBe(
+		false,
+	);
+});
+
+it.each([{ run_id: "another-run" }, { purpose: "unknown" }, { input_status: "unknown" }])(
+	"rejects mismatched request identity or semantics: %j",
+	async (invalid) => {
+		server.use(
+			http.get("/api/v1/backtests/runs/:id/request", () => HttpResponse.json({ data: { ...request, ...invalid } })),
+		);
+		render(<BacktestRequestPanel run={run} />, { wrapper });
+		await screen.findByText(/请求来源响应无效/);
+		expect(screen.queryByRole("button", { name: "补证后沿原配置新建运行" })).not.toBeInTheDocument();
+		expect(screen.queryByText(/实际入库/)).not.toBeInTheDocument();
+	},
+);

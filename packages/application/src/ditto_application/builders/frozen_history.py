@@ -36,7 +36,7 @@ class FrozenHistoryProvider:
         source: str = "tushare",
     ) -> None:
         if frozen_at.tzinfo is None:
-            raise ValueError("history freeze requires an aware receipt cutoff")
+            raise AppBuilderError("history freeze requires an aware receipt cutoff")
         self._reader = reader
         self.members: tuple[str, ...] = ()
         self.instrument_ids: tuple[int, ...] = ()

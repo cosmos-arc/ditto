@@ -632,6 +632,20 @@ class BacktestRuntimeBuilder:
         account_state = _load_account_state(config)
         settlement_state = _load_settlement_state(config)
         runtime_state = _load_runtime_state(config)
+        # 解析 universe → tickers + id_map + display_map
+        universe_ids = self._resolve_historical_members(config, runtime.spec.universe)
+        if historical_provider is not None:
+            historical_provider.instrument_ids = tuple(universe_ids)
+        _validate_resume_pool(universe_ids, account_state, runtime_state)
+        resolution = resolve_instrument_display(
+            universe_ids,
+            self._metadata_service,
+            source=source,
+            as_of=config.start_date,
+        )
+        display_map = resolution.display_map
+        if historical_provider is not None:
+            historical_provider.members = tuple(resolution.tickers)
         benchmark_id = resolve_benchmark(
             runtime.spec.benchmark,
             self._metadata_service,
@@ -649,13 +663,6 @@ class BacktestRuntimeBuilder:
             effective_parameters=runtime.effective_parameters,
         )
 
-        # 解析 universe → tickers + id_map + display_map
-        universe_ids = self._metadata_service.get_universe(
-            runtime.spec.universe,
-            asof=config.start_date,
-        )
-        universe_ids = self._resolve_historical_members(config, universe_ids)
-        _validate_resume_pool(universe_ids, account_state, runtime_state)
         pool = self._metadata_service.universe.get_universe_detail(
             runtime.spec.universe
         )
@@ -677,13 +684,6 @@ class BacktestRuntimeBuilder:
                     "description": pool_description,
                 },
             )
-        resolution = resolve_instrument_display(
-            universe_ids,
-            self._metadata_service,
-            source=source,
-            as_of=config.start_date,
-        )
-        display_map = resolution.display_map
         benchmark_ticker = None
         if benchmark_id is not None:
             benchmark_resolution = resolve_instrument_display(
@@ -754,7 +754,7 @@ class BacktestRuntimeBuilder:
         )
 
     def _resolve_historical_members(
-        self, config: BacktestCatalogRequestConfig, universe_ids: list[int]
+        self, config: BacktestCatalogRequestConfig, universe: str
     ) -> list[int]:
         """A repair keeps resolved members; an unresolved pool can acquire evidence."""
         if (
@@ -779,7 +779,10 @@ class BacktestRuntimeBuilder:
                 if len(set(original_ids)) != len(original_ids):
                     raise AppBuilderError("invalid original historical security scope")
                 if original_ids:
-                    universe_ids = original_ids
+                    return original_ids
+        universe_ids = self._metadata_service.get_universe(
+            universe, asof=config.start_date
+        )
         if not universe_ids:
             # 空成员放行会产出零标的的"成功"回测,静默掩盖上游数据损坏
             # （宇宙缺失/成员区间不覆盖 start_date/物化中断残留）。

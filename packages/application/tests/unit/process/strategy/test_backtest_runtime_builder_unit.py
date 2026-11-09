@@ -10,6 +10,7 @@ from ditto_application.builders import (
     BacktestRuntimeBuilder,
     PublishedStrategyRuntime,
 )
+from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
     BacktestCatalogRequestConfig,
 )
@@ -24,6 +25,7 @@ from ditto_backtest.result import (
     BacktestSettlementStateSnapshot,
 )
 from ditto_backtest.simulation.fill import AShareFillModel
+from ditto_data.catalog.snapshot_reader import SnapshotReadService
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
@@ -37,7 +39,10 @@ from ditto_strategy.alpha.parameters import (
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.spec_codec import adapt_legacy_strategy_spec
 from ditto_strategy.alpha.specs import StrategySpec
-from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.models import StrategyArtifactRecord, StrategySpecRecord
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
 
 from .ordinary_catalog_support import LISTINGS, CatalogProvider, make_metadata
 
@@ -677,3 +682,56 @@ class TestBacktestRuntimeBuilder:
         )
 
         assert runtime.spec.asset_class == "stock"
+
+
+def test_missing_benchmark_keeps_original_security_scope_when_pool_changes():
+    spec = _make_strategy_spec()
+    strategy_builder = MagicMock()
+    strategy_builder.build_published_runtime.return_value = (
+        _make_published_strategy_runtime(spec, version=1)
+    )
+    metadata = make_metadata()
+    metadata.resolve_instrument_id.return_value = None
+    saved: dict[str, StrategyArtifactRecord] = {}
+    artifacts = MagicMock(spec=StrategyArtifactService)
+    artifacts.get_artifact.side_effect = saved.get
+    artifacts.save_artifact.side_effect = lambda record: saved.setdefault(
+        record.artifact_id, record
+    )
+    reader = MagicMock(spec=SnapshotReadService)
+    reader.list_snapshots.return_value = ()
+    builder = BacktestRuntimeBuilder(
+        strategy_runtime_builder=strategy_builder,
+        metadata_service=metadata,
+        data_provider=CatalogProvider(),
+        artifact_service=artifacts,
+        snapshot_read_service=reader,
+    )
+    request = BacktestCatalogRequestConfig(
+        strategy_id=spec.strategy_id,
+        run_id="original",
+        start_date="2014-10-13",
+        end_date="2014-10-24",
+        initial_cash=1000000,
+        historical_reconstruction=True,
+    )
+    with pytest.raises(AppBuilderError, match="declared benchmark cannot be resolved"):
+        builder.build_published_runtime(config=request)
+    original = saved["original:historical_inputs"]
+    assert original.metadata["members"] == ["510300.SH", "510500.SH"]
+    assert original.metadata["instrument_ids"] == [2000001, 2000002]
+    metadata.resolve_instrument_id.return_value = 3000001
+    metadata.get_universe.return_value = [2000001]
+    with pytest.raises(AppBuilderError, match="missing retained etf_daily"):
+        builder.build_published_runtime(
+            config=replace(request, run_id="repaired", parent_run_id="original")
+        )
+    assert (
+        saved["repaired:historical_inputs"].metadata["members"]
+        == original.metadata["members"]
+    )
+    assert (
+        saved["repaired:historical_inputs"].metadata["instrument_ids"]
+        == original.metadata["instrument_ids"]
+    )
+    assert "benchmark cannot be resolved" in str(original.metadata["reason"])

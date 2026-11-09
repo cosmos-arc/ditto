@@ -211,6 +211,16 @@ export async function fetchBacktestRequest(runId: string): Promise<BacktestReque
 	const dto = await apiClient.get("/api/v1/backtests/runs/{run_id}/request", {
 		params: { path: { run_id: runId } },
 	});
+	if (
+		!dto ||
+		dto.run_id !== runId ||
+		!["historical_reconstruction", "limited_historical_research", "strict_snapshot_replay", "unclassified"].includes(
+			dto.purpose,
+		) ||
+		!["pending", "ready", "blocked", "unrecorded"].includes(dto.input_status)
+	) {
+		throw new Error("请求来源响应无效；请重试读取本次运行。");
+	}
 	return {
 		runId: dto.run_id,
 		purpose: dto.purpose,
@@ -242,7 +252,13 @@ export async function retryBacktestRun(input: { readonly runId: string; readonly
 	const dto = await apiClient.post("/api/v1/backtests/runs/{run_id}/retry", {
 		params: { path: { run_id: input.runId }, header: { "Idempotency-Key": input.idempotencyKey } },
 	});
-	if (!/^[A-Za-z0-9._:-]+$/u.test(dto.run_id) || dto.parent_run_id !== input.runId) {
+	if (
+		!dto ||
+		typeof dto.run_id !== "string" ||
+		!/^[A-Za-z0-9._:-]+$/u.test(dto.run_id) ||
+		dto.parent_run_id !== input.runId ||
+		!["pending", "running", "completed", "failed", "cancelled"].includes(dto.status)
+	) {
 		throw new Error("恢复响应无效；请重试核对同一次恢复。");
 	}
 	return { runId: dto.run_id };
