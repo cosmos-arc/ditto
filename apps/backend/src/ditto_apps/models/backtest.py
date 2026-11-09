@@ -366,7 +366,8 @@ class DividendEventResponse(BaseModel):
     """Implemented source facts and the actual record-date entitlement."""
 
     event_id: str
-    asset_class: Literal["stock", "etf"]
+    # Reports saved before ETF distributions existed hold only stock events.
+    asset_class: Literal["stock", "etf"] = "stock"
     instrument_id: int
     source_ticker: str
     source_snapshot_id: str

@@ -18,6 +18,7 @@ from ditto_backtest._checkpoint_codec import (
     payload_float,
     payload_int,
     payload_mapping,
+    payload_optional_str,
     payload_sequence,
     payload_str,
 )
@@ -30,7 +31,9 @@ def dividend_payload(book: DividendBook) -> dict[str, object]:
 
 def _event(payload: object) -> Distribution:
     row = payload_mapping(payload)
-    asset_class = payload_str(row, "asset_class")
+    # Checkpoints saved before ETF distributions existed only ever held
+    # stock events; read them back as "stock" instead of failing the resume.
+    asset_class = payload_optional_str(row, "asset_class") or "stock"
     if asset_class not in ("stock", "etf"):
         raise ValueError("invalid distribution asset class")
     return Distribution(

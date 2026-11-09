@@ -273,7 +273,12 @@ class ETFTushareAdapter(BaseTushareAdapter):
             frame = TushareDataTransformer.transform(
                 response, "etf_dividend", ETF_DIVIDEND_MAPPING
             )
-            if frame["knowledge_date"].null_count():
+            # Only implemented rows must be datable: 预案/决案 announcements
+            # legitimately lack imp_anndate and are filtered downstream by
+            # div_proc; an undatable 实施 row would silently shrink coverage.
+            if frame.filter(pl.col("div_proc") == "实施")[
+                "knowledge_date"
+            ].null_count():
                 raise ValueError(
                     "ETF dividend announcement/implementation date unknown"
                 )

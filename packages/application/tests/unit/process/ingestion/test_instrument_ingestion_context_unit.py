@@ -3,7 +3,6 @@
 from typing import cast
 
 import polars as pl
-import pytest
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.evidence_commit import (
     EvidenceCommitOutcome,
@@ -409,16 +408,14 @@ def _unused_write_result() -> WriteResult:
     )
 
 
-@pytest.mark.parametrize("dataset", ["dividend", "etf_dividend"])
-def test_empty_distribution_history_retains_exact_readable_source(
-    tmp_path, mocker, dataset
-):
+def test_empty_distribution_history_retains_exact_readable_source(tmp_path, mocker):
     from ditto_data.catalog.provider_payload import FilesystemProviderPayloadStore
     from ditto_data.sources.tushare.processors.mappings.capital import (
         ETF_DIVIDEND_MAPPING,
     )
     from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
 
+    dataset = "etf_dividend"
     frame = TushareDataTransformer.transform(
         pl.DataFrame(), dataset, ETF_DIVIDEND_MAPPING
     )

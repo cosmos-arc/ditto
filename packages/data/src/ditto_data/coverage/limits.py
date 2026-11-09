@@ -40,6 +40,7 @@ _KNOWLEDGE_AXES: dict[str, str] = {
     "income_statement": "provider_anchor",
     "cash_flow": "provider_anchor",
     "dividend": "provider_anchor",
+    "etf_dividend": "provider_anchor",
     "corporate_actions": "provider_anchor",
     "fina_indicator": "provider_anchor",
     "fund_portfolio": "provider_anchor",
@@ -185,6 +186,17 @@ _DATASET_COVERAGE: dict[str, DatasetCoverageLimit] = {
         measured_end="2026-10-29",
         gaps=(),
         notes="公告/登记/除权/到账日期分开;未披露值不补零,修订与实施状态分开;保留此前可知比较值。",
+    ),
+    "etf_dividend": DatasetCoverageLimit(
+        dataset="etf_dividend",
+        domain="fundamental",
+        status="empty",
+        measured_start=None,
+        measured_end=None,
+        gaps=(
+            "生产库尚未回补；2026-11-10 探针 tushare:fund_div 510300.SH 全历史 14 行可取，2014/2025 双窗口事实与发行人公告一致（docs/evidence/etf-cash-dividends-761.md）",
+        ),
+        notes="个人基金分配收入暂免所得税（财税〔2002〕128 号）；份额折算与收益转份额不属于本数据集；空响应与缺失公告区间区分，公告/实施公告取较晚为 knowledge_date。",
     ),
     "earnings_express": DatasetCoverageLimit(
         dataset="earnings_express",

@@ -14348,6 +14348,7 @@
             "type": "string"
           },
           "asset_class": {
+            "default": "stock",
             "enum": [
               "stock",
               "etf"
@@ -14424,7 +14425,6 @@
         },
         "required": [
           "event_id",
-          "asset_class",
           "instrument_id",
           "source_ticker",
           "source_snapshot_id",

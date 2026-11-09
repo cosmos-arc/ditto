@@ -462,6 +462,11 @@ def ordinary_equity_rules(
     )
 
 
+# Source factor precision: stock adj_factor keeps three decimals, fund_adj four.
+_STOCK_ADJ_FACTOR_QUANTUM = 0.001
+_ETF_ADJ_FACTOR_QUANTUM = 0.0001
+
+
 def _cash_factor_matches(
     row: Mapping[str, object],
     cash: float | None,
@@ -525,7 +530,9 @@ def ordinary_execution_fields(
                 cash_dividend,
                 share_ratio,
                 definition.tick_size,
-                0.001 if definition.asset_class == "stock" else 0.0001,
+                _STOCK_ADJ_FACTOR_QUANTUM
+                if definition.asset_class == "stock"
+                else _ETF_ADJ_FACTOR_QUANTUM,
             )
         )
     ):

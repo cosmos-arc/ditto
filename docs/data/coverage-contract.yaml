@@ -1905,12 +1905,10 @@ datasets:
       observations: []
     status: empty
     gaps:
-    - 生产库尚未回补；2026-11-10 探针 tushare:fund_div 510300.SH 全历史 14 行可取，
-      2014/2025 双窗口事实与发行人公告一致（docs/evidence/etf-cash-dividends-761.md）
+    - 生产库尚未回补；2026-11-10 探针 tushare:fund_div 510300.SH 全历史 14 行可取，2014/2025 双窗口事实与发行人公告一致（docs/evidence/etf-cash-dividends-761.md）
     consumers:
     - 普通历史回测 ETF 现金分红冻结与登记/除息/到账记账
-    notes: 个人基金分配收入暂免所得税（财税〔2002〕128 号）；份额折算与收益转份额不属于本数据集；
-      空响应与缺失公告区间区分，公告/实施公告取较晚为 knowledge_date。
+    notes: 个人基金分配收入暂免所得税（财税〔2002〕128 号）；份额折算与收益转份额不属于本数据集；空响应与缺失公告区间区分，公告/实施公告取较晚为 knowledge_date。
     current_failures: []
   valuation_metrics:
     domain: capital

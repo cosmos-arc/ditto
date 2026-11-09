@@ -42,6 +42,7 @@ from ditto_application.processes.ingestion.fetch_handlers import (
 )
 from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
 from ditto_application.processes.ingestion.post_ingest import (
+    ANNOUNCEMENT_PAYLOAD_DATASETS,
     CatalogWriteContext,
     DataWriteContext,
     RequestWindow,
@@ -271,7 +272,7 @@ def _process_fetched_data_by_instrument(  # noqa: PLR0911 - fail-closed stages
 ) -> IngestionResult:
     """按标的处理获取的数据：写入。"""
     # Cash-account reconstruction must verify empty announcement payloads too.
-    if df.is_empty() and dataset not in {"dividend", "etf_dividend"}:
+    if df.is_empty() and dataset not in ANNOUNCEMENT_PAYLOAD_DATASETS:
         return _handle_instrument_empty(
             df, dataset, params, source_ticker=source_ticker, chunk_id=chunk_id, ctx=ctx
         )

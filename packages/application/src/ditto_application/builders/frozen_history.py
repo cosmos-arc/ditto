@@ -80,6 +80,7 @@ class FrozenHistoryProvider:
         )
         try:
             selected = implemented_cash_dividends(frame, start=start, end=end)
+            etf = self._asset_class == "etf"
             self.cash_dividends = tuple(
                 Distribution(
                     instrument_id=InstrumentId(row["instrument_id"]),
@@ -87,14 +88,22 @@ class FrozenHistoryProvider:
                     ex_date=row["ex_dividend_date"],
                     pay_date=row["pay_date"],
                     gross_per_share=row["gross_dividend_per_share"],
+                    # ETF facts know implementation from max(ann, imp) upstream;
+                    # stock events keep their established #759/#760 announcement
+                    # semantics untouched.
                     announcement_date=max(
-                        row["knowledge_date"],
-                        row["implementation_date"],
-                        row["share_tax_knowledge_date"]
+                        row["knowledge_date"], row["implementation_date"]
+                    )
+                    if etf
+                    else (
+                        max(
+                            row["implementation_date"],
+                            row["share_tax_knowledge_date"],
+                        )
                         if row["stock_dividend_ratio"]
-                        else row["implementation_date"],
+                        else row["implementation_date"]
                     ),
-                    asset_class="etf" if self._asset_class == "etf" else "stock",
+                    asset_class="etf" if etf else "stock",
                     source_snapshot_id=row["source_snapshot_id"],
                     source_ticker=row["source_ticker"],
                     share_ratio=row["stock_dividend_ratio"],

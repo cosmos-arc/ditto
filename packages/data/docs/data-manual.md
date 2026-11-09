@@ -686,15 +686,6 @@ class IndustryMapping:
 
 ### 6.4 股息分红 (dividend)
 
-
-### 6.5 ETF 现金分红 (etf_dividend)
-
-`ETFTushareAdapter.fetch_etf_dividend` 调用 `fund_div`，只按真实 ETF 交易标的与公告区间补采；不支持用单日公告查询证明完整实施覆盖。`div_cash` 是人民币元/份，`knowledge_date` 为 `ann_date` 与 `imp_anndate` 较晚日。登记、除息、派息独立保留；未知日期不以 NAV 或券商划款日期替代。
-
-协议 `fundamental.etf_dividend.v1`，状态 experimental，独立留存与覆盖身份；SQLite 复用 `dividend` 事实表的 `(instrument_id, ex_dividend_date, effective_from)` 键。已完成空响应证明限定区间无事件，缺失区间仍拒绝。股票分红覆盖不能替代 ETF 覆盖。份额折算不由此现金接口声明为不存在。
-
-权益、应收、到账、个人税务口径与来源公告见 [ETF 现金分红](../../../docs/evidence/etf-cash-dividends-761.md)。在结果页“分红与送转账本”核对元/份、业务日期和每日余额；补采后使用原失败页的新建运行入口，旧报告保持原事实。
-
 #### 6.4.1 供应商接口
 
 | 项目 | 值 |
@@ -730,6 +721,14 @@ class IndustryMapping:
 **主键**：`(instrument_id, ex_dividend_date, effective_from)`
 
 普通历史分派记账使用 v4 留存载荷，不从复权因子推断权益。登记持仓、除息应收、到账现金见 [股票现金分红](../../../docs/evidence/stock-cash-dividends-759.md)；总份额、成本、上市日及发行人税务证据配置见 [股票送转](../../../docs/evidence/stock-distributions-760.md)。缺少必需事实时重新采集并新建运行，原报告保持原事实。
+
+### 6.5 ETF 现金分红 (etf_dividend)
+
+`ETFTushareAdapter.fetch_etf_dividend` 调用 `fund_div`，只按真实 ETF 交易标的与公告区间补采；不支持用单日公告查询证明完整实施覆盖。`div_cash` 是人民币元/份，`knowledge_date` 为 `ann_date` 与 `imp_anndate` 较晚日。登记、除息、派息独立保留；未知日期不以 NAV 或券商划款日期替代。
+
+协议 `fundamental.etf_dividend.v1`，状态 experimental，独立留存与覆盖身份；SQLite 复用 `dividend` 事实表的 `(instrument_id, ex_dividend_date, effective_from)` 键。已完成空响应证明限定区间无事件，缺失区间仍拒绝。股票分红覆盖不能替代 ETF 覆盖。份额折算不由此现金接口声明为不存在。
+
+权益、应收、到账、个人税务口径与来源公告见 [ETF 现金分红](../../../docs/evidence/etf-cash-dividends-761.md)。在结果页“分红与送转账本”核对元/份、业务日期和每日余额；补采后使用原失败页的新建运行入口，旧报告保持原事实。
 
 ---
 

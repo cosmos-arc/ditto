@@ -146,8 +146,8 @@ def _daily(tickers: tuple[str, ...]) -> pl.DataFrame:
 
 
 def _seed_history() -> None:
-    retain_empty_dividends(("1990-01-01", "2026-11-10"), "etf_dividend")
     today = datetime.now(UTC).date().isoformat()
+    retain_empty_dividends(("1990-01-01", today), "etf_dividend")
     retain_history_payload(
         "etf_reference",
         EtfReferenceConfigSource(

@@ -1,6 +1,7 @@
 import type { BacktestDividendStatement } from "../types";
 
 const money = (value: number) => value.toLocaleString("zh-CN", { maximumFractionDigits: 6 });
+const unit = (assetClass: string | undefined) => (assetClass === "etf" ? "份" : "股");
 const labels: Record<string, string> = {
 	receivable: "除息应收",
 	cash_payment: "分红到账",
@@ -24,8 +25,8 @@ export function BacktestDividends({ statement }: { readonly statement: BacktestD
 			{statement.events.map((event) => (
 				<details key={event.eventId} className="my-3">
 					<summary className="cursor-pointer focus-visible:outline-2">
-						{event.symbol} · 登记 {event.record} · {event.quantity} {event.assetClass === "etf" ? "份" : "股"} · 税前每
-						{event.assetClass === "etf" ? "份" : "股"} {money(event.grossPerShare)} 元
+						{event.symbol} · 登记 {event.record} · {event.quantity} {unit(event.assetClass)} · 税前每
+						{unit(event.assetClass)} {money(event.grossPerShare)} 元
 					</summary>
 					<p>
 						实施公告 {event.announcement}；除息 {event.ex}；派息 {event.pay ?? "无现金分派"}。
@@ -47,7 +48,7 @@ export function BacktestDividends({ statement }: { readonly statement: BacktestD
 					<li key={`${entry.eventId}-${entry.day}-${entry.kind}-${entry.acquired}`}>
 						{entry.day} · {labels[entry.kind]} · {money(entry.amount)} 元
 						{entry.quantity
-							? ` · ${entry.quantity} ${statement.events.find((event) => event.eventId === entry.eventId)?.assetClass === "etf" ? "份" : "股"}`
+							? ` · ${entry.quantity} ${unit(statement.events.find((event) => event.eventId === entry.eventId)?.assetClass)}`
 							: ""}
 						{entry.acquired ? ` · 取得日 ${entry.acquired}` : ""}
 					</li>
