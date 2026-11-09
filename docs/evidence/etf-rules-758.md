@@ -26,7 +26,7 @@
 ## 公开依据
 
 - [深交所 2013 年 11 月交易规则](https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf)：3.1.4 当日回转品种、3.3.8–15 基金单位、数量上限和限幅。
-- [上交所 ETF 交易问答](https://etf.sse.com.cn/fund/quertion/)：二级市场和申赎的区分、单位/报价、品类的可卖周期。历史股票 ETF 名单沿用[既有核验](ordinary-backtest-20261108/rules.md)，不用于推断其他证券。
+- [上交所 ETF 交易问答](https://etf.sse.com.cn/fund/quertion/)：二级市场和申赎的区分、单位/报价、品类的可卖周期。历史股票 ETF 名单补入当时的具体材料：[510050（2005）](https://www.sse.com.cn/assortment/fund/etf/home/c/c_20151111_4011009.shtml)、[510300（2012）](https://epaper.stcn.com/paper/zqsb/page/1/2012-05/23/D006/20120523D006_pdf.pdf)、[510500（2013）](https://www.p5w.net/fund/jjgg/201303/t20130312_61969.htm)、[159901（2006）](https://www.szse.cn/aboutus/trends/news/t20060417_517445.html)、[159915（2011）](https://www.szse.cn/disclosure/notice/fund/t20111207_516231.html)。后两者和 510050 为交易所说明，510300/510500 为发行人在指定报刊的原上市披露；不用于推断其他证券。
 - [上交所跨境 ETF 调整通知](https://english.sse.com.cn/news/newsrelease/c/4947611.shtml)与[深交所通知](https://www.szse.cn/disclosure/notice/general/t20150109_501348.html)：2015-01-19 的生效日期与初始名单；本项仅声明其中的 510900、159920。
 - [深交所 2020-08-24 首批 20% 名单](https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf)：包含 159915；不按 `159` 前缀或当前类别推断。
 - [上交所科创板 ETF 限幅通知](https://etf.sse.com.cn/ruleguide/business/c/5287913.shtml)与[华夏 588000 产品资料](https://www.sse.com.cn/disclosure/fund/announcement/c/new/2022-05-31/588000_20220531_2_5YSO9H55.pdf)：科创板指数 ETF 的 20% 规则、该基金实际上市日期。

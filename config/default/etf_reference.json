@@ -71,7 +71,7 @@
           "unit": "text",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "华泰柏瑞沪深300ETF原上市声明（保留本文件 #408 依据）；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "华泰柏瑞沪深300ETF原上市声明（保留本文件 #408 依据）；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://epaper.stcn.com/paper/zqsb/page/1/2012-05/23/D006/20120523D006_pdf.pdf （发行人2012-05-23上市公告）"
         }
       }
     },
@@ -83,42 +83,42 @@
           "unit": "text",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.sse.com.cn/assortment/fund/etf/home/c/c_20151111_4011009.shtml （原文2005-02-22）"
         },
         "trading_currency": {
           "value": "CNY",
           "unit": "text",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.sse.com.cn/assortment/fund/etf/home/c/c_20151111_4011009.shtml （原文2005-02-22）"
         },
         "lot_size": {
           "value": "100",
           "unit": "count",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.sse.com.cn/assortment/fund/etf/home/c/c_20151111_4011009.shtml （原文2005-02-22）"
         },
         "tick_size": {
           "value": "0.001",
           "unit": "price",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.sse.com.cn/assortment/fund/etf/home/c/c_20151111_4011009.shtml （原文2005-02-22）"
         },
         "settlement_cycle": {
           "value": "1",
           "unit": "days",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.sse.com.cn/assortment/fund/etf/home/c/c_20151111_4011009.shtml （原文2005-02-22）"
         },
         "price_limit_pct": {
           "value": "0.1",
           "unit": "ratio",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "华夏上证50ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.sse.com.cn/assortment/fund/etf/home/c/c_20151111_4011009.shtml （原文2005-02-22）"
         }
       }
     },
@@ -130,42 +130,42 @@
           "unit": "text",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.p5w.net/fund/jjgg/201303/t20130312_61969.htm （发行人2013-03-12上市公告）"
         },
         "trading_currency": {
           "value": "CNY",
           "unit": "text",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.p5w.net/fund/jjgg/201303/t20130312_61969.htm （发行人2013-03-12上市公告）"
         },
         "lot_size": {
           "value": "100",
           "unit": "count",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.p5w.net/fund/jjgg/201303/t20130312_61969.htm （发行人2013-03-12上市公告）"
         },
         "tick_size": {
           "value": "0.001",
           "unit": "price",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.p5w.net/fund/jjgg/201303/t20130312_61969.htm （发行人2013-03-12上市公告）"
         },
         "settlement_cycle": {
           "value": "1",
           "unit": "days",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.p5w.net/fund/jjgg/201303/t20130312_61969.htm （发行人2013-03-12上市公告）"
         },
         "price_limit_pct": {
           "value": "0.1",
           "unit": "ratio",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "南方中证500ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.p5w.net/fund/jjgg/201303/t20130312_61969.htm （发行人2013-03-12上市公告）"
         }
       }
     },
@@ -177,42 +177,42 @@
           "unit": "text",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/aboutus/trends/news/t20060417_517445.html （交易所2006-04-17上市说明）"
         },
         "trading_currency": {
           "value": "CNY",
           "unit": "text",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/aboutus/trends/news/t20060417_517445.html （交易所2006-04-17上市说明）"
         },
         "lot_size": {
           "value": "100",
           "unit": "count",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/aboutus/trends/news/t20060417_517445.html （交易所2006-04-17上市说明）"
         },
         "tick_size": {
           "value": "0.001",
           "unit": "price",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/aboutus/trends/news/t20060417_517445.html （交易所2006-04-17上市说明）"
         },
         "settlement_cycle": {
           "value": "1",
           "unit": "days",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/aboutus/trends/news/t20060417_517445.html （交易所2006-04-17上市说明）"
         },
         "price_limit_pct": {
           "value": "0.1",
           "unit": "ratio",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达深证100ETF；docs/evidence/ordinary-backtest-20261108/rules.md ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/aboutus/trends/news/t20060417_517445.html （交易所2006-04-17上市说明）"
         }
       }
     },
@@ -224,42 +224,42 @@
           "unit": "text",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/disclosure/notice/fund/t20111207_516231.html （交易所2011-12-06上市通知）"
         },
         "trading_currency": {
           "value": "CNY",
           "unit": "text",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/disclosure/notice/fund/t20111207_516231.html （交易所2011-12-06上市通知）"
         },
         "lot_size": {
           "value": "100",
           "unit": "count",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/disclosure/notice/fund/t20111207_516231.html （交易所2011-12-06上市通知）"
         },
         "tick_size": {
           "value": "0.001",
           "unit": "price",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/disclosure/notice/fund/t20111207_516231.html （交易所2011-12-06上市通知）"
         },
         "settlement_cycle": {
           "value": "1",
           "unit": "days",
           "effective_from": "2014-01-01",
           "effective_to": "2026-11-10",
-          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/disclosure/notice/fund/t20111207_516231.html （交易所2011-12-06上市通知）"
         },
         "price_limit_pct": {
           "value": "0.1",
           "unit": "ratio",
           "effective_from": "2014-01-01",
           "effective_to": "2020-08-24",
-          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。"
+          "basis": "易方达创业板ETF，2020-08-24前适用10%；https://docs.static.szse.cn/www/aboutus/trends/conference/W020200821767425488573.pdf ; https://docs.static.szse.cn/www/disclosure/notice/W020180328432928783546.pdf ; https://etf.sse.com.cn/fund/quertion/ ; 二级市场报价人民币/份，100 份，0.001 元；不采用申赎单位或标的市场日历。 ; https://www.szse.cn/disclosure/notice/fund/t20111207_516231.html （交易所2011-12-06上市通知）"
         }
       }
     },
