@@ -548,7 +548,9 @@ def _resolve_inputs(command: OperatePaperOrderCommand) -> _ResolvedPaperInputs:
             settlement_cycle=command.rules.settlement_cycle,
             fund_settlement_cycle=0,
             price_limit_pct=command.rules.price_limit_pct,
-            order_types_supported=("market", "limit"),
+            order_types_supported=command.rules.order_types_supported,
+            max_limit_order_quantity=command.rules.max_limit_order_quantity,
+            max_market_order_quantity=command.rules.max_market_order_quantity,
             call_auction_sessions=(),
         ),
         FeeSchedule(

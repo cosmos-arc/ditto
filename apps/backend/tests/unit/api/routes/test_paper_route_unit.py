@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable, Coroutine
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 from unittest.mock import patch
 
 import pytest
@@ -22,7 +22,7 @@ from ditto_application.processes.execution.reconcile_paper_account import (
 from ditto_application.queries.account_ledger import AccountLedgerQuery
 from ditto_application.queries.paper_session import GetPaperSessionQuery
 from ditto_application.queries.portfolio_history import GetPaperHistoryQuery
-from ditto_apps.api.errors import UnprocessableEntityError
+from ditto_apps.api.errors import ConflictError, UnprocessableEntityError
 from ditto_apps.api.routes.paper import (
     create_paper_account,
     create_paper_session,
@@ -165,7 +165,22 @@ def test_paper_request_models_accept_standard_json_wire_values() -> None:
     )
 
 
-def test_paper_routes_complete_local_workflow(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("kind", "maximum", "order_types", "reason"),
+    [
+        ("market", None, ["market", "limit"], None),
+        ("market", 50, ["market", "limit"], "order_quantity_exceeds_dated_maximum"),
+        ("limit", 50, ["market", "limit"], "order_quantity_exceeds_dated_maximum"),
+        ("market", None, ["limit"], "unsupported_order_type"),
+    ],
+)
+def test_paper_routes_complete_local_workflow(
+    tmp_path: Path,
+    kind: Literal["market", "limit"],
+    maximum: int | None,
+    order_types: list[Literal["market", "limit"]],
+    reason: str | None,
+) -> None:
     database = str(tmp_path / "paper-api.sqlite")
     journal = SqliteAccountEventJournal(database)
     store = SqlitePaperSessionStore(database)
@@ -179,6 +194,14 @@ def test_paper_routes_complete_local_workflow(tmp_path: Path) -> None:
     account_handler = CreatePaperAccountHandler(journal=journal, clock=lambda: NOW)
     operator = OperatePaperSession(store=store, account_journal=journal)
     query = GetPaperSessionQuery(store=store)
+    wire = _operate_body().model_dump(mode="json")
+    wire.update(order_type=kind, price=10.0 if kind == "limit" else None)
+    wire["rules"].update(
+        max_market_order_quantity=maximum,
+        max_limit_order_quantity=maximum,
+        order_types_supported=order_types,
+    )
+    body = OperatePaperOrderBody.model_validate(wire)
 
     with patch("ditto_apps.api.routes.paper.asyncio.to_thread", side_effect=_inline):
         account = asyncio.run(
@@ -210,10 +233,28 @@ def test_paper_routes_complete_local_workflow(tmp_path: Path) -> None:
         execution = asyncio.run(
             _original(operate_paper_order)(
                 session_id="paper-session-1",
-                body=_operate_body(),
+                body=body,
                 process=operator,
             )
         )
+        replay = asyncio.run(
+            _original(operate_paper_order)(
+                session_id="paper-session-1",
+                body=body,
+                process=operator,
+            )
+        )
+        assert replay.data.status == "replayed"
+        changed = body.model_dump(mode="json")
+        changed["rules"]["max_market_order_quantity"] = 1000
+        with pytest.raises(ConflictError, match="idempotency payload conflict"):
+            asyncio.run(
+                _original(operate_paper_order)(
+                    session_id="paper-session-1",
+                    body=OperatePaperOrderBody.model_validate(changed),
+                    process=operator,
+                )
+            )
         ledger = asyncio.run(
             _original(get_paper_account_ledger)(
                 account_id="paper-account-1",
@@ -256,14 +297,15 @@ def test_paper_routes_complete_local_workflow(tmp_path: Path) -> None:
     assert account.data.opening_event_id is not None
     assert session.data.session.status == "running"
     assert execution.data.status == "created"
-    assert execution.data.fill is not None
-    assert execution.data.ledger_event_id is not None
+    assert execution.data.reason == reason
+    assert (execution.data.fill is not None) == (reason is None)
+    assert (execution.data.ledger_event_id is not None) == (reason is None)
     assert ledger.data.account.account_kind == "paper"
-    assert len(ledger.data.events) == 2
+    assert len(ledger.data.events) == (2 if reason is None else 1)
     assert len(read.data.executions) == 1
     assert reconciliation.data.balanced is True
-    assert reconciliation.data.fill_count == 1
-    assert reconciliation.data.ledger_fill_count == 1
+    assert reconciliation.data.fill_count == (1 if reason is None else 0)
+    assert reconciliation.data.ledger_fill_count == (1 if reason is None else 0)
     assert paused.data.session.status == "paused"
     assert recovered.data.recovered_execution_count == 1
     store.close()
