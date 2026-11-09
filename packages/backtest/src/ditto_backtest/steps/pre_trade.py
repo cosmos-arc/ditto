@@ -78,7 +78,20 @@ class PreTradeStep:
         pre_trade_context = self._build_pre_trade_context(ctx)
 
         # 逐单校验
-        decisions: list[PreTradeDecisionRecord] = []
+        decisions = [
+            PreTradeDecisionRecord(
+                trade_date=ctx.time_context.trade_date,
+                order_id=f"{ctx.execution_plan.plan_id}:blocked:{index}",
+                instrument_id=blocked.instrument_id,
+                direction=blocked.direction.value,
+                original_quantity=blocked.intended_quantity,
+                final_quantity=0,
+                decision="rejected",
+                reason=blocked.reason,
+                check_sequence=("planner", blocked.severity.value),
+            )
+            for index, blocked in enumerate(ctx.execution_plan.blocked_orders)
+        ]
         for order in ctx.execution_plan.orders:
             result = self._check_order(order, pre_trade_context)
 

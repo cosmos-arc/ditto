@@ -175,8 +175,11 @@ def build_factor_aware_bundle_builder[CompiledT: _CompiledExpressionSet](
 ) -> Callable[[StepContext], StrategyInputBundle]:
     """Build a reusable factor-aware input-bundle factory for one run."""
     lookback_days = max(
-        (expr.analysis.lookback for expr in compiled.expressions),
-        default=REGIME_DEFAULT_LOOKBACK,
+        1,
+        max(
+            (expr.analysis.lookback for expr in compiled.expressions),
+            default=REGIME_DEFAULT_LOOKBACK,
+        ),
     )
 
     def _build(ctx: StepContext) -> StrategyInputBundle:

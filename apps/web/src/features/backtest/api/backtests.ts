@@ -240,7 +240,8 @@ export async function fetchBacktestRequest(runId: string): Promise<BacktestReque
 				row.warmup_available < 0 ||
 				!Number.isSafeInteger(row.warmup_required) ||
 				row.warmup_required < 0 ||
-				(row.evaluated !== undefined && typeof row.evaluated !== "boolean"),
+				(row.evaluated !== undefined && typeof row.evaluated !== "boolean") ||
+				(row.execution_rule != null && typeof row.execution_rule !== "string"),
 		) ||
 		new Set(participation.map((row) => `${row.trade_date}:${row.instrument_id}`)).size !== participation.length
 	) {
@@ -266,6 +267,7 @@ export async function fetchBacktestRequest(runId: string): Promise<BacktestReque
 			warmupAvailable: row.warmup_available,
 			warmupRequired: row.warmup_required,
 			evaluated: row.evaluated ?? false,
+			executionRule: row.execution_rule ?? null,
 		})),
 		sources: (dto.sources ?? []).map((source) => ({
 			dataset: source.dataset,

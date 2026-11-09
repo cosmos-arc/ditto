@@ -5,7 +5,11 @@ from dataclasses import replace
 import pytest
 from ditto_execution.reality.ordinary_equity import (
     CashEquityListing,
+    is_mainboard_stock,
+    mainboard_rule_history,
+    mainboard_trading_history,
     ordinary_equity_rules,
+    ordinary_execution_fields,
 )
 from ditto_kernel.identity import InstrumentId
 
@@ -80,3 +84,103 @@ def test_historical_opt_in_has_a_verified_2014_etf_window_only() -> None:
                 end=end,
                 historical_reconstruction=enabled,
             )
+
+
+@pytest.mark.pit
+def test_mainboard_ipo_rules_change_on_sixth_session_not_calendar_age() -> None:
+    listing = CashEquityListing(
+        InstrumentId(1_005_567), "001246", "stock", "SZSE", "2026-09-30", None
+    )
+    # National Day closure: the sixth session is fourteen calendar days later.
+    days = [
+        "2026-09-30",
+        "2026-10-08",
+        "2026-10-09",
+        "2026-10-12",
+        "2026-10-13",
+        "2026-10-14",
+    ]
+    history = mainboard_rule_history(
+        listing, commission_rate=0.001, start=days[0], end=days[-1], trading_days=days
+    )
+    from ditto_execution.rules import InMemoryRuleProvider
+
+    provider = InMemoryRuleProvider(
+        definitions={listing.instrument_id: history[0][0]},
+        trading_rules={listing.instrument_id: [row[1] for row in history]},
+        fee_schedules={listing.instrument_id: [row[2] for row in history]},
+    )
+    fifth = provider.get_rules("2026-10-13", [listing.instrument_id])[
+        listing.instrument_id
+    ]
+    sixth = provider.get_rules("2026-10-14", [listing.instrument_id])[
+        listing.instrument_id
+    ]
+    assert fifth[1].price_limit_pct is None
+    assert sixth[1].price_limit_pct == 0.1
+    assert fifth[1].as_of_date == "2026-09-30"
+    assert sixth[1].as_of_date == "2026-10-14"
+    assert (sixth[0].lot_size, sixth[0].tick_size, sixth[1].settlement_cycle) == (
+        100,
+        0.01,
+        1,
+    )
+
+
+def test_mainboard_identity_calendar_and_older_fee_boundaries() -> None:
+    assert is_mainboard_stock("stock", "SZSE", "003999")
+    for ticker in ("001001", "001199", "300001", "000000", "\uff10" * 5 + "\uff11"):
+        assert not is_mainboard_stock("stock", "SZSE", ticker)
+    assert not is_mainboard_stock("stock", "SSE", "688001")
+    listing = CashEquityListing(
+        InstrumentId(1), "600000", "stock", "SSE", "1999-11-10", None
+    )
+    days = [
+        "2018-08-10",
+        "2018-08-13",
+        "2018-08-14",
+        "2018-08-15",
+        "2018-08-16",
+        "2018-08-17",
+        "2018-08-20",
+    ]
+    history = mainboard_trading_history(
+        listing, start=days[-2], end=days[-1], trading_days=days
+    )
+    before = [rule for rule in history if rule.as_of_date <= days[-2]][-1]
+    after = history[-1]
+    assert "market_on_close" not in before.order_types_supported
+    assert "market_on_close" in after.order_types_supported
+    with pytest.raises(ValueError, match="five prior trading sessions"):
+        mainboard_trading_history(
+            listing, start=days[-2], end=days[-1], trading_days=days[-2:]
+        )
+    with pytest.raises(ValueError, match="fee schedule missing"):
+        mainboard_rule_history(
+            listing,
+            commission_rate=0.001,
+            start=days[-2],
+            end=days[-1],
+            trading_days=days,
+        )
+
+
+def test_stock_band_has_at_least_one_tick_difference() -> None:
+    listing = CashEquityListing(
+        InstrumentId(1), "000001", "stock", "SZSE", "1991-04-03", None
+    )
+    rules = ordinary_equity_rules(
+        listing, commission_rate=0.001, start="2026-10-08", end="2026-10-08"
+    )
+    row = {
+        "trade_date": "2026-10-08",
+        "is_st": False,
+        "pre_close": 0.04,
+        "limit_up": 0.05,
+        "limit_down": 0.03,
+    }
+    assert ordinary_execution_fields(row, rules, start_date="2026-10-08") == {}
+    with pytest.raises(ValueError, match="disagrees"):
+        ordinary_execution_fields(
+            {**row, "limit_up": 0.04}, rules, start_date="2026-10-08"
+        )

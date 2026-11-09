@@ -13126,6 +13126,17 @@
             "title": "Evaluated",
             "type": "boolean"
           },
+          "execution_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Rule"
+          },
           "instrument_id": {
             "title": "Instrument Id",
             "type": "integer"

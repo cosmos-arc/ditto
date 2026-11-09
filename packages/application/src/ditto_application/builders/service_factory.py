@@ -38,7 +38,10 @@ from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.planner import ExecutionPlanner, SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
-from ditto_execution.reality.ordinary_equity import RULES_OBSERVED_AT
+from ditto_execution.reality.ordinary_equity import (
+    RULES_OBSERVED_AT,
+    is_mainboard_stock,
+)
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider, InstrumentRules
@@ -81,6 +84,7 @@ from ditto_application.builders.historical_members import (
 from ditto_application.builders.ordinary_backtest import (
     build_ordinary_rules,
     ordinary_market_transform,
+    ordinary_rule_description,
 )
 from ditto_application.builders.runtime_builder import (
     PublishedStrategyRuntime,
@@ -205,7 +209,7 @@ def _compute_max_lookback(
     if compiled is None:
         return REGIME_DEFAULT_LOOKBACK
     return max(
-        REGIME_DEFAULT_LOOKBACK,
+        1,
         max(
             (expr.analysis.lookback for expr in compiled.expressions),
             default=REGIME_DEFAULT_LOOKBACK,
@@ -849,7 +853,7 @@ class BacktestRuntimeBuilder:
                 end=(
                     date.fromisoformat(config.end_date) + timedelta(days=31)
                 ).isoformat(),
-                warmup=max_lookback,
+                warmup=max(max_lookback, 5),
                 lag=config.knowledge_lag_days,
             )
             historical_provider.freeze(
@@ -866,14 +870,24 @@ class BacktestRuntimeBuilder:
                 include_fundamentals=runtime.spec.asset_class == "stock",
             )
         participation = None
+        trading_days = provider.get_schedule(data_start_date, config.end_date)[
+            "trade_date"
+        ].to_list()
         if historical_provider is not None:
             participation = daily_participation(
                 historical_provider.roster,
-                provider.get_schedule(data_start_date, config.end_date)[
-                    "trade_date"
-                ].to_list(),
+                trading_days,
                 warmup_days=max_lookback,
                 knowledge_lag_days=config.knowledge_lag_days,
+                mainboard_ids=frozenset(
+                    int(str(row["instrument_id"]))
+                    for row in historical_provider.roster
+                    if is_mainboard_stock(
+                        str(row["asset_class"]),
+                        str(row["exchange"]),
+                        str(row["ticker"]),
+                    )
+                ),
             ).with_columns(
                 pl.col("instrument_id")
                 .replace_strict(
@@ -899,12 +913,32 @@ class BacktestRuntimeBuilder:
             [int(iid) for iid in resolution.id_map.values()],
             asset_class=runtime.spec.asset_class,
             commission_rate=runtime.spec.execution.cost_model.commission_rate,
-            start=config.start_date,
-            end=config.end_date,
+            period=(config.start_date, config.end_date),
             historical_roster=historical_provider.roster
             if historical_provider is not None
             else None,
+            trading_days=trading_days,
         )
+        if participation is not None and historical_provider is not None:
+            participation = participation.with_columns(
+                pl.Series(
+                    "execution_rule",
+                    [
+                        ordinary_rule_description(rule_provider, iid, day)
+                        for iid, day in participation.select(
+                            "instrument_id", "trade_date"
+                        ).iter_rows()
+                    ],
+                    dtype=pl.String,
+                )
+            )
+            descriptions = participation.filter(
+                pl.col("trade_date") >= config.start_date
+            )["execution_rule"]
+            for row, description in zip(
+                historical_provider.participation, descriptions, strict=True
+            ):
+                row["execution_rule"] = description
 
         # 基本面快照闭包:注入 DataFeed 数据通道,供 quality_roe / value_pe 等因子引用。
         # maturity gate 经 facade 的 allow_experimental_data 生效。

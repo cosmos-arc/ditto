@@ -1,6 +1,6 @@
 """FillModel unit tests — SimpleFill, AShare, ClosingAuction."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import pytest
 from ditto_backtest.simulation.fill import (
@@ -84,7 +84,7 @@ _TRADING_RULE = TradingRuleSet(
     settlement_cycle=1,
     fund_settlement_cycle=1,
     price_limit_pct=0.10,
-    order_types_supported=("market", "limit"),
+    order_types_supported=("market", "limit", "market_on_close"),
     call_auction_sessions=("open", "close"),
 )
 
@@ -92,6 +92,18 @@ _TRADING_RULE = TradingRuleSet(
 # ---------------------------------------------------------------------------
 # SimpleFillModel
 # ---------------------------------------------------------------------------
+
+
+def test_dated_rules_can_disable_closing_auction_orders() -> None:
+    rule = replace(_TRADING_RULE, order_types_supported=("market", "limit"))
+    outcome = AShareFillModel().try_fill(
+        _order(order_type=OrderType.MARKET_ON_CLOSE),
+        _market_snapshot(),
+        _DEFINITION,
+        rule,
+    )
+    assert isinstance(outcome, NoFill)
+    assert outcome.reason == "unsupported_order_type"
 
 
 class TestSimpleFillModel:
@@ -518,3 +530,86 @@ class TestAShareFillScenarios:
             assert isinstance(result, NoFill), "Expected NoFill but got Filled"
             assert result.reason == scenario.expected_reason
             assert result.can_retry is scenario.expected_can_retry
+
+
+def test_ordinary_mainboard_ipo_phase_drives_fill_then_limit_rejection() -> None:
+    from ditto_execution.reality.ordinary_equity import (
+        CashEquityListing,
+        mainboard_rule_history,
+        ordinary_execution_fields,
+    )
+    from ditto_execution.rules import InMemoryRuleProvider
+
+    listing = CashEquityListing(
+        InstrumentId(1), "001246", "stock", "SZSE", "2026-09-30", None
+    )
+    days = [
+        "2026-09-30",
+        "2026-10-08",
+        "2026-10-09",
+        "2026-10-12",
+        "2026-10-13",
+        "2026-10-14",
+    ]
+    history = mainboard_rule_history(
+        listing, commission_rate=0.001, start=days[0], end=days[-1], trading_days=days
+    )
+    provider = InMemoryRuleProvider(
+        definitions={InstrumentId(1): history[0][0]},
+        trading_rules={InstrumentId(1): [row[1] for row in history]},
+        fee_schedules={InstrumentId(1): [row[2] for row in history]},
+    )
+    fifth = provider.get_rules("2026-10-13", [InstrumentId(1)])[InstrumentId(1)]
+    sixth = provider.get_rules("2026-10-14", [InstrumentId(1)])[InstrumentId(1)]
+    values = ordinary_execution_fields(
+        {
+            "trade_date": "2026-10-13",
+            "is_st": False,
+            "pre_close": 10.0,
+            "limit_up": 999999.999,
+            "limit_down": 0.01,
+        },
+        fifth,
+        start_date=days[0],
+    )
+    assert values == {"limit_up": None, "limit_down": None}
+    model = AShareFillModel()
+    filled = model.try_fill(
+        _order(), _market_snapshot(close=12.0, high=12.0), fifth[0], fifth[1]
+    )
+    assert isinstance(filled, Filled)
+    assert filled.fill_event.fill_price == 12.0
+    assert (
+        ordinary_execution_fields(
+            {
+                "trade_date": "2026-10-14",
+                "is_st": False,
+                "pre_close": 10.0,
+                "limit_up": 11.0,
+                "limit_down": 9.0,
+            },
+            sixth,
+            start_date=days[0],
+        )
+        == {}
+    )
+    rejected = model.try_fill(
+        _order(),
+        _market_snapshot(close=11.0, limit_up=11.0, limit_down=9.0),
+        sixth[0],
+        sixth[1],
+    )
+    assert isinstance(rejected, NoFill)
+    assert rejected.reason == "limit_up_no_buy"
+    with pytest.raises(ValueError, match="disagrees with dated rule"):
+        ordinary_execution_fields(
+            {
+                "trade_date": "2026-10-14",
+                "is_st": False,
+                "pre_close": 10.0,
+                "limit_up": 999999.999,
+                "limit_down": 0.01,
+            },
+            sixth,
+            start_date=days[0],
+        )

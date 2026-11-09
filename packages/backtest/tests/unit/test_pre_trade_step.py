@@ -223,3 +223,45 @@ class TestPreTradeStep:
         ctx = self._make_ctx_with_plan()
         result = step.execute(ctx)
         assert result.success is True
+
+
+def test_planner_rejection_reaches_saved_decision_stream() -> None:
+    from dataclasses import replace
+
+    from ditto_execution._planner_types import BlockedOrder, BlockSeverity
+    from ditto_kernel.identity import InstrumentId
+    from ditto_kernel.order import OrderSide
+
+    ctx = _make_ctx()
+    ctx.slice_ = _make_slice()
+    ctx.account_view = _make_account_view()
+    ctx.rules = {}
+    ctx.execution_plan = replace(
+        _make_execution_plan(),
+        orders=(),
+        blocked_orders=(
+            BlockedOrder(
+                InstrumentId(1),
+                OrderSide.BUY,
+                100,
+                "limit_up_no_buy",
+                BlockSeverity.DEFER,
+            ),
+        ),
+    )
+    step = PreTradeStep(
+        pre_trade_check=Mock(),
+        brokerage=Mock(),
+        fee_model=None,
+        event_bus=None,
+        clock=_make_clock(),
+    )
+    assert step.execute(ctx).success
+    assert len(ctx.pre_trade_decisions) == 1
+    saved = ctx.pre_trade_decisions[0]
+    assert (saved.decision, saved.reason, saved.final_quantity) == (
+        "rejected",
+        "limit_up_no_buy",
+        0,
+    )
+    assert saved.check_sequence == ("planner", "defer")

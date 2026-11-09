@@ -172,6 +172,8 @@ class AShareFillModel:
         trading_rule: _TradingRuleSet,
     ) -> FillOutcome | None:
         """A 股规则矩阵 — 返回 None 表示未匹配任何规则。"""
+        if order.order_type.value not in trading_rule.order_types_supported:
+            return NoFill(reason="unsupported_order_type", can_retry=False)
         # 停牌
         if market.is_suspended:
             return NoFill(reason="suspended", can_retry=True)

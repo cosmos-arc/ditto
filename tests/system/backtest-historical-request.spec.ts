@@ -108,3 +108,85 @@ test("ordinary 2014 request persists its failed freeze and recovers into a new r
 	expect(accessibility.violations.filter((v) => ["critical", "serious"].includes(v.impact ?? ""))).toEqual([]);
 	expect(errors).toEqual([]);
 });
+
+test("main-board IPO rules survive a failed freeze, repair, fills, rejection and reload", async ({ page }) => {
+	const errors: string[] = [];
+	page.on("pageerror", (error) => errors.push(error.message));
+	await page.goto(`${webOrigin}/research/strategies/mainboard_ipo_fixture`);
+	await page.getByRole("button", { name: "提交回测", exact: true }).click();
+	const form = page.getByRole("dialog", { name: "提交回测" });
+	await form.getByLabel("历史请求用途").selectOption("reconstruction");
+	await form.getByLabel("策略版本").selectOption("1");
+	await form.getByLabel("开始日期").fill("2026-10-08");
+	await form.getByLabel("结束日期").fill("2026-10-16");
+	await form.getByLabel("初始资金（元）").fill("250000");
+	await form.getByRole("button", { name: "提交回测", exact: true }).focus();
+	await page.keyboard.press("Enter");
+	const link = form.getByRole("link", { name: "查看本次回测" });
+	await expect(link).toBeVisible();
+	const originalId = (await link.getAttribute("href"))?.split("/").at(-1);
+	await link.click();
+	await expect(page.getByTestId("backtest-detail-meta")).toContainText("failed", { timeout: 60000 });
+	await page.reload();
+	await expect(page.getByText(/stock price band disagrees with dated rule/).first()).toBeVisible();
+	const oldRequest = (await (await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${originalId}/request`)).json())
+		.data;
+	expect((await page.request.post(`${apiOrigin}/system-fixture/mainboard/repair`)).ok()).toBe(true);
+	await page.getByRole("button", { name: "补证后沿原配置新建运行" }).focus();
+	await page.keyboard.press("Enter");
+	const next = page.getByRole("link", { name: "打开补证后的新运行" });
+	await expect(next).toBeVisible();
+	const newId = (await next.getAttribute("href"))?.split("/").at(-1);
+	expect(newId).not.toBe(originalId);
+	await next.click();
+	await expect(page.getByTestId("backtest-detail-meta")).toContainText("completed", { timeout: 60000 });
+	await page.reload();
+	await page.locator("summary").filter({ hasText: "请求与冻结来源" }).click();
+	const dates = page.getByLabel("逐日参与日期");
+	await dates.focus();
+	await expect(dates).toBeFocused();
+	await dates.selectOption("2026-10-13");
+	await expect(page.getByRole("row", { name: /001246.SZ.*无日涨跌幅限制/ })).toBeVisible();
+	await dates.selectOption("2026-10-14");
+	await expect(dates).toBeFocused();
+	await expect(page.getByRole("row", { name: /001246.SZ.*涨跌幅 10%.*100 股.*0.01 元.*T\+1/ })).toBeVisible();
+	const trades = (await (await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${newId}/trades`)).json()).data;
+	expect(
+		trades.some(
+			(row: { instrument_id: number; entry_date: string }) =>
+				row.instrument_id === 1001002 && row.entry_date === "2026-10-08",
+		),
+	).toBe(true);
+	// The second purchase is still open, so it belongs to saved holdings, not closed round trips.
+	const report = (await (await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${newId}/report`)).json()).data;
+	expect(report.final_account_state.positions).toEqual([
+		expect.objectContaining({ instrument_id: 1001002, quantity: 1900 }),
+	]);
+	const audit = (await (await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${newId}/audit`)).json()).data;
+	expect(
+		audit.some(
+			(row: { trade_date: string; instrument_id: number; payload: { reason?: string } }) =>
+				row.trade_date === "2026-10-14" && row.instrument_id === 1001002 && row.payload.reason === "limit_up_no_buy",
+		),
+	).toBe(true);
+	expect(audit).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({
+				trade_date: "2026-10-15",
+				instrument_id: 1001002,
+				payload: expect.objectContaining({ decision: "accepted", final_quantity: 1900 }),
+			}),
+		]),
+	);
+	expect(trades).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({ instrument_id: 1001001, entry_date: "2026-10-13", exit_date: "2026-10-14" }),
+		]),
+	);
+	expect(
+		(await (await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${originalId}/request`)).json()).data,
+	).toEqual(oldRequest);
+	const accessibility = await new AxeBuilder({ page }).analyze();
+	expect(accessibility.violations.filter((v) => ["critical", "serious"].includes(v.impact ?? ""))).toEqual([]);
+	expect(errors).toEqual([]);
+});
