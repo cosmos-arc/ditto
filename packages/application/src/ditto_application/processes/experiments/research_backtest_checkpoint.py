@@ -32,6 +32,9 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import (
     BacktestServiceConfig,
 )
+from ditto_application.processes.experiments._backtest_exact_state import (
+    has_exact_runtime_value,
+)
 from ditto_application.processes.experiments.execution_bundle import (
     BaselineExecutorBinding,
     ExactBenchmarkBinding,
@@ -313,6 +316,10 @@ def require_research_resume_runtime_state(
     if (
         account_state.get("_cash") is not cash
         or account_state.get("_event_bus") is not None
+        or not has_exact_runtime_value(
+            account_state.get("_dividends"), resume.account.dividends
+        )
+        or account_state.get("_dividend_day_open") is not None
         or BacktestAccountStateSnapshot.from_account_view(account.get_view())
         != resume.account
     ):

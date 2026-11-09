@@ -117,7 +117,7 @@ def retain_empty_dividends(period: tuple[str, str]) -> None:
                 "stock_dividend_ratio": pl.Float64,
             }
         ),
-        period=period,
+        period=("1990-01-01", period[1]),
     )
 
 

@@ -198,6 +198,12 @@ class TestTushareDataTransformer:
                 "ts_code": ["000001.SZ"],
                 "ex_date": [None],
                 "cash_div": [0.1],
+                "cash_div_tax": [0.1],
+                "record_date": [None],
+                "pay_date": [None],
+                "imp_ann_date": [None],
+                "end_date": ["20151231"],
+                "stk_div": [0.0],
                 "ann_date": ["20160514"],
                 "div_proc": ["预案"],
             }

@@ -25,6 +25,7 @@ from ditto_kernel.trading import (
     DEFAULT_LOT_SIZE,
 )
 from ditto_portfolio.accounting import Account, CashBook
+from ditto_portfolio.accounting.dividends import DividendBook
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -557,7 +558,7 @@ def _require_component_state_shapes(
         ),
         (
             components.account,
-            {"_positions", "_cash", "_event_bus"},
+            {"_positions", "_cash", "_event_bus", "_dividends", "_dividend_day_open"},
             "constructed_brokerage_account_drift",
         ),
         (
@@ -763,6 +764,8 @@ def _require_pristine_account_and_orders(
     if (
         account_state.get("_cash") is not components.cash
         or account_state.get("_event_bus") is not None
+        or not has_exact_runtime_value(account_state.get("_dividends"), DividendBook())
+        or account_state.get("_dividend_day_open") is not None
         or not has_exact_runtime_value(components.cash, expected_cash)
     ):
         raise _error("constructed_brokerage_account_drift")

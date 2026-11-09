@@ -184,6 +184,55 @@ def _provider(
     return provider, snapshots, contents
 
 
+@pytest.mark.parametrize("covered_start", ["2014-10-16", "2014-10-13", "2014-10-01"])
+def test_dividend_coverage_includes_listing_to_run_announcements(covered_start):
+    provider, snapshots, contents = _provider(stock=True)
+    provider.roster.append({"source_ticker": "000001.SZ", "list_date": "2014-10-01"})
+    frame = pl.DataFrame(
+        {
+            "source_ticker": ["000001.SZ"],
+            "knowledge_date": [date(2014, 10, 2)],
+            "implementation_date": [date(2014, 10, 10)],
+            "div_proc": ["实施"],
+            "record_date": [date(2014, 10, 17)],
+            "ex_dividend_date": [date(2014, 10, 20)],
+            "pay_date": [date(2014, 10, 21)],
+            "gross_dividend_per_share": [0.1],
+            "stock_dividend_ratio": [0.0],
+        }
+    )
+    if covered_start != "2014-10-01":
+        frame = frame.head(0)
+    snapshot = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="dividend",
+            source="tushare",
+            request_start=covered_start,
+            request_end="2014-10-17",
+            schema_version="fundamental.dividend.v3",
+            checksum="d" * 32,
+            canonical_asset=DataAssetRef("dividend", "fundamental"),
+            request_parameters_hash="e" * 32,
+            response_metadata=(),
+            row_count=frame.height,
+            payload_uri="dividend.parquet",
+            payload_retained=True,
+            created_at=_RECEIPT,
+        )
+    )
+    snapshots.append(snapshot)
+    contents[snapshot.snapshot_id] = SnapshotContents(snapshot, None, _RECEIPT, frame)
+    if covered_start != "2014-10-01":
+        with pytest.raises(
+            AppBuilderError, match="incomplete retained dividend coverage"
+        ):
+            provider.freeze_cash_dividends(start="2014-10-13", end="2014-10-17")
+    else:
+        provider.freeze_cash_dividends(start="2014-10-13", end="2014-10-17")
+        assert len(provider.cash_dividends) == 1
+        assert provider.cash_dividends[0].ex_date == date(2014, 10, 20)
+
+
 def test_ordinary_history_reads_2014_with_2026_receipt_and_excludes_future():
     provider, snapshots, _ = _provider()
     feed = ProviderBackedDataFeed(

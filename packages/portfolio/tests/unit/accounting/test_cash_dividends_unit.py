@@ -33,6 +33,62 @@ def trade(account: Account, day: str, side: OrderSide, quantity: int, price: flo
     account.mark_to_market({InstrumentId(1): price})
 
 
+@pytest.mark.pit
+def test_future_event_cannot_leak_acquisition_lots_or_book_clocks():
+    event = CashDividend(
+        InstrumentId(1),
+        date(2020, 6, 10),
+        date(2020, 6, 11),
+        date(2020, 6, 12),
+        999,
+        date(2020, 6, 5),
+        "snapshot:future",
+    )
+    accounts = [
+        Account(cash=CashBook(2000, 2000, 0), dividends=events)
+        for events in ((), (event,))
+    ]
+    for account in accounts:
+        account.settle_dividends("2020-06-04")
+        trade(account, "2020-06-04", OrderSide.BUY, 100, 10)
+        account.close_dividend_day("2020-06-04")
+    assert accounts[0].get_view() == accounts[1].get_view()
+    accounts[1].settle_dividends("2020-06-08")
+    assert accounts[1].get_view().dividends.events == (event,)
+    assert accounts[1].get_view().dividends.lots[0].acquired == date(2020, 6, 4)
+
+
+def test_repeated_session_closes_use_final_net_holdings_and_tax():
+    event = CashDividend(
+        InstrumentId(1),
+        date(2020, 6, 2),
+        date(2020, 6, 3),
+        date(2020, 6, 5),
+        1,
+        date(2020, 5, 28),
+        "snapshot:cash",
+    )
+    account = Account(cash=CashBook(3000, 3000, 0), dividends=(event,))
+    trade(account, "2020-06-02", OrderSide.BUY, 100, 10)
+    account.close_dividend_day("2020-06-02")
+    trade(account, "2020-06-02", OrderSide.BUY, 100, 10)
+    account.close_dividend_day("2020-06-02")
+    assert sum(r.quantity for r in account.get_view().dividends.rights) == 200
+    account.settle_dividends("2020-06-03")
+    trade(account, "2020-06-03", OrderSide.SELL, 100, 9)
+    account.close_dividend_day("2020-06-03")
+    assert account.get_view().dividends.tax_payable == 20
+    trade(account, "2020-06-03", OrderSide.BUY, 50, 9)
+    account.close_dividend_day("2020-06-03")
+    view = account.get_view()
+    assert (view.dividends.tax_payable, view.cash.frozen, view.cash.available) == (
+        10,
+        10,
+        1440,
+    )
+    assert sum(r.remaining for r in view.dividends.rights) == 150
+
+
 def test_dividend_receivable_cannot_be_spent_and_payment_is_idempotent():
     event = CashDividend(
         instrument_id=InstrumentId(1),

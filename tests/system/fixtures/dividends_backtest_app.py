@@ -81,7 +81,9 @@ def _dividends(*, complete: bool) -> None:
         ]
     ).with_columns(pl.col("pay_date").cast(pl.Date))
     # Duplicate provider rows must not create duplicate economic rights.
-    _retain("dividend", pl.concat([frame, frame]))
+    retain_history_payload(
+        "dividend", pl.concat([frame, frame]), period=("1990-01-01", _PERIOD[1])
+    )
 
 
 _seed_prices()

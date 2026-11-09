@@ -61,13 +61,21 @@ class FrozenHistoryProvider:
         """Pin implementation facts selected by the raw announcement date."""
         if not self._reader.list_snapshots(dataset_id="dividend", source=self._source):
             raise AppBuilderError("missing retained dividend coverage")
+        listed = {
+            str(row["source_ticker"]): str(row["list_date"]) for row in self.roster
+        }
+        if any(not listed.get(ticker) for ticker in self.members):
+            raise AppBuilderError("dividend coverage requires retained listing dates")
+        # Announcements may precede the run by arbitrarily many sessions. Require
+        # their complete declared history rather than inventing a lookback window.
+        coverage_start = min(listed[ticker] for ticker in self.members)
         frame = self._freeze_dataset(
             "dividend",
             {ticker: self._ticker_ids[ticker] for ticker in self.members},
             start=None,
             end=end,
             date_column="knowledge_date",
-            coverage_start=start,
+            coverage_start=coverage_start,
         )
         try:
             selected = implemented_cash_dividends(frame, start=start, end=end)
@@ -324,6 +332,8 @@ class FrozenHistoryProvider:
                 f"missing retained {dataset}: {sorted(scope)} {start}..{end}"
             )
         first = date.fromisoformat(start or min(s.request_start for s in candidates))
+        if coverage_start is not None:
+            first = min(first, date.fromisoformat(coverage_start))
         dates = pl.date_range(first, date.fromisoformat(end), eager=True)
         # ponytail: daily scope grid; replace with interval joins if large pools
         # make this measured cost material. No date/member is silently omitted.

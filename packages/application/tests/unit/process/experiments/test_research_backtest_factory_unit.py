@@ -2790,6 +2790,20 @@ def test_existing_runner_rejects_cash_float_subclass_after_official_build(
     )
 
 
+@pytest.mark.parametrize("field_name", ["_dividends", "_dividend_day_open"])
+def test_existing_runner_rejects_unattested_dividend_state(field_name):
+    from ditto_portfolio.accounting.dividends import DividendBook
+
+    def mutate(build):
+        object.__setattr__(
+            build.graph.components.account, field_name, DividendBook(tax_payable=100.0)
+        )
+
+    _assert_post_build_mutation_rejected(
+        mutate, reason="constructed_brokerage_account_drift"
+    )
+
+
 @pytest.mark.parametrize("poison_kind", ["tuple_subclass", "string_subclass"])
 def test_existing_runner_rejects_noncanonical_settlement_calendar_after_build(
     poison_kind: str,

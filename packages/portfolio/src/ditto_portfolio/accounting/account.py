@@ -99,6 +99,7 @@ class Account:
         if dividends and positions and dividend_state is None:
             raise ValueError("dividend tax requires opening acquisition lots")
         self._dividends = dividend_state or DividendBook.start(dividends)
+        self._dividend_day_open: DividendBook | None = None
 
     @property
     def positions(self) -> MappingProxyType[InstrumentId, Position]:
@@ -122,6 +123,13 @@ class Account:
     def get_view(self) -> AccountView:
         """生成只读账户快照。"""
         exposure = self._calc_exposure()
+        visible_events = tuple(
+            event
+            for event in self._dividends.events
+            if event.announcement_date.isoformat()
+            < max(self._dividends.settled_day, self._dividends.closed_day)
+        )
+        visible_ids = {event.instrument_id for event in visible_events}
         return AccountView(
             positions=MappingProxyType(dict(self._positions)),
             cash=self.cash,
@@ -136,13 +144,15 @@ class Account:
             exposure=exposure,
             dividends=replace(
                 self._dividends,
-                events=tuple(
-                    event
-                    for event in self._dividends.events
-                    if event.announcement_date.isoformat()
-                    < max(self._dividends.settled_day, self._dividends.closed_day)
+                events=visible_events,
+                lots=tuple(
+                    lot
+                    for lot in self._dividends.lots
+                    if lot.instrument_id in visible_ids
                 ),
-            ),
+            )
+            if visible_events
+            else DividendBook(),
         )
 
     def settle_dividends(self, day: str) -> None:
@@ -178,7 +188,13 @@ class Account:
 
     def close_dividend_day(self, day: str) -> None:
         """Freeze daily-net holdings and reserve tax before the daily report."""
-        state = self._dividends.close(
+        if self._dividends.closed_day != day:
+            self._dividend_day_open = self._dividends
+        if self._dividend_day_open is None:
+            raise ValueError("cannot revise a restored dividend closing boundary")
+        # Delayed execution can append fills on the last session. Recompute the
+        # daily net change from its opening state, not from an earlier close.
+        state = self._dividend_day_open.close(
             day, {iid: p.quantity for iid, p in self._positions.items()}
         )
         reserve = state.tax_payable - self._dividends.tax_payable
