@@ -58,6 +58,7 @@ describe("ordinary versioned backtest submission", () => {
 			end_date: "2025-01-31",
 			initial_cash: 250000.5,
 			allow_experimental_data: true,
+			historical_reconstruction: false,
 		});
 		second.unmount();
 		render(<BacktestCreateForm strategyId="seed_etf_industry_rotation" version={4} />, { wrapper });

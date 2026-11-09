@@ -32,7 +32,7 @@ test("ordinary 2014 request persists its failed freeze and recovers into a new r
 	expect(oldResponse.ok()).toBeTruthy();
 	const oldRequest = (await oldResponse.json()).data;
 	expect(oldRequest.input_status).toBe("blocked");
-	expect(oldRequest.sources[0].received_at).toMatch(/^2026-/);
+	expect(Date.parse(oldRequest.sources[0].received_at)).toBeGreaterThanOrEqual(Date.UTC(2026, 0, 1));
 	expect(oldRequest.sources[0].request_start).toBe("2014-01-01");
 	const repair = await page.request.post(`${apiOrigin}/system-fixture/history/repair`);
 	expect(repair.ok()).toBeTruthy();
