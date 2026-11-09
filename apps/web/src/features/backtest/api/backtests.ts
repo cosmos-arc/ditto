@@ -297,9 +297,16 @@ export async function fetchBacktestRequest(runId: string): Promise<BacktestReque
 				!row.symbol ||
 				typeof row.trade_date !== "string" ||
 				!/^\d{4}-\d{2}-\d{2}$/u.test(row.trade_date) ||
-				!["eligible", "outside_universe", "not_listed", "delisted", "warmup", "listing_rule_unavailable"].includes(
-					row.status,
-				) ||
+				![
+					"eligible",
+					"outside_universe",
+					"not_listed",
+					"delisted",
+					"warmup",
+					"listing_rule_unavailable",
+					"suspended",
+					"zero_volume",
+				].includes(row.status) ||
 				!Number.isSafeInteger(row.warmup_available) ||
 				row.warmup_available < 0 ||
 				!Number.isSafeInteger(row.warmup_required) ||

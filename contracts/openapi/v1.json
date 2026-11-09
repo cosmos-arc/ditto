@@ -13159,7 +13159,9 @@
               "not_listed",
               "delisted",
               "warmup",
-              "listing_rule_unavailable"
+              "listing_rule_unavailable",
+              "suspended",
+              "zero_volume"
             ],
             "title": "Status",
             "type": "string"

@@ -95,7 +95,7 @@ test("ordinary 2014 request persists its failed freeze and recovers into a new r
 	await dateSelector.selectOption("2014-10-14");
 	await expect(dateSelector).toHaveValue("2014-10-14");
 	await expect(dateSelector).toBeFocused();
-	await expect(page.getByRole("row", { name: /510050.SH.*交易日预热不足/ })).toBeVisible();
+	await expect(page.getByRole("row", { name: /510050.SH.*有效行情预热不足/ })).toBeVisible();
 	await dateSelector.selectOption("2014-10-20");
 	await expect(page.getByRole("row", { name: /510500.SH.*当日不在证券池/ })).toBeVisible();
 	const tradesResponse = await page.request.get(`${apiOrigin}/api/v1/backtests/runs/${newId}/trades`);

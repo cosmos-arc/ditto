@@ -13,7 +13,7 @@ from ditto_backtest.data_feed import (
     ProviderBackedDataFeed,
     SnapshotProviders,
 )
-from ditto_backtest.participation import daily_participation
+from ditto_backtest.participation import apply_market_participation, daily_participation
 from ditto_backtest.result import (
     BacktestAccountStateSnapshot,
     BacktestPendingOrderSnapshot,
@@ -26,7 +26,7 @@ from ditto_backtest.simulation.settlement import AShareSettlementModel
 from ditto_backtest.simulation.slippage import SlippageModel
 from ditto_data.catalog.snapshot_reader import SnapshotReadService
 from ditto_data.lineage import DataLineageRecorder
-from ditto_data.provider import DataProvider
+from ditto_data.provider import BarQuery, DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.brokerage import Brokerage
@@ -82,6 +82,7 @@ from ditto_application.builders.historical_members import (
     freeze_roster,
 )
 from ditto_application.builders.ordinary_backtest import (
+    HistoricalRuleInputs,
     build_ordinary_rules,
     ordinary_market_transform,
     ordinary_rule_description,
@@ -908,16 +909,53 @@ class BacktestRuntimeBuilder:
                 )
                 .to_dicts()
             )
+        execution_facts = None
+        if historical_provider is not None and participation is not None:
+            execution_facts = historical_provider.get_bars(
+                BarQuery(
+                    instruments=tuple(resolution.tickers),
+                    start=data_start_date,
+                    end=config.end_date,
+                    with_execution_state=True,
+                )
+            )
+            participation = apply_market_participation(
+                participation,
+                execution_facts,
+                historical_provider.get_bars(
+                    BarQuery(
+                        instruments=tuple(resolution.tickers),
+                        start=data_start_date,
+                        end=config.end_date,
+                    )
+                ),
+                knowledge_lag_days=config.knowledge_lag_days,
+            )
+            historical_provider.participation = (
+                participation.filter(pl.col("trade_date") >= config.start_date)
+                .select(
+                    "instrument_id",
+                    "symbol",
+                    "trade_date",
+                    "status",
+                    "warmup_available",
+                    "warmup_required",
+                )
+                .to_dicts()
+            )
         rule_provider = build_ordinary_rules(
             self._metadata_service,
             [int(iid) for iid in resolution.id_map.values()],
             asset_class=runtime.spec.asset_class,
             commission_rate=runtime.spec.execution.cost_model.commission_rate,
             period=(config.start_date, config.end_date),
-            historical_roster=historical_provider.roster
+            historical_inputs=HistoricalRuleInputs(
+                historical_provider.roster,
+                trading_days,
+                execution_facts if runtime.spec.asset_class == "stock" else None,
+            )
             if historical_provider is not None
             else None,
-            trading_days=trading_days,
         )
         if participation is not None and historical_provider is not None:
             participation = participation.with_columns(
@@ -932,6 +970,41 @@ class BacktestRuntimeBuilder:
                     dtype=pl.String,
                 )
             )
+            if execution_facts is not None and runtime.spec.asset_class == "stock":
+                notes = execution_facts.select(
+                    "instrument_id",
+                    pl.col("trade_date").cast(pl.String),
+                    pl.concat_str(
+                        pl.when(pl.col("is_st"))
+                        .then(pl.lit(" · ST 风险警示"))
+                        .otherwise(pl.lit("")),
+                        pl.when(pl.col("is_valuation_only"))
+                        .then(
+                            pl.concat_str(
+                                pl.lit(" · 停牌估值 "),
+                                pl.col("close"),
+                                pl.lit(" 元; 报价日期 "),
+                                pl.col("valuation_date").cast(pl.String),
+                            )
+                        )
+                        .otherwise(pl.lit("")),
+                    ).alias("_market_note"),
+                )
+                participation = (
+                    participation.join(
+                        notes,
+                        on=["instrument_id", "trade_date"],
+                        how="left",
+                        validate="1:1",
+                    )
+                    .with_columns(
+                        pl.concat_str(
+                            "execution_rule", pl.col("_market_note").fill_null("")
+                        ).alias("execution_rule")
+                    )
+                    .drop("_market_note")
+                    .sort("trade_date", "instrument_id")
+                )
             descriptions = participation.filter(
                 pl.col("trade_date") >= config.start_date
             )["execution_rule"]

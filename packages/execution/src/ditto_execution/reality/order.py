@@ -38,3 +38,17 @@ def minimum_order_rejection(
     if order.quantity != position_quantity:
         return "sell_below_minimum_requires_full_liquidation"
     return None
+
+
+def daily_buy_rejection(
+    order: Order, rule: _TradingRuleSet, *, bought_quantity: int, pending_quantity: int
+) -> str | None:
+    """Dated daily ST cap includes executed and still-open buys, never sells."""
+    cap = rule.max_daily_buy_quantity
+    if cap is None or order.direction is _OrderSide.SELL:
+        return None
+    if cap <= 0 or min(bought_quantity, pending_quantity) < 0:
+        raise ValueError("invalid daily buy limit inputs")
+    if order.quantity + bought_quantity + pending_quantity > cap:
+        return "daily_buy_quantity_exceeds_dated_maximum"
+    return None

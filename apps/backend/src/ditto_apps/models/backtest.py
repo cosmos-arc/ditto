@@ -447,6 +447,8 @@ class DailyParticipationResponse(BaseModel):
         "delisted",
         "warmup",
         "listing_rule_unavailable",
+        "suspended",
+        "zero_volume",
     ]
     warmup_available: int
     warmup_required: int

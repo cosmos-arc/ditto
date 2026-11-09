@@ -205,7 +205,7 @@ it("reads saved daily exclusions with keyboard selection and explicit trading-da
 	const user = userEvent.setup();
 	render(<BacktestRequestPanel run={run} />, { wrapper });
 	const select = await screen.findByLabelText("逐日参与日期");
-	expect(screen.getByText("交易日预热不足")).toBeVisible();
+	expect(screen.getByText("有效行情预热不足")).toBeVisible();
 	expect(screen.getByText("3 / 60 交易日")).toBeVisible();
 	expect(screen.getByText("预检；尚无执行证据")).toBeVisible();
 	select.focus();
@@ -269,4 +269,32 @@ it("reopens the saved daily execution rule with dates and trading units", async 
 	render(<BacktestRequestPanel run={run} />, { wrapper });
 	expect(await screen.findByRole("columnheader", { name: "执行规则" })).toBeVisible();
 	expect(screen.getByText(/XSHE\/main\/2026-10-14/)).toBeVisible();
+});
+
+it.each([
+	["suspended", "已确认停牌；保留估值、不成交"],
+	["zero_volume", "零成交；保留报价、不成交"],
+])("reads saved market state %s without converting it to eligibility", async (status, label) => {
+	server.use(
+		http.get("/api/v1/backtests/runs/:id/request", () =>
+			HttpResponse.json({
+				data: {
+					...request,
+					participation: [
+						{
+							instrument_id: 1,
+							symbol: "000001.SZ",
+							trade_date: "2014-10-13",
+							status,
+							warmup_available: 3,
+							warmup_required: 1,
+							evaluated: true,
+						},
+					],
+				},
+			}),
+		),
+	);
+	render(<BacktestRequestPanel run={run} />, { wrapper });
+	expect(await screen.findByText(label)).toBeVisible();
 });

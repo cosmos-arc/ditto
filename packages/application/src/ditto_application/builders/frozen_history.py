@@ -11,6 +11,7 @@ from ditto_data.catalog.snapshot_reader import SnapshotReadService
 from ditto_data.catalog.source_snapshot import ProviderSnapshot
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_data.services.market_adjustment import adjust_retained_bars
+from ditto_data.services.market_status import stock_execution_bars
 from ditto_data.services.market_types import AdjType
 from ditto_kernel.identity import InstrumentId
 
@@ -91,6 +92,71 @@ class FrozenHistoryProvider:
                 end=(calendar_end or end) if dataset == "calendar" else end,
                 date_column="knowledge_date" if financial else "trade_date",
             )
+        if asset_class == "stock":
+            self._freeze_suspension_anchors(start)
+
+    def _freeze_suspension_anchors(self, start: str) -> None:
+        """Retain a past quote for halts already in progress at the warmup start."""
+        bars = self._frames["stock_daily"]
+        missing = (
+            self._frames["stock_status"]
+            .filter(pl.col("is_suspended"))
+            .join(
+                bars.group_by("instrument_id").agg(
+                    pl.col("trade_date").min().alias("_first_quote")
+                ),
+                on="instrument_id",
+                how="left",
+            )
+            .filter(
+                pl.col("_first_quote").is_null()
+                | (pl.col("trade_date") < pl.col("_first_quote"))
+            )
+        )
+        scope = {
+            ticker: self._ticker_ids[ticker]
+            for ticker in missing["source_ticker"].unique().to_list()
+        }
+        if not scope:
+            return
+        candidates = [
+            s
+            for s in self._reader.list_snapshots(
+                dataset_id="stock_daily", source=self._source
+            )
+            if s.created_at <= self.frozen_at and s.request_start < start
+        ]
+        if not candidates:
+            return
+        earliest = min(s.request_start for s in candidates)
+        end = (date.fromisoformat(start) - timedelta(days=1)).isoformat()
+        span = 31
+        while scope:
+            first = max(
+                earliest, (date.fromisoformat(start) - timedelta(days=span)).isoformat()
+            )
+            if any(
+                s.request_end >= first
+                and (
+                    not s.source_ticker_scope
+                    or s.source_ticker_scope.intersection(scope)
+                )
+                for s in candidates
+            ):
+                quotes = self._freeze_dataset(
+                    "stock_daily", scope, start=first, end=end, date_column="trade_date"
+                )
+                anchors = quotes.sort("trade_date").group_by("source_ticker").tail(1)
+                self._frames["stock_daily"] = pl.concat(
+                    [self._frames["stock_daily"], anchors], how="diagonal_relaxed"
+                )
+                found = set(anchors["source_ticker"])
+                scope = {
+                    ticker: iid for ticker, iid in scope.items() if ticker not in found
+                }
+            if first == earliest:
+                break
+            span *= 2
 
     def prepare_calendar(self, *, start: str, end: str, warmup: int, lag: int) -> str:
         """Expand verified calendar coverage until the required sessions exist."""
@@ -301,6 +367,19 @@ class FrozenHistoryProvider:
         self, bars: pl.DataFrame, factors: pl.DataFrame, query: BarQuery
     ) -> pl.DataFrame:
         """Require exact daily execution factors, status and price limits."""
+        if self._asset_class == "stock":
+            try:
+                bars = stock_execution_bars(
+                    bars,
+                    self._range("stock_status", query),
+                    self._range("stock_limit", query),
+                    valuation_history=self._frames["stock_daily"].filter(
+                        pl.col("source_ticker").is_in(query.instruments)
+                        & (pl.col("trade_date") < date.fromisoformat(query.start))
+                    ),
+                )
+            except ValueError as error:
+                raise AppBuilderError(str(error)) from error
         keys = ["instrument_id", "trade_date"]
         bars = bars.join(
             factors.select(
@@ -314,42 +393,6 @@ class FrozenHistoryProvider:
         )
         if bars["adj_factor"].null_count():
             raise AppBuilderError("missing frozen execution adjustment factors")
-        if self._asset_class == "stock":
-            for dataset, columns in (
-                (
-                    "stock_status",
-                    {
-                        "is_suspended": "is_suspended",
-                        "is_st": "is_st",
-                        "list_status": "list_status",
-                        "source_snapshot_id": "status_source_snapshot_id",
-                    },
-                ),
-                (
-                    "stock_limit",
-                    {
-                        "up_limit": "limit_up",
-                        "down_limit": "limit_down",
-                        "source_snapshot_id": "limit_source_snapshot_id",
-                    },
-                ),
-            ):
-                bars = bars.join(
-                    self._range(dataset, query).select(
-                        *keys,
-                        *[pl.col(k).alias(v) for k, v in columns.items()],
-                    ),
-                    on=keys,
-                    how="left",
-                    validate="1:1",
-                )
-                if any(bars[name].null_count() for name in columns.values()):
-                    raise AppBuilderError(f"missing frozen {dataset} execution facts")
-        if (
-            self._asset_class == "stock"
-            and bars.filter(pl.col("list_status") != "L").height
-        ):
-            raise AppBuilderError("unsupported frozen stock lifecycle state")
         return bars
 
     def _range(self, dataset: str, query: BarQuery) -> pl.DataFrame:

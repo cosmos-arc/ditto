@@ -1,6 +1,7 @@
 """Assemble observed ordinary research rules and market inputs (#723)."""
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date, timedelta
 
 import polars as pl
@@ -20,6 +21,15 @@ from ditto_kernel.trading import InstrumentRules
 from ditto_application.exceptions import AppBuilderError
 
 
+@dataclass(frozen=True)
+class HistoricalRuleInputs:
+    """The frozen listing, calendar and status evidence of one ordinary request."""
+
+    roster: list[dict[str, object]]
+    trading_days: list[str]
+    stock_status: pl.DataFrame | None
+
+
 def build_ordinary_rules(
     metadata: MetadataService,
     instrument_ids: list[int],
@@ -27,11 +37,13 @@ def build_ordinary_rules(
     asset_class: str,
     commission_rate: float,
     period: tuple[str, str],
-    historical_roster: list[dict[str, object]] | None = None,
-    trading_days: list[str] | None = None,
+    historical_inputs: HistoricalRuleInputs | None = None,
 ) -> InMemoryRuleProvider:
     """Bind every frozen member to an explicitly covered listing."""
     start, end = period
+    historical_roster = historical_inputs.roster if historical_inputs else None
+    stock_status = historical_inputs.stock_status if historical_inputs else None
+    trading_days = historical_inputs.trading_days if historical_inputs else []
     rules: dict[InstrumentId, tuple[InstrumentRules, ...]] = {}
     frozen = (
         {int(str(row["instrument_id"])): row for row in historical_roster}
@@ -68,6 +80,13 @@ def build_ordinary_rules(
                 start=max(start, listing.list_date),
                 end=end,
                 trading_days=trading_days or [],
+                risk_warning=dict(
+                    stock_status.filter(pl.col("instrument_id") == iid)
+                    .select(pl.col("trade_date").cast(pl.String), "is_st")
+                    .iter_rows()
+                )
+                if stock_status is not None
+                else None,
             )
             continue
         if historical_roster is not None:
@@ -128,6 +147,8 @@ def ordinary_rule_description(
         band = "上市首日申报价格范围"
     if "market" not in trading.order_types_supported:
         band += " · 不接受市价申报"
+    if trading.max_daily_buy_quantity is not None:
+        band += f" · 当日已买入及未撤销买单合计 ≤{trading.max_daily_buy_quantity} 股"
     unit = "股" if definition.asset_class == "stock" else "份"
     if trading.max_limit_order_quantity is not None:
         band += f" · 限价/收盘单笔 ≤{trading.max_limit_order_quantity} {unit}"

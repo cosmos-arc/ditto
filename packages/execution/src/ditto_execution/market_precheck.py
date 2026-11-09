@@ -23,13 +23,13 @@ def pre_check(
     if snap is None:
         return None
 
-    if snap.is_suspended:
+    if snap.is_suspended or snap.volume <= 0:
         direction = OrderSide.BUY if diff_qty > 0 else OrderSide.SELL
         return BlockedOrder(
             instrument_id=iid,
             direction=direction,
             intended_quantity=abs(diff_qty),
-            reason="suspended",
+            reason="suspended" if snap.is_suspended else "zero_volume",
             severity=BlockSeverity.BLOCK,
         )
 

@@ -7,7 +7,7 @@ These are reconstructed rules, never evidence of historical knowability.
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 from math import isfinite
@@ -46,6 +46,7 @@ RULES_EFFECTIVE_FROM = "2023-08-28"
 MIN_ORDINARY_LISTED_DAYS = 30
 _A_SHARE_CODE_LENGTH = 6
 _IPO_NO_LIMIT_SESSIONS = 5
+_GROWTH_BOARD_BAND = 0.2
 
 # Only the explicitly selected, verified ordinary-research instruments. This is
 # deliberately not a classifier for arbitrary ETFs, STAR/BSE stocks or IPOs.
@@ -125,6 +126,7 @@ def stock_rule_history(
     start: str,
     end: str,
     trading_days: list[str],
+    risk_warning: Mapping[str, bool] | None = None,
 ) -> tuple[_InstrumentRules, ...]:
     """Bind independent trading and fee effective dates to the same consumer."""
     if cash_stock_board(listing.asset_class, listing.exchange, listing.ticker) is None:
@@ -137,7 +139,11 @@ def stock_rule_history(
         historical_reconstruction=True,
     )
     trading = stock_trading_history(
-        listing, start=start, end=end, trading_days=trading_days
+        listing,
+        start=start,
+        end=end,
+        trading_days=trading_days,
+        risk_warning=risk_warning,
     )
     fees = _stock_fee_history(listing, commission_rate=commission_rate)
     dates = sorted({row.as_of_date for row in (*trading, *fees)})
@@ -190,7 +196,12 @@ def _stock_fee_history(
 
 
 def stock_trading_history(
-    listing: CashEquityListing, *, start: str, end: str, trading_days: list[str]
+    listing: CashEquityListing,
+    *,
+    start: str,
+    end: str,
+    trading_days: list[str],
+    risk_warning: Mapping[str, bool] | None = None,
 ) -> tuple[_TradingRuleSet, ...]:
     """Dated domestic stock trading rules; fee coverage is a separate requirement."""
     if cash_stock_board(listing.asset_class, listing.exchange, listing.ticker) is None:
@@ -248,7 +259,64 @@ def stock_trading_history(
                 else ("09:15-09:25",),
             )
         )
-    return tuple(history)
+    return _risk_warning_history(listing, history, risk_warning or {})
+
+
+def _risk_warning_history(
+    listing: CashEquityListing,
+    history: list[_TradingRuleSet],
+    statuses: Mapping[str, bool],
+) -> tuple[_TradingRuleSet, ...]:
+    """Overlay actual dated ST transitions without carrying a future status back."""
+    versions = {rule.as_of_date: rule for rule in history}
+    base_dates = set(versions)
+    previous = False
+    for day, warned in sorted(statuses.items()):
+        if day < history[0].as_of_date:
+            continue
+        if type(warned) is not bool:
+            raise ValueError(
+                f"unknown risk-warning status: {listing.instrument_id} {day}"
+            )
+        base = max(
+            (rule for rule in history if rule.as_of_date <= day),
+            key=lambda rule: rule.as_of_date,
+        )
+        if warned:
+            main = (
+                cash_stock_board(listing.asset_class, listing.exchange, listing.ticker)
+                == "main"
+            )
+            if not main and base.price_limit_pct != _GROWTH_BOARD_BAND:
+                raise ValueError(
+                    "unverified risk-warning rule/status: "
+                    + f"{listing.instrument_id} {day}"
+                )
+            capped = (listing.exchange == "SSE" and (main or day >= "2020-12-31")) or (
+                listing.exchange == "SZSE" and day >= "2021-05-17"
+            )
+            versions[day] = replace(
+                base,
+                as_of_date=day,
+                price_limit_pct=(0.05 if day < "2026-07-06" else 0.1) if main else 0.2,
+                order_types_supported=("limit",)
+                if main and listing.exchange == "SSE"
+                else base.order_types_supported,
+                max_daily_buy_quantity=500_000 if capped else None,
+            )
+        elif previous:
+            versions[day] = replace(base, as_of_date=day)
+        previous = warned
+    result: list[_TradingRuleSet] = []
+    for day in sorted(versions):
+        rule = versions[day]
+        if (
+            day in base_dates
+            or not result
+            or replace(result[-1], as_of_date=day) != rule
+        ):
+            result.append(rule)
+    return tuple(result)
 
 
 def _apply_ipo_exemption(
@@ -451,8 +519,17 @@ def _stock_execution_fields(
 ) -> dict[str, float | bool | None]:
     definition, rule, _ = rules
     iid, day = definition.instrument_id, str(row["trade_date"])
-    if row.get("is_st") is not False:
+    if type(row.get("is_st")) is not bool or type(row.get("is_suspended")) is not bool:
         raise ValueError(f"unverified risk-warning rule/status: {iid} {day}")
+    expected_st_band = (
+        (0.05 if day < "2026-07-06" else 0.1)
+        if definition.board_segment == "main"
+        else _GROWTH_BOARD_BAND
+    )
+    if row["is_st"] and rule.price_limit_pct != expected_st_band:
+        raise ValueError(f"unverified risk-warning rule/status: {iid} {day}")
+    if row["is_suspended"]:
+        return {"limit_up": None, "limit_down": None}
     registration = _registration_date(definition.board_segment)
     if rule.price_limit_pct is None and (definition.ipo_date or "") >= registration:
         # The verified listing calendar/rule proves the exemption. A missing

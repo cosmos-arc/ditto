@@ -82,6 +82,7 @@ def test_reform_does_not_rewrite_prior_bands_fees_or_transition_exceptions() -> 
         row = {
             "trade_date": rules[1].as_of_date,
             "is_st": False,
+            "is_suspended": False,
             "pre_close": 10.0,
             "limit_up": upper,
             "limit_down": lower,
@@ -93,7 +94,7 @@ def test_reform_does_not_rewrite_prior_bands_fees_or_transition_exceptions() -> 
                 rules,
                 start_date="2014-01-01",
             )
-        for unknown in (None, True):
+        for unknown in (None, "ST"):
             with pytest.raises(ValueError, match="risk-warning"):
                 ordinary_execution_fields(
                     {**row, "is_st": unknown}, rules, start_date="2014-01-01"
@@ -150,7 +151,9 @@ def test_pre_reform_ipo_has_one_initial_session_even_across_reform() -> None:
     assert "market" not in first[1].order_types_supported
     assert (
         ordinary_execution_fields(
-            {"trade_date": "2020-08-20", "is_st": False}, first, start_date="2020-08-20"
+            {"trade_date": "2020-08-20", "is_st": False, "is_suspended": False},
+            first,
+            start_date="2020-08-20",
         )
         == {}
     )

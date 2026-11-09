@@ -1,2 +1,12 @@
 schema: ditto.approved-breaks.v1
-breaks: []
+breaks:
+  - id: response-property-enum-value-added
+    fingerprint: f943fbaa231d
+    approved-by: https://github.com/cosmos-arc/ditto/issues/756#issuecomment-6739618210
+    added: '2026-11-09'
+    note: Add suspended participation; API and Web migrate together under the maintainer's direct-change authorization.
+  - id: response-property-enum-value-added
+    fingerprint: ce73cc2bfa8f
+    approved-by: https://github.com/cosmos-arc/ditto/issues/756#issuecomment-6739618210
+    added: '2026-11-09'
+    note: Add zero_volume participation; API and Web migrate together under the maintainer's direct-change authorization.

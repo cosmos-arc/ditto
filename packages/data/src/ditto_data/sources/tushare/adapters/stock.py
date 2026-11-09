@@ -31,7 +31,8 @@ _STOCK_BASIC_RAW_COLUMNS = (
     "delist_date",
     "list_status",
 )
-_STOCK_STATUS_HISTORY_START = date(2016, 1, 1)
+_STOCK_STATUS_HISTORY_START = date(2000, 1, 3)
+_BAK_BASIC_HISTORY_START = date(2016, 1, 1)
 _ST_NAME_PATTERN = r"^(?:S\*ST|SST|\*ST|ST)"
 
 
@@ -494,6 +495,7 @@ class StockTushareAdapter(BaseTushareAdapter):
         - suspend_d: 停牌信息
         - stock_st: ST 每日状态
         - bak_basic: 2016+ 历史每日股票列表和名称
+        - daily + suspend_d: date-scoped identities when bak_basic has no coverage
 
         Args:
             trade_date: Trade date (YYYY-MM-DD).
@@ -522,7 +524,7 @@ class StockTushareAdapter(BaseTushareAdapter):
             ) from error
         if cutoff < _STOCK_STATUS_HISTORY_START:
             raise SourceFetchError(
-                message="stock_status provider history starts at 2016-01-01",
+                message="stock_status provider history starts at 2000-01-03",
                 source="tushare",
                 details={"trade_date": trade_date},
             )
@@ -539,13 +541,36 @@ class StockTushareAdapter(BaseTushareAdapter):
             # 1. Fetch suspension data from suspend_d API
             suspend_df = self._fetch_suspend_data(ts_date)
 
-            # 2. Reconstruct the date-scoped active universe from bak_basic.
-            universe_df = self._fetch_historical_universe(ts_date)
+            # 2. bak_basic starts during 2016, not at its first trading day.
+            universe_df = (
+                self._fetch_historical_universe(ts_date)
+                if cutoff >= _BAK_BASIC_HISTORY_START
+                else None
+            )
+
+            if universe_df is None or universe_df.is_empty():
+                universe_df = self._fetch_traded_universe(ts_date, suspend_df)
+            universe_df = universe_df.join(
+                suspend_df.select("ts_code").unique(),
+                on="ts_code",
+                how="full",
+                coalesce=True,
+            )
 
             # 3. Fetch the same-date ST snapshot; historical names are a
             # provider-native fallback when the daily endpoint has no rows.
             st_df = self._fetch_st_data(ts_date, universe_df)
-            list_status_df = universe_df.select("ts_code", "list_status")
+            list_status_df = (
+                pl.concat(
+                    [
+                        universe_df.select("ts_code"),
+                        st_df.select("ts_code"),
+                        suspend_df.select("ts_code"),
+                    ]
+                )
+                .unique()
+                .with_columns(pl.lit("L").alias("list_status"))
+            )
 
             # 4. 使用 Processor 合并数据
             merger = StatusMerger()
@@ -900,9 +925,41 @@ class StockTushareAdapter(BaseTushareAdapter):
         )
         if not st_response.is_empty():
             return st_response.select("ts_code", "name")
+        if universe_df.filter(
+            pl.col("name").is_null() | (pl.col("name").str.strip_chars() == "")
+        ).height:
+            raise SourceFetchError(
+                message="empty stock_st without complete dated name evidence",
+                source="tushare",
+                details={"trade_date": ts_date},
+            )
         return universe_df.filter(
             pl.col("name").fill_null("").str.contains(_ST_NAME_PATTERN)
         ).select("ts_code", "name")
+
+    def _fetch_traded_universe(
+        self, ts_date: str, suspend_df: pl.DataFrame
+    ) -> pl.DataFrame:
+        """Without bak_basic coverage, dated trades/halts prove an active identity."""
+        response = self._client.query(
+            api_name="daily", trade_date=ts_date, fields="ts_code,trade_date"
+        )
+        assert_single_trade_date(
+            response, expected=ts_date, dataset="stock_status.daily"
+        )
+        traded = (
+            response.select("ts_code")
+            if not response.is_empty()
+            else pl.DataFrame(schema={"ts_code": pl.String})
+        )
+        return (
+            pl.concat([traded, suspend_df.select("ts_code")])
+            .unique()
+            .with_columns(
+                pl.lit(None, dtype=pl.String).alias("name"),
+                pl.lit("L").alias("list_status"),
+            )
+        )
 
     def _fetch_historical_universe(self, ts_date: str) -> pl.DataFrame:
         """Fetch the provider's 2016+ daily active-stock universe."""

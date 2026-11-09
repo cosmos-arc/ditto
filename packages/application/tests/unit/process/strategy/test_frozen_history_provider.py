@@ -27,7 +27,13 @@ _IID = InstrumentId(2_000_001)
 
 
 def _provider(
-    *, future_close: float = 999.0, newer: str | None = None, stock: bool = False
+    *,
+    future_close: float = 999.0,
+    newer: str | None = None,
+    stock: bool = False,
+    halted: bool = False,
+    start: str = "2014-10-13",
+    prior_quote: bool = True,
 ):
     days = [date(2014, 10, 13) + timedelta(days=i) for i in range(5)]
     bars = pl.DataFrame(
@@ -74,13 +80,25 @@ def _provider(
         frames["adj_factor"] = frames.pop("fund_adj")
         execution = bars.select("source_ticker", "trade_date")
         frames["stock_status"] = execution.with_columns(
-            pl.lit(False).alias("is_suspended"),
+            pl.col("trade_date").is_in(days[1:3]).alias("is_suspended")
+            if halted
+            else pl.lit(False).alias("is_suspended"),
+            pl.lit("").alias("suspend_timing"),
             pl.lit(False).alias("is_st"),
             pl.lit("L").alias("list_status"),
         )
         frames["stock_limit"] = execution.with_columns(
             pl.lit(11.0).alias("up_limit"), pl.lit(9.0).alias("down_limit")
         )
+        if halted:
+            for dataset in ("stock_daily", "stock_limit"):
+                frames[dataset] = frames[dataset].filter(
+                    ~pl.col("trade_date").is_in(days[1:3])
+                )
+        if not prior_quote:
+            frames["stock_daily"] = frames["stock_daily"].filter(
+                pl.col("trade_date") != days[0]
+            )
         frames = {
             dataset: frame.with_columns(pl.lit("000001.SZ").alias("source_ticker"))
             if "source_ticker" in frame.columns
@@ -151,7 +169,7 @@ def _provider(
     provider.freeze(
         ticker_ids={"000001.SZ" if stock else "510300.SH": _IID},
         asset_class="stock" if stock else "etf",
-        start="2014-10-13",
+        start=start,
         end="2014-10-17",
         include_fundamentals=True,
     )
@@ -268,3 +286,145 @@ def test_actual_stock_execution_schema_does_not_require_invented_knowledge_dates
     assert bars["is_st"].to_list() == [False] * 4
     assert bars["status_source_snapshot_id"].null_count() == 0
     assert bars["limit_source_snapshot_id"].null_count() == 0
+
+
+def test_confirmed_halts_keep_past_valuation_without_fabricating_signal_history():
+    provider, _, _ = _provider(stock=True, halted=True, future_close=999.0)
+    query = BarQuery(
+        instruments=("000001.SZ",),
+        start="2014-10-13",
+        end="2014-10-16",
+        with_execution_state=True,
+    )
+    bars = provider.get_bars(query)
+    assert bars["close"].to_list() == [10.0] * 4
+    assert bars["is_valuation_only"].to_list() == [False, True, True, False]
+    assert bars["is_suspended"].to_list() == [False, True, True, False]
+    assert bars["volume"].to_list() == [1000.0, 0.0, 0.0, 1000.0]
+    marks = bars.filter(pl.col("is_valuation_only"))
+    assert marks["valuation_date"].to_list() == [date(2014, 10, 13)] * 2
+    assert marks["status_source_snapshot_id"].null_count() == 0
+    assert marks["source_snapshot_id"].null_count() == 0
+    history = provider.get_bars(
+        BarQuery(
+            instruments=("000001.SZ",),
+            start="2014-10-13",
+            end="2014-10-15",
+            adj="qfq",
+            asof="2014-10-16",
+        )
+    )
+    assert history["trade_date"].cast(pl.String).to_list() == ["2014-10-13"]
+
+
+def test_halt_without_a_past_valuation_cannot_take_a_future_quote():
+    provider, _, _ = _provider(stock=True, halted=True, prior_quote=False)
+    with pytest.raises(
+        AppBuilderError, match=r"missing prior suspension valuation.*2014"
+    ):
+        provider.get_bars(
+            BarQuery(
+                instruments=("000001.SZ",),
+                start="2014-10-14",
+                end="2014-10-16",
+                with_execution_state=True,
+            )
+        )
+
+
+def test_long_halt_retains_frozen_quote_before_warmup_without_adding_signal_history():
+    provider, _, _ = _provider(stock=True, halted=True, start="2014-10-14")
+    execution = provider.get_bars(
+        BarQuery(
+            instruments=("000001.SZ",),
+            start="2014-10-14",
+            end="2014-10-15",
+            with_execution_state=True,
+        )
+    )
+    assert execution["close"].to_list() == [10.0, 10.0]
+    assert execution["valuation_date"].to_list() == [date(2014, 10, 13)] * 2
+    assert execution["is_valuation_only"].to_list() == [True, True]
+    history = provider.get_bars(
+        BarQuery(instruments=("000001.SZ",), start="2014-10-14", end="2014-10-15")
+    )
+    assert history.is_empty()
+    assert all(row["verified"] for row in provider.sources)
+
+
+@pytest.mark.parametrize("incomplete", [False, True])
+def test_long_halt_search_crosses_empty_snapshot_windows_but_not_invalid_evidence(
+    incomplete,
+):
+    _, snapshots, contents = _provider(stock=True, halted=True, prior_quote=False)
+    original = next(s for s in snapshots if s.dataset_id == "stock_daily")
+    current = contents[original.snapshot_id].frame
+    snapshots.remove(original)
+    anchor = current.head(1).with_columns(
+        pl.lit(date(2014, 8, 1)).alias("trade_date"),
+        pl.lit(date(2014, 8, 2)).alias("knowledge_date"),
+    )
+    anchor_id = ""
+    for first, last, frame, checksum in [
+        ("2014-10-14", "2014-10-17", current, "c" * 32),
+        ("2014-08-01", "2014-08-01", anchor, "a" * 32),
+    ]:
+        snapshot = ProviderSnapshot.create(
+            ProviderSnapshotDraft(
+                dataset_id="stock_daily",
+                source="tushare",
+                request_start=first,
+                request_end=last,
+                schema_version=original.schema_version,
+                checksum=checksum,
+                canonical_asset=original.canonical_asset,
+                request_parameters_hash="f" * 32,
+                response_metadata=(),
+                row_count=frame.height,
+                payload_uri="quotes.parquet",
+                payload_retained=True,
+                created_at=_RECEIPT,
+            )
+        )
+        snapshots.append(snapshot)
+        contents[snapshot.snapshot_id] = SnapshotContents(
+            snapshot, None, _RECEIPT, frame
+        )
+        anchor_id = snapshot.snapshot_id
+    reader = MagicMock(spec=SnapshotReadService)
+    reader.list_snapshots.side_effect = lambda **kw: tuple(
+        s for s in snapshots if s.dataset_id == kw["dataset_id"]
+    )
+
+    def read(identity, **_):
+        if incomplete and identity == anchor_id:
+            raise ValueError("provider snapshot has no COMPLETE checkpoint")
+        return contents[identity]
+
+    reader.read.side_effect = read
+    provider = FrozenHistoryProvider(reader, frozen_at=_RECEIPT)
+    if incomplete:
+        with pytest.raises(AppBuilderError, match="no COMPLETE checkpoint"):
+            provider.freeze(
+                ticker_ids={"000001.SZ": _IID},
+                asset_class="stock",
+                start="2014-10-14",
+                end="2014-10-17",
+            )
+        return
+    provider.freeze(
+        ticker_ids={"000001.SZ": _IID},
+        asset_class="stock",
+        start="2014-10-14",
+        end="2014-10-17",
+    )
+    execution = provider.get_bars(
+        BarQuery(
+            instruments=("000001.SZ",),
+            start="2014-10-14",
+            end="2014-10-15",
+            with_execution_state=True,
+        )
+    )
+    assert execution["valuation_date"].to_list() == [date(2014, 8, 1)] * 2
+    assert execution["source_snapshot_id"].to_list() == [anchor_id] * 2

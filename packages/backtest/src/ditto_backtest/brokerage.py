@@ -20,7 +20,7 @@ from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.orders.trigger import OrderTrigger
-from ditto_execution.reality.order import minimum_order_rejection
+from ditto_execution.reality.order import daily_buy_rejection, minimum_order_rejection
 from ditto_execution.reality.price import round_to_tick
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
@@ -306,6 +306,14 @@ class BacktestBrokerage:
             )
             if ticket.filled_quantity == 0
             else None
+        )
+        reason = reason or daily_buy_rejection(
+            remaining_order,
+            trading_rule,
+            bought_quantity=position.quantity - position.available_quantity
+            if position
+            else 0,
+            pending_quantity=0,
         )
         outcome = (
             NoFill(reason=reason, can_retry=False)

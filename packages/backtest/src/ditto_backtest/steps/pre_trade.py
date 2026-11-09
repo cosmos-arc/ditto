@@ -18,10 +18,15 @@ from typing import ClassVar
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.events import OrderSubmitted
 from ditto_execution.orders.model import Order
-from ditto_execution.reality.order import minimum_order_rejection, order_rule_rejection
+from ditto_execution.reality.order import (
+    daily_buy_rejection,
+    minimum_order_rejection,
+    order_rule_rejection,
+)
 from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
+from ditto_kernel.order import OrderSide
 from ditto_kernel.trading import FeeModel
 from ditto_portfolio.accounting import CashAccountBuyingPower
 from ditto_risk.pre_trade import (
@@ -240,6 +245,33 @@ class PreTradeStep:
         reason = order_rule_rejection(order, rules[1]) or minimum_order_rejection(
             order, rules[1], position_quantity=position.quantity if position else 0
         )
+        if reason is None and rules[1].max_daily_buy_quantity is not None:
+            accepted = [
+                item
+                for item in pre_trade_context.accepted_orders
+                if item.instrument_id == order.instrument_id
+            ]
+            # T+1 inventory difference is today's purchases; undo the context's
+            # temporary sell reservations, which have not changed total holdings.
+            bought = (
+                position.quantity - position.available_quantity if position else 0
+            ) - sum(
+                item.quantity for item in accepted if item.direction is OrderSide.SELL
+            )
+            pending = sum(
+                item.quantity for item in accepted if item.direction is OrderSide.BUY
+            ) + sum(
+                ticket.leaves_quantity
+                for ticket in pre_trade_context.pending_tickets
+                if ticket.order.instrument_id == order.instrument_id
+                and ticket.order.direction is OrderSide.BUY
+            )
+            reason = daily_buy_rejection(
+                order,
+                rules[1],
+                bought_quantity=max(0, bought),
+                pending_quantity=pending,
+            )
         if reason is not None:
             return OrderCheckResult(
                 decision=Decision.REJECT,

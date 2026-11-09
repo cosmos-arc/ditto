@@ -72,6 +72,13 @@ class ASharePaperReality:
         """Apply quantity, position, and T+1 constraints."""
         definition, trading_rules, _fee_schedule = rules
         order = paper_order.order
+        if (
+            trading_rules.max_daily_buy_quantity is not None
+            and order.direction is OrderSide.BUY
+        ):
+            return self._reject(
+                paper_order, "daily_buy_limit_context_unavailable", context.execution_at
+            )
         if reason := order_rule_rejection(
             order, trading_rules
         ) or minimum_order_rejection(
@@ -115,11 +122,11 @@ class ASharePaperReality:
         """Apply suspension and directional price-limit constraints."""
         order = paper_order.order
         snapshot = lineage.snapshot
-        if snapshot.is_suspended:
+        if snapshot.is_suspended or snapshot.volume <= 0:
             return PaperRealityResult(
                 status=PaperRealityStatus.DEFERRED,
                 order=paper_order,
-                reason="suspended",
+                reason="suspended" if snapshot.is_suspended else "zero_volume",
             )
         if (
             order.direction is OrderSide.BUY

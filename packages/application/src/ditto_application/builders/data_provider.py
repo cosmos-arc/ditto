@@ -25,6 +25,7 @@ from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.models.common import InstrumentIdRange
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
+from ditto_data.services.market_status import stock_execution_bars
 from ditto_data.services.metadata_service import MetadataService
 from ditto_features.services import DerivedQueryService
 
@@ -615,7 +616,6 @@ class ServiceBackedDataProvider:
             raise AppBuilderError(
                 "stock execution state requires source snapshot evidence"
             )
-        keys = ["instrument_id", "trade_date"]
         status = self._market.get_stock_status(query.start, query.end).filter(
             pl.col("instrument_id").is_in(instrument_ids)
         )
@@ -631,56 +631,10 @@ class ServiceBackedDataProvider:
         limits = _attach_catalog_source_snapshots(
             limits, self._snapshots, "stock_limit", self._lifecycle
         )
-        missing_quotes = status.filter(pl.col("is_suspended")).join(
-            bars.select(keys), on=keys, how="anti"
-        )
-        if not missing_quotes.is_empty():
-            raise AppBuilderError(
-                "verified suspension without valuation quote; "
-                + "positions cannot disappear: "
-                + f"{missing_quotes.select(keys).head(10).to_dicts()}"
-            )
-        joined = bars.join(
-            status.select(
-                *keys,
-                "is_suspended",
-                "is_st",
-                "list_status",
-                pl.col("source_snapshot_id").alias("status_source_snapshot_id"),
-            ),
-            on=keys,
-            how="left",
-            validate="1:1",
-        ).join(
-            limits.select(
-                *keys,
-                pl.col("up_limit").alias("limit_up"),
-                pl.col("down_limit").alias("limit_down"),
-                pl.col("source_snapshot_id").alias("limit_source_snapshot_id"),
-            ),
-            on=keys,
-            how="left",
-            validate="1:1",
-        )
-        required = (
-            "is_suspended",
-            "is_st",
-            "list_status",
-            "limit_up",
-            "limit_down",
-            "status_source_snapshot_id",
-            "limit_source_snapshot_id",
-        )
-        bad = joined.filter(
-            pl.any_horizontal(pl.col(name).is_null() for name in required)
-            | (pl.col("list_status") != "L")
-        )
-        if not bad.is_empty():
-            raise AppBuilderError(
-                "missing status/limit/lineage or unresolved exit: "
-                + f"{bad.select(keys).head(10).to_dicts()}"
-            )
-        return joined
+        try:
+            return stock_execution_bars(bars, status, limits)
+        except ValueError as error:
+            raise AppBuilderError(str(error)) from error
 
     def get_instruments(self, query: InstrumentQuery) -> pl.DataFrame:
         """获取标的列表."""

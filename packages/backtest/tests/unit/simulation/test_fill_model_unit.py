@@ -270,15 +270,18 @@ class TestAShareFillModel:
         assert result.fill_event.filled_quantity == 300
         assert result.fill_event.leaves_quantity == 0
 
-    def test_zero_volume_returns_retryable_no_fill(self) -> None:
-        model = AShareFillModel(participation_rate=0.05)
-        order = _order(quantity=100)
+    @pytest.mark.parametrize(
+        "order_type", [OrderType.MARKET, OrderType.LIMIT, OrderType.MARKET_ON_CLOSE]
+    )
+    def test_zero_volume_returns_retryable_no_fill(self, order_type: OrderType) -> None:
+        model = AShareFillModel()
+        order = _order(quantity=100, order_type=order_type, price=10.5)
         market = _market_snapshot(close=10.5, volume=0)
 
         result = model.try_fill(order, market, _DEFINITION, _TRADING_RULE)
 
         assert isinstance(result, NoFill)
-        assert result.reason == "volume_constraint"
+        assert result.reason == "zero_volume"
         assert result.can_retry is True
 
     def test_market_on_close_uses_auction_volume_cap(self) -> None:
@@ -604,6 +607,7 @@ def test_ordinary_stock_ipo_phase_drives_fill_then_limit_rejection(
         {
             "trade_date": days[4],
             "is_st": False,
+            "is_suspended": False,
             "pre_close": 10.0,
             "limit_up": 999999.999,
             "limit_down": 0.01,
@@ -638,6 +642,7 @@ def test_ordinary_stock_ipo_phase_drives_fill_then_limit_rejection(
             {
                 "trade_date": days[5],
                 "is_st": False,
+                "is_suspended": False,
                 "pre_close": 10.0,
                 "limit_up": upper,
                 "limit_down": lower,
@@ -660,6 +665,7 @@ def test_ordinary_stock_ipo_phase_drives_fill_then_limit_rejection(
             {
                 "trade_date": days[5],
                 "is_st": False,
+                "is_suspended": False,
                 "pre_close": 10.0,
                 "limit_up": 999999.999,
                 "limit_down": 0.01,
