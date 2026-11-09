@@ -70,6 +70,9 @@ meta:
       tushare:fund_daily:
         result: ok
         rows: 2170
+      tushare:fund_div:
+        result: ok
+        rows: 14
       tushare:fund_nav:
         result: ok
         rows: 10500
@@ -1870,6 +1873,44 @@ datasets:
     - 截至公告日可见的个股财务披露；application 实测入口/参数/结果见 readiness-708-2026-11.md
     notes: 公告/登记/除权/到账日期分开;未披露值不补零,修订与实施状态分开;保留此前可知比较值。
     verification_report: docs/data/readiness-708-2026-11.md
+    current_failures: []
+  etf_dividend:
+    domain: fundamental
+    tier: t2_repair
+    sources:
+    - tushare
+    provider_apis:
+    - fund_div
+    declared:
+      frequency: event
+      update_frequency: 按需补采
+      coverage_start_rule: 2014-01-01 起
+      currency: CNY
+      timezone: Asia/Shanghai
+      typical_available_time: '20:00:00'
+      scope: 按标的全历史现金分派公告采集，仅按公告区间筛选；div_cash 为每份金额
+    measured:
+      storage: sqlite:fundamental:etf_dividend
+      rows: 0
+      instruments: null
+      start: null
+      end: null
+      date_axis: knowledge_date
+      measured_at: '2026-11-10T07:26:49+08:00'
+    catalog_latest:
+      date: null
+      partition_rows: null
+      status: unmeasured
+      freshness: dataset_metadata_only
+      observations: []
+    status: empty
+    gaps:
+    - 生产库尚未回补；2026-11-10 探针 tushare:fund_div 510300.SH 全历史 14 行可取，
+      2014/2025 双窗口事实与发行人公告一致（docs/evidence/etf-cash-dividends-761.md）
+    consumers:
+    - 普通历史回测 ETF 现金分红冻结与登记/除息/到账记账
+    notes: 个人基金分配收入暂免所得税（财税〔2002〕128 号）；份额折算与收益转份额不属于本数据集；
+      空响应与缺失公告区间区分，公告/实施公告取较晚为 knowledge_date。
     current_failures: []
   valuation_metrics:
     domain: capital

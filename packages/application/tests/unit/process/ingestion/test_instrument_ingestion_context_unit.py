@@ -460,4 +460,4 @@ def test_empty_distribution_history_retains_exact_readable_source(
     restored = payloads.read_payload(intent.payload)
     assert restored.is_empty()
     assert restored.schema == frame.schema
-    assert snapshot.source_ticker_scope == ("159915.SZ",)
+    assert snapshot.source_ticker_scope == frozenset({"159915.SZ"})
