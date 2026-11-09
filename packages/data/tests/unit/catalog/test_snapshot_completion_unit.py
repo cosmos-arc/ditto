@@ -179,3 +179,15 @@ class TestSnapshotCompleted:
         lifecycle._checkpoints += (self._complete(v2, evidence_id=v2.snapshot_id),)
         assert completed_snapshots((v2, v1), lifecycle) == (v2, v1)
         assert lifecycle.complete_reads == 2
+
+
+def test_completion_after_request_freeze_cannot_attest_frozen_inputs():
+    snapshot = _snapshot("market.stock_daily.v1")
+    checkpoint = TestSnapshotCompleted()._complete(snapshot, snapshot.snapshot_id)
+    lifecycle = _Lifecycle(checkpoint)
+    assert not snapshot_completed(
+        snapshot, lifecycle, completed_before=datetime(2026, 6, 1, 10, 5, tzinfo=UTC)
+    )
+    assert snapshot_completed(
+        snapshot, lifecycle, completed_before=checkpoint.updated_at
+    )

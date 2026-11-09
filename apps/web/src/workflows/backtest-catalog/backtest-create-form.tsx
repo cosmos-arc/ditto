@@ -27,6 +27,9 @@ export function BacktestCreateForm({ strategyId: initialStrategyId = "", version
 	const [endDate, setEndDate] = useState(saved.get("endDate") ?? "");
 	const [initialCash, setInitialCash] = useState(saved.get("initialCash") ?? "1000000");
 	const [allowExperimental, setAllowExperimental] = useState(saved.get("allowExperimental") === "true");
+	const [historicalReconstruction, setHistoricalReconstruction] = useState(
+		saved.get("historicalReconstruction") === "true",
+	);
 	const [storageError, setStorageError] = useState("");
 	const submit = useMutation({
 		mutationFn: createBacktestRun,
@@ -77,6 +80,7 @@ export function BacktestCreateForm({ strategyId: initialStrategyId = "", version
 					endDate,
 					initialCash: Number(initialCash),
 					allowExperimental,
+					...(historicalReconstruction ? { historicalReconstruction: true } : {}),
 				};
 				const fingerprint = JSON.stringify(input);
 				const key = saved.get("fingerprint") === fingerprint ? saved.get("key") : null;
@@ -88,6 +92,7 @@ export function BacktestCreateForm({ strategyId: initialStrategyId = "", version
 					endDate,
 					initialCash,
 					allowExperimental: String(allowExperimental),
+					historicalReconstruction: String(historicalReconstruction),
 					fingerprint,
 					key: idempotencyKey,
 				});
@@ -106,6 +111,21 @@ export function BacktestCreateForm({ strategyId: initialStrategyId = "", version
 				</div>
 			) : null}
 			<fieldset disabled={submit.isPending || Boolean(runId)} className="space-y-4">
+				<label className="block">
+					历史请求用途
+					<select
+						className={fieldClass}
+						value={historicalReconstruction ? "reconstruction" : "limited"}
+						onChange={(event) => setHistoricalReconstruction(event.target.value === "reconstruction")}
+					>
+						<option value="limited">受限历史研究 · 当前存储读取</option>
+						<option value="reconstruction">普通历史重建 · 冻结留存事实</option>
+					</select>
+				</label>
+				<p className="text-xs text-(--color-foreground-secondary)">
+					普通历史重建保留真实入库时间，按业务／公告日期过滤；缺证会保存原因，补证后可沿原配置创建新运行。
+					严格快照重放需要另外的已认证研究快照，本入口不授予该资格。
+				</p>
 				<label className="block">
 					策略
 					<select

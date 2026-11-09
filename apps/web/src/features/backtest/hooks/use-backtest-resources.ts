@@ -21,6 +21,7 @@ export const backtestKeys = {
 export function useBacktestRun(runId: string) {
 	return useQuery({
 		queryKey: backtestKeys.run(runId),
+		refetchInterval: (query) => (["pending", "running"].includes(query.state.data?.status ?? "") ? 2000 : false),
 		queryFn: () => fetchBacktestRun(runId),
 		enabled: runId.length > 0,
 	});

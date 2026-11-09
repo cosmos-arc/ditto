@@ -174,6 +174,7 @@ test("strategy detail submits an exact ordinary version and recovers a lost resp
 		end_date: "2025-01-31",
 		initial_cash: 250000.5,
 		allow_experimental_data: true,
+        historical_reconstruction: false,
 	});
 	const runId = submissions[0]?.runId;
 	expect(runId).toBeTruthy();
@@ -193,7 +194,7 @@ test("strategy detail submits an exact ordinary version and recovers a lost resp
 		strategy_version: "1",
 		status: "failed",
 	});
-	expect(body.data[0].error_message).toContain("declared benchmark cannot be resolved");
+	expect(body.data[0].error_message).toContain("在 2025-01-02 解析到 0 成员");
 	await page.goto(`${webOrigin}/research/strategies/${strategyId}`);
 	await page.getByRole("button", { name: "提交回测", exact: true }).click();
 	await expect(form.getByRole("link", { name: "查看本次回测" })).toBeVisible();

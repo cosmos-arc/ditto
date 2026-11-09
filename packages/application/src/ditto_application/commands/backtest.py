@@ -40,6 +40,7 @@ from ditto_application.mutation_idempotency import (
     find_mutation_receipt,
     mutation_event_id,
     mutation_receipt_detail,
+    without_validated_mutation_receipt,
 )
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
@@ -72,6 +73,7 @@ class BacktestRunCommand:
     parameter_overrides: tuple[str, ...] = ()
     cost_config: CostConfig | None = None
     allow_experimental_data: bool = False
+    historical_reconstruction: bool = False
     idempotency: MutationIdempotency | None = None
 
 
@@ -177,6 +179,8 @@ class BacktestRunHandler:
             "spec_hash": binding.resolved_spec_hash,
             "parameter_hash": binding.parameter_hash,
             "allow_experimental_data": command.allow_experimental_data,
+            "historical_reconstruction": command.historical_reconstruction,
+            "universe": legacy_spec.universe,
         }
         if command.cost_config is not None:
             config_data["cost_config"] = {
@@ -482,6 +486,7 @@ class RetryRunCommand:
     """重试运行命令."""
 
     run_id: str
+    idempotency: MutationIdempotency | None = None
 
 
 @dataclass(frozen=True)
@@ -565,15 +570,47 @@ class RetryRunHandler:
             msg = f"Cannot retry run in '{record.status}' status"
             raise AppCommandError(msg)
 
-        new_run_id = uuid.uuid4().hex[:8]
+        new_run_id = (
+            canonical_request_hash(mutation_event_id(command.idempotency))
+            if command.idempotency is not None
+            else uuid.uuid4().hex[:8]
+        )
+        config_json = record.config_json
+        expected = {"run_id": new_run_id, "parent_run_id": run_id}
+        if command.idempotency is not None:
+            config: object = orjson.loads(config_json)
+            if not isinstance(config, dict):
+                raise AppCommandError("Invalid saved backtest request")
+            config_json = orjson.dumps(
+                mutation_receipt_detail(
+                    command.idempotency,
+                    response=expected,
+                    detail=without_validated_mutation_receipt(
+                        cast("dict[str, object]", config)
+                    ),
+                )
+            ).decode()
         self._run_service.create_run(
             run_id=new_run_id,
             strategy_id=record.strategy_id,
             strategy_version=record.strategy_version,
             mode=record.mode,
             parent_run_id=run_id,
-            config_json=record.config_json,
+            config_json=config_json,
         )
+        if command.idempotency is not None:
+            child = self._run_service.get_run(new_run_id)
+            if child is None or child.parent_run_id != run_id:
+                raise AppCommandError("Retry request was not persisted")
+            saved: object = orjson.loads(child.config_json)
+            if (
+                not isinstance(saved, dict)
+                or find_mutation_receipt(
+                    [cast("dict[str, object]", saved)], command.idempotency
+                )
+                != expected
+            ):
+                raise AppCommandError("Invalid backtest retry receipt")
         return new_run_id
 
 

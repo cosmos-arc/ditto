@@ -153,6 +153,7 @@ class BacktestCatalogRequestConfig:
     strategy_version: str = ""
     run_id: str = ""
     parent_run_id: str = ""
+    historical_reconstruction: bool = False
     start_date: str = ""
     end_date: str = ""
     initial_cash: float = DEFAULT_INITIAL_CASH

@@ -534,6 +534,47 @@
         "title": "APIResponse[BacktestReportResponse]",
         "type": "object"
       },
+      "APIResponse_BacktestRequestResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BacktestRequestResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[BacktestRequestResponse]",
+        "type": "object"
+      },
       "APIResponse_BacktestRunTriggerResponse_": {
         "properties": {
           "data": {
@@ -9340,6 +9381,112 @@
         "title": "BacktestReportResponse",
         "type": "object"
       },
+      "BacktestRequestResponse": {
+        "additionalProperties": false,
+        "description": "Saved request remains readable even when no report can be produced.",
+        "properties": {
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "frozen_at": {
+            "default": "",
+            "title": "Frozen At",
+            "type": "string"
+          },
+          "initial_cash": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Cash"
+          },
+          "input_status": {
+            "enum": [
+              "pending",
+              "ready",
+              "blocked",
+              "unrecorded"
+            ],
+            "title": "Input Status",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "members": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "purpose": {
+            "enum": [
+              "historical_reconstruction",
+              "limited_historical_research",
+              "strict_snapshot_replay",
+              "unclassified"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/HistoricalSourceResponse"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "universe": {
+            "default": "",
+            "title": "Universe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "purpose",
+          "input_status"
+        ],
+        "title": "BacktestRequestResponse",
+        "type": "object"
+      },
       "BacktestRunTriggerResponse": {
         "description": "回测触发响应.",
         "properties": {
@@ -11203,6 +11350,12 @@
             "minLength": 1,
             "title": "End Date",
             "type": "string"
+          },
+          "historical_reconstruction": {
+            "default": false,
+            "description": "普通历史重建:冻结实际留存来源;不认证本地历史持有或严格快照重放",
+            "title": "Historical Reconstruction",
+            "type": "boolean"
           },
           "initial_cash": {
             "default": 1000000.0,
@@ -17805,6 +17958,66 @@
           "features"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HistoricalSourceResponse": {
+        "additionalProperties": false,
+        "description": "Verified retained identity and its actual local receipt.",
+        "properties": {
+          "checksum": {
+            "title": "Checksum",
+            "type": "string"
+          },
+          "dataset": {
+            "title": "Dataset",
+            "type": "string"
+          },
+          "observed_at": {
+            "title": "Observed At",
+            "type": "string"
+          },
+          "received_at": {
+            "title": "Received At",
+            "type": "string"
+          },
+          "request_end": {
+            "title": "Request End",
+            "type": "string"
+          },
+          "request_start": {
+            "title": "Request Start",
+            "type": "string"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dataset",
+          "source",
+          "snapshot_id",
+          "checksum",
+          "request_start",
+          "request_end",
+          "received_at",
+          "observed_at",
+          "rows",
+          "verified"
+        ],
+        "title": "HistoricalSourceResponse",
         "type": "object"
       },
       "HistoricalUniverseBody": {
@@ -32903,6 +33116,122 @@
         "x-ditto-maturity": "initial-focus"
       }
     },
+    "/api/v1/backtests/runs/{run_id}/request": {
+      "get": {
+        "description": "重开原始请求与冻结来源；预检失败不需要伪造绩效报告。\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "backtests_get_request",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_BacktestRequestResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Request",
+        "tags": [
+          "backtests"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
     "/api/v1/backtests/runs/{run_id}/resume": {
       "post": {
         "description": "从 latest checkpoint 恢复回测运行，创建 child run 并提交 flow.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
@@ -33031,6 +33360,22 @@
             "schema": {
               "title": "Run Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
             }
           },
           {

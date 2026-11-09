@@ -154,6 +154,45 @@ class BacktestQueryFacade:
         record = self._run_model.get_run(run_id)
         return to_run_summary(record) if record is not None else None
 
+    def get_request(self, run_id: str) -> dict[str, object] | None:
+        """Read a saved request and immutable preflight without rerunning."""
+        record = self._run_model.get_run(run_id)
+        if record is None:
+            return None
+        decoded: object = orjson.loads(record.config_json or "{}")
+        if not isinstance(decoded, dict):
+            raise AppQueryError("invalid saved backtest request")
+        config = cast("dict[str, object]", decoded)
+        historical = config.get("historical_reconstruction") is True
+        evidence = self._artifact_service.get_artifact(f"{run_id}:historical_inputs")
+        metadata = evidence.metadata if evidence is not None else {}
+        purpose = (
+            "historical_reconstruction" if historical else "limited_historical_research"
+        )
+        if config.get("research_snapshot_id"):
+            purpose = "strict_snapshot_replay"
+        if not config:
+            purpose = "unclassified"
+        return {
+            "run_id": run_id,
+            "purpose": purpose,
+            "start_date": config.get("start_date"),
+            "end_date": config.get("end_date"),
+            "initial_cash": config.get("initial_cash"),
+            "universe": config.get("universe", ""),
+            "input_status": metadata.get(
+                "input_status",
+                "pending"
+                if historical and record.status in {"pending", "running"}
+                else "unrecorded",
+            ),
+            "frozen_at": metadata.get("frozen_at", ""),
+            "reason": metadata.get("reason", record.error_message or ""),
+            "members": metadata.get("members", []),
+            "sources": metadata.get("sources", []),
+            "limitations": metadata.get("limitations", []),
+        }
+
     # ------------------------------------------------------------------
     # 成交查询
     # ------------------------------------------------------------------

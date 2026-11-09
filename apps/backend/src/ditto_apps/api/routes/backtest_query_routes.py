@@ -58,6 +58,7 @@ from ditto_apps.api.errors import NotFoundError, raise_business_error
 from ditto_apps.models.backtest import (
     AuditRecordResponse,
     BacktestReportResponse,
+    BacktestRequestResponse,
     BenchmarkNavResponse,
     NavPointResponse,
     RunResponse,
@@ -387,6 +388,23 @@ async def get_run(
     if summary is None:
         raise NotFoundError(f"Run not found: {run_id}")
     return APIResponse(data=to_run_response(summary))
+
+
+@router.get(
+    "/runs/{run_id}/request",
+    response_model=APIResponse[BacktestRequestResponse],
+    operation_id="backtests_get_request",
+)
+@inject
+async def get_request(
+    run_id: str,
+    facade: Annotated[BacktestQueryFacade, FromComponent()],
+) -> APIResponse[BacktestRequestResponse]:
+    """重开原始请求与冻结来源；预检失败不需要伪造绩效报告。"""
+    request = await run_blocking(facade.get_request, run_id)
+    if request is None:
+        raise NotFoundError(f"Run not found: {run_id}")
+    return APIResponse(data=BacktestRequestResponse.model_validate(request))
 
 
 @router.get(

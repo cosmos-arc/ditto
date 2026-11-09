@@ -121,3 +121,29 @@ export interface BacktestAuditRecord {
 	readonly payload: Readonly<Record<string, unknown>>;
 	readonly createdAt: string;
 }
+
+export interface BacktestRequest {
+	readonly runId: string;
+	readonly purpose: string;
+	readonly startDate: string | null;
+	readonly endDate: string | null;
+	readonly initialCash: number | null;
+	readonly universe: string;
+	readonly inputStatus: string;
+	readonly frozenAt: string;
+	readonly reason: string;
+	readonly members: readonly string[];
+	readonly limitations: readonly string[];
+	readonly sources: readonly {
+		readonly dataset: string;
+		readonly source: string;
+		readonly snapshotId: string;
+		readonly checksum: string;
+		readonly startDate: string;
+		readonly endDate: string;
+		readonly receivedAt: string;
+		readonly observedAt: string;
+		readonly rows: number;
+		readonly verified: boolean;
+	}[];
+}

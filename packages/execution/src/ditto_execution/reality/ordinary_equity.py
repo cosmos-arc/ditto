@@ -68,13 +68,32 @@ class CashEquityListing:
 
 
 def ordinary_equity_rules(
-    listing: CashEquityListing, *, commission_rate: float, start: str, end: str
+    listing: CashEquityListing,
+    *,
+    commission_rate: float,
+    start: str,
+    end: str,
+    historical_reconstruction: bool = False,
 ) -> _InstrumentRules:
     """Reject unknown coverage/exit periods; retain seed commission assumptions."""
     key = (listing.asset_class, listing.exchange, listing.ticker)
     if key not in _COVERAGE:
         raise ValueError(f"missing ordinary asset rule: {listing.instrument_id} {key}")
-    if not RULES_EFFECTIVE_FROM <= start <= end <= RULES_OBSERVED_AT[:10]:
+    representative_2014 = (
+        historical_reconstruction
+        and key
+        in {
+            ("etf", "SSE", "510050"),
+            ("etf", "SSE", "510300"),
+            ("etf", "SSE", "510500"),
+        }
+        and "2014-09-26" <= start <= end <= "2014-12-31"
+    )
+    effective_from = "2014-09-26" if representative_2014 else RULES_EFFECTIVE_FROM
+    if (
+        not representative_2014
+        and not RULES_EFFECTIVE_FROM <= start <= end <= RULES_OBSERVED_AT[:10]
+    ):
         raise ValueError(
             "ordinary rule coverage is "
             + f"{RULES_EFFECTIVE_FROM}..{RULES_OBSERVED_AT[:10]}"
@@ -108,16 +127,18 @@ def ordinary_equity_rules(
         ),
         _TradingRuleSet(
             instrument_id=iid,
-            as_of_date=RULES_EFFECTIVE_FROM,
+            as_of_date=effective_from,
             settlement_cycle=1,
             fund_settlement_cycle=0,
             price_limit_pct=_COVERAGE[key],
             order_types_supported=("market", "limit", "market_on_close"),
-            call_auction_sessions=("09:15-09:25", "14:57-15:00"),
+            call_auction_sessions=("09:15-09:25",)
+            if representative_2014
+            else ("09:15-09:25", "14:57-15:00"),
         ),
         _FeeSchedule(
             instrument_id=iid,
-            as_of_date="2023-08-28",
+            as_of_date=effective_from,
             commission_rate=commission_rate,
             min_commission=5.0,
             stamp_duty_rate=0.0005 if stock else 0.0,

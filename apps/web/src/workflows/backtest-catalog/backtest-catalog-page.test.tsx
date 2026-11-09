@@ -66,6 +66,7 @@ describe("BacktestCatalogPage", () => {
 			end_date: "2026-11-06",
 			initial_cash: 1000000,
 			allow_experimental_data: experimental,
+			historical_reconstruction: false,
 		});
 		expect(screen.getByRole("dialog")).toHaveTextContent("严格历史未认证");
 	});

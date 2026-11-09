@@ -107,7 +107,7 @@ def _inline_backtest_route_thread_bridge(monkeypatch: pytest.MonkeyPatch) -> Non
     )
     monkeypatch.setattr(
         "ditto_apps.api.routes.backtest_run_routes.submit_backtest_flow",
-        lambda *, flow_params, on_failure: None,
+        lambda *, flow_params, on_failure, claim_run=None: None,
     )
 
 
@@ -337,7 +337,7 @@ class TestRetryStatusGuard:
         """retry 路由应将 parent_run_id 传入 flow_params."""
         submitted: dict[str, object] = {}
 
-        def capture_submit(*, flow_params, on_failure) -> None:
+        def capture_submit(*, flow_params, on_failure, claim_run=None) -> None:
             submitted.update(flow_params)
 
         monkeypatch.setattr(
@@ -461,7 +461,7 @@ class TestResumeStatusGuard:
         """status=cancelled + checkpoint → 202，并提交 resume_from 后的 flow。"""
         submitted: dict[str, object] = {}
 
-        def capture_submit(*, flow_params, on_failure) -> None:
+        def capture_submit(*, flow_params, on_failure, claim_run=None) -> None:
             submitted.update(flow_params)
 
         monkeypatch.setattr(
@@ -523,7 +523,7 @@ class TestResumeStatusGuard:
         """resume 路由应将 parent_run_id 传入 flow_params."""
         submitted: dict[str, object] = {}
 
-        def capture_submit(*, flow_params, on_failure) -> None:
+        def capture_submit(*, flow_params, on_failure, claim_run=None) -> None:
             submitted.update(flow_params)
 
         monkeypatch.setattr(

@@ -50,6 +50,7 @@ def _join_factors(
             "knowledge_date",
             "source",
             "source_ticker",
+            "source_snapshot_id",
             "adj_factor",
         )
         if column in adj_df.columns
@@ -134,14 +135,7 @@ def apply_adjustment(
             + "ingest adj_factor or query with adj=none/raw (#514)"
         )
 
-    df = _join_factors(df, adj_df, asof)
-
-    # 根据调整类型调用相应方法
-    if adj == AdjType.QFQ:
-        adjusted = apply_qfq_adj(df, adj_df, asof)
-    else:  # HFQ
-        adjusted = apply_hfq_adj(df, adj_df)
-    return _restore_row_order(adjusted)
+    return adjust_retained_bars(df, adj_df, adj=adj, asof=asof)
 
 
 def apply_etf_adjustment(
@@ -206,11 +200,19 @@ def apply_etf_adjustment(
             + "query with adj=none (#514)"
         )
 
-    df = _join_factors(df, adj_df, asof)
+    return adjust_retained_bars(df, adj_df, adj=adj, asof=asof)
 
-    # 根据调整类型调用相应方法
-    if adj == AdjType.QFQ:
-        adjusted = apply_qfq_adj(df, adj_df, asof)
-    else:  # HFQ
-        adjusted = apply_hfq_adj(df, adj_df)
+
+def adjust_retained_bars(
+    bars: pl.DataFrame, factors: pl.DataFrame, *, adj: AdjType, asof: date | None
+) -> pl.DataFrame:
+    """Apply the shared PIT adjustment to verified retained input frames."""
+    if adj not in (AdjType.QFQ, AdjType.HFQ):
+        raise ValueError("retained adjustment requires qfq or hfq")
+    joined = _join_factors(bars, factors, asof)
+    adjusted = (
+        apply_qfq_adj(joined, factors, asof)
+        if adj == AdjType.QFQ
+        else apply_hfq_adj(joined, factors)
+    )
     return _restore_row_order(adjusted)

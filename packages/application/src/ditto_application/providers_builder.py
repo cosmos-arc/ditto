@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog.provider_payload import ProviderPayloadReader
+from ditto_data.catalog.snapshot_reader import SnapshotReadService
 from ditto_data.catalog.source_snapshot import ProviderSnapshotReader
 from ditto_data.ingestion.partition_state import PartitionLifecycleReader
 from ditto_data.lineage import DataLineageRecorder
@@ -138,12 +140,24 @@ class AppBuilderFactory(Provider):
         )
 
     @provide
+    def snapshot_read_service(
+        self,
+        snapshots: ProviderSnapshotReader,
+        payloads: ProviderPayloadReader,
+        lifecycle: PartitionLifecycleReader,
+    ) -> SnapshotReadService:
+        """Verify retained content through the existing source/completion ports."""
+        return SnapshotReadService(snapshots, payloads, lifecycle)
+
+    @provide
     def backtest_runtime_builder(
         self,
         runtime_builder: StrategyRuntimeBuilder,
         metadata_service: MetadataService,
         data_provider: ServiceBackedDataProvider,
         fundamental_query_facade: FundamentalQueryFacade,
+        snapshot_read_service: SnapshotReadService,
+        artifacts: StrategyArtifactService,
     ) -> BacktestRuntimeBuilder:
         """回测运行时构建器."""
         return BacktestRuntimeBuilder(
@@ -151,6 +165,8 @@ class AppBuilderFactory(Provider):
             metadata_service=metadata_service,
             data_provider=data_provider,
             fundamental_read_facade=fundamental_query_facade,
+            snapshot_read_service=snapshot_read_service,
+            artifact_service=artifacts,
             # InstrumentService 满足 ClassificationReadFacade Protocol(其
             # get_stock_industry 委托 IndustryMappingReader 做 PIT 行业查询)。
             classification_read_facade=metadata_service.instrument,

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
+from typing import cast
 
 from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import (
@@ -22,6 +23,7 @@ from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.simulation.fill import AShareFillModel
 from ditto_backtest.simulation.settlement import AShareSettlementModel
 from ditto_backtest.simulation.slippage import SlippageModel
+from ditto_data.catalog.snapshot_reader import SnapshotReadService
 from ditto_data.lineage import DataLineageRecorder
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
@@ -53,7 +55,11 @@ from ditto_strategy.alpha.selection_evidence import (
     SelectionEvidenceSink,
 )
 from ditto_strategy.alpha.specs import StrategySpec
-from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.models import (
+    ArtifactKind,
+    StrategyArtifactRecord,
+    StrategySpecRecord,
+)
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -62,17 +68,22 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 )
 
 from ditto_application.builders._resolution import (
+    ResolutionResult,
     resolve_benchmark,
     resolve_instrument_display,
 )
+from ditto_application.builders.frozen_history import FrozenHistoryProvider
 from ditto_application.builders.ordinary_backtest import (
     build_ordinary_rules,
     ordinary_market_transform,
 )
-from ditto_application.builders.runtime_builder import StrategyRuntimeBuilder
+from ditto_application.builders.runtime_builder import (
+    PublishedStrategyRuntime,
+    StrategyRuntimeBuilder,
+)
 from ditto_application.catalog_maturity import assert_strategy_runtime_data_allowed
 from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK, CostConfig
-from ditto_application.exceptions import AppBuilderError
+from ditto_application.exceptions import AppBuilderError, AppError
 from ditto_application.processes.execution.backtest_process import (
     BacktestCatalogRequestConfig,
     BacktestService,
@@ -389,6 +400,7 @@ def _resolve_backtest_catalog_request(
         strategy_version=strategy_version,
         run_id=config.run_id,
         parent_run_id=config.parent_run_id,
+        historical_reconstruction=config.historical_reconstruction,
         start_date=config.start_date,
         end_date=config.end_date,
         initial_cash=config.initial_cash,
@@ -486,12 +498,16 @@ class BacktestRuntimeBuilder:
         data_provider: DataProvider,
         fundamental_read_facade: FundamentalReadFacade | None = None,
         classification_read_facade: ClassificationReadFacade | None = None,
+        snapshot_read_service: SnapshotReadService | None = None,
+        artifact_service: StrategyArtifactService | None = None,
     ) -> None:
         self._strategy_runtime_builder = strategy_runtime_builder
         self._metadata_service = metadata_service
         self._data_provider = data_provider
         self._fundamental_read_facade = fundamental_read_facade
         self._classification_read_facade = classification_read_facade
+        self._snapshot_read_service = snapshot_read_service
+        self._artifact_service = artifact_service
 
     def build_published_runtime(
         self,
@@ -502,6 +518,94 @@ class BacktestRuntimeBuilder:
         fee_model: FeeModel | None = None,
         slippage_model: SlippageModel | None = None,
         allow_experimental_data: bool = False,
+    ) -> PublishedBacktestRuntime:
+        """Persist the exact frozen-input preflight even when execution is blocked."""
+        historical = None
+        evidence: dict[str, object] = {}
+        if config.historical_reconstruction:
+            if (
+                not config.run_id
+                or self._artifact_service is None
+                or self._snapshot_read_service is None
+            ):
+                raise AppBuilderError(
+                    "historical reconstruction requires durable run/snapshot services"
+                )
+            if config.resume_from_run_id:
+                raise AppBuilderError(
+                    "补充历史证据后须创建新运行,不能以新输入续跑旧 checkpoint"
+                )
+            if (
+                self._artifact_service.get_artifact(
+                    f"{config.run_id}:historical_inputs"
+                )
+                is not None
+            ):
+                raise AppBuilderError(
+                    "historical inputs already frozen; "
+                    + "create a new run to refresh evidence"
+                )
+            historical = FrozenHistoryProvider(
+                self._snapshot_read_service,
+                frozen_at=datetime.now(UTC),
+                source=source,
+            )
+            evidence = {
+                "purpose": "historical_reconstruction",
+                "input_status": "blocked",
+                "frozen_at": historical.frozen_at.isoformat(),
+                "start_date": config.start_date,
+                "end_date": config.end_date,
+                "members": [],
+                "sources": historical.sources,
+                "historical_availability": "not_certified",
+                "limitations": [
+                    "近期留存事实按原始业务/公告日期重建;真实入库时间保持不变。",
+                    "固定起始日证券池;未认证本地历史持有、原始版本完整性或严格快照重放。",
+                    "规则、公司行动和历史身份缺证仍阻止执行;补证后创建新运行。",
+                ],
+            }
+        try:
+            runtime = self._build_published_runtime(
+                config=config,
+                version=version,
+                source=source,
+                fee_model=fee_model,
+                slippage_model=slippage_model,
+                allow_experimental_data=allow_experimental_data,
+                historical_provider=historical,
+            )
+            evidence["input_status"] = "ready"
+            return runtime
+        except (AppError, ValueError, OSError) as exc:
+            evidence["reason"] = str(exc)
+            raise
+        finally:
+            if historical is not None and self._artifact_service is not None:
+                evidence["members"] = list(historical.members)
+                evidence["instrument_ids"] = list(historical.instrument_ids)
+                self._artifact_service.save_artifact(
+                    StrategyArtifactRecord(
+                        artifact_id=f"{config.run_id}:historical_inputs",
+                        strategy_id=config.strategy_id,
+                        run_id=config.run_id,
+                        artifact_type=ArtifactKind.HISTORICAL_INPUTS,
+                        file_path="",
+                        metadata=evidence,
+                        created_at=historical.frozen_at.isoformat(),
+                    )
+                )
+
+    def _build_published_runtime(
+        self,
+        *,
+        config: BacktestCatalogRequestConfig,
+        version: int | None = None,
+        source: str = "tushare",
+        fee_model: FeeModel | None = None,
+        slippage_model: SlippageModel | None = None,
+        allow_experimental_data: bool = False,
+        historical_provider: FrozenHistoryProvider | None = None,
     ) -> PublishedBacktestRuntime:
         """从 published strategy catalog 构造回测运行时。"""
         if config.research_snapshot_id is not None:
@@ -528,6 +632,20 @@ class BacktestRuntimeBuilder:
         account_state = _load_account_state(config)
         settlement_state = _load_settlement_state(config)
         runtime_state = _load_runtime_state(config)
+        # 解析 universe → tickers + id_map + display_map
+        universe_ids = self._resolve_historical_members(config, runtime.spec.universe)
+        if historical_provider is not None:
+            historical_provider.instrument_ids = tuple(universe_ids)
+        _validate_resume_pool(universe_ids, account_state, runtime_state)
+        resolution = resolve_instrument_display(
+            universe_ids,
+            self._metadata_service,
+            source=source,
+            as_of=config.start_date,
+        )
+        display_map = resolution.display_map
+        if historical_provider is not None:
+            historical_provider.members = tuple(resolution.tickers)
         benchmark_id = resolve_benchmark(
             runtime.spec.benchmark,
             self._metadata_service,
@@ -545,28 +663,6 @@ class BacktestRuntimeBuilder:
             effective_parameters=runtime.effective_parameters,
         )
 
-        # 解析 universe → tickers + id_map + display_map
-        universe_ids = self._metadata_service.get_universe(
-            runtime.spec.universe,
-            asof=config.start_date,
-        )
-        if not universe_ids:
-            # 空成员放行会产出零标的的"成功"回测,静默掩盖上游数据损坏
-            # （宇宙缺失/成员区间不覆盖 start_date/物化中断残留）。
-            msg = (
-                f"universe {runtime.spec.universe} 在 {config.start_date} "
-                + "解析到 0 成员; 检查宇宙存在性与成员 PIT 区间"
-            )
-            raise AppBuilderError(msg)
-        _validate_resume_pool(universe_ids, account_state, runtime_state)
-        rule_provider = build_ordinary_rules(
-            self._metadata_service,
-            universe_ids,
-            asset_class=runtime.spec.asset_class,
-            commission_rate=runtime.spec.execution.cost_model.commission_rate,
-            start=config.start_date,
-            end=config.end_date,
-        )
         pool = self._metadata_service.universe.get_universe_detail(
             runtime.spec.universe
         )
@@ -588,15 +684,6 @@ class BacktestRuntimeBuilder:
                     "description": pool_description,
                 },
             )
-        resolution = resolve_instrument_display(
-            universe_ids,
-            self._metadata_service,
-            source=source,
-            as_of=config.start_date,
-        )
-        tickers = resolution.tickers
-        id_map = resolution.id_map
-        display_map = resolution.display_map
         benchmark_ticker = None
         if benchmark_id is not None:
             benchmark_resolution = resolve_instrument_display(
@@ -607,51 +694,16 @@ class BacktestRuntimeBuilder:
             )
             benchmark_ticker = benchmark_resolution.tickers[0]
 
-        # 计算数据加载起点：考虑因子表达式 lookback + Regime 默认 lookback
-        max_lookback = _compute_max_lookback(runtime.compiled_expressions)
-        data_start_date = _shift_back_calendar_days(config.start_date, max_lookback * 2)
-
-        # 基本面快照闭包：注入 DataFeed 数据通道,供 quality_roe / value_pe 等因子引用。
-        # maturity gate 经 facade 的 allow_experimental_data 生效。
-        fundamental_snapshot_fn = None
-        if self._fundamental_read_facade is not None:
-            fundamental_snapshot_fn = build_fundamental_snapshot_fn(
-                self._fundamental_read_facade,
-                allow_experimental_data=allow_experimental_data,
-            )
-        # 分类快照闭包:注入 DataFeed 数据通道,供 sector_id 列(stock_sector_rotation
-        # 结构列校验 + 因子中性化 neutralize_by="sector_id")使用。industry 数据未进
-        # catalog maturity,无需 allow_experimental_data gate。
-        classification_snapshot_fn = None
-        if self._classification_read_facade is not None:
-            classification_snapshot_fn = build_classification_snapshot_fn(
-                self._classification_read_facade,
-            )
-        snapshot_providers = SnapshotProviders(
-            fundamental=fundamental_snapshot_fn,
-            classification=classification_snapshot_fn,
-            require_source_snapshot_lineage=True,
-            market=ordinary_market_transform(
-                rule_provider, start_date=config.start_date
-            ),
-            requirements=FeedInputRequirements(
-                start_date=config.start_date,
-                warmup_days=max_lookback,
-                knowledge_lag_days=config.knowledge_lag_days,
-                benchmark_ticker=benchmark_ticker,
-            ),
+        data_feed, provider, rule_provider = self._build_data_feed(
+            config=config,
+            runtime=runtime,
+            resolution=resolution,
+            benchmark_id=benchmark_id,
+            benchmark_ticker=benchmark_ticker,
+            historical_provider=historical_provider,
+            allow_experimental_data=allow_experimental_data,
         )
-        data_feed = ProviderBackedDataFeed(
-            self._data_provider,
-            tickers=tickers,
-            start_date=data_start_date,
-            end_date=config.end_date,
-            id_map=id_map,
-            benchmark_id=resolved_config.benchmark_id,
-            snapshot_providers=snapshot_providers,
-        )
-        data_feed.validate_inputs()
-        settlement_days = _settlement_calendar(self._data_provider, config)
+        settlement_days = _settlement_calendar(provider, config)
 
         def rules_getter(iid: InstrumentId, trade_date: str) -> InstrumentRules:
             rules = rule_provider.get_rules(trade_date, [iid])
@@ -700,6 +752,130 @@ class BacktestRuntimeBuilder:
             rule_provider=rule_provider,
             slippage_model=resolved_slippage,
         )
+
+    def _resolve_historical_members(
+        self, config: BacktestCatalogRequestConfig, universe: str
+    ) -> list[int]:
+        """A repair keeps resolved members; an unresolved pool can acquire evidence."""
+        if (
+            config.historical_reconstruction
+            and config.parent_run_id
+            and self._artifact_service is not None
+        ):
+            previous = self._artifact_service.get_artifact(
+                f"{config.parent_run_id}:historical_inputs"
+            )
+            if previous is not None:
+                frozen_ids = previous.metadata.get("instrument_ids", [])
+                if not isinstance(frozen_ids, list):
+                    raise AppBuilderError("invalid original historical security scope")
+                original_ids: list[int] = []
+                for iid in cast(list[object], frozen_ids):
+                    if not isinstance(iid, int) or isinstance(iid, bool) or iid <= 0:
+                        raise AppBuilderError(
+                            "invalid original historical security scope"
+                        )
+                    original_ids.append(iid)
+                if len(set(original_ids)) != len(original_ids):
+                    raise AppBuilderError("invalid original historical security scope")
+                if original_ids:
+                    return original_ids
+        universe_ids = self._metadata_service.get_universe(
+            universe, asof=config.start_date
+        )
+        if not universe_ids:
+            # 空成员放行会产出零标的的"成功"回测,静默掩盖上游数据损坏
+            # （宇宙缺失/成员区间不覆盖 start_date/物化中断残留）。
+            msg = (
+                f"universe for {config.strategy_id} 在 {config.start_date} "
+                + "解析到 0 成员; 检查宇宙存在性与成员 PIT 区间"
+            )
+            raise AppBuilderError(msg)
+        return universe_ids
+
+    def _build_data_feed(
+        self,
+        *,
+        config: BacktestCatalogRequestConfig,
+        runtime: PublishedStrategyRuntime,
+        resolution: ResolutionResult,
+        benchmark_id: InstrumentId | None,
+        benchmark_ticker: str | None,
+        historical_provider: FrozenHistoryProvider | None,
+        allow_experimental_data: bool,
+    ) -> tuple[ProviderBackedDataFeed, DataProvider, InstrumentRuleProvider]:
+        """Assemble verified price channels and preflight their consumers."""
+        # 计算数据加载起点:考虑因子表达式 lookback + Regime 默认 lookback
+        max_lookback = _compute_max_lookback(runtime.compiled_expressions)
+        data_start_date = _shift_back_calendar_days(config.start_date, max_lookback * 2)
+
+        provider: DataProvider = historical_provider or self._data_provider
+        if historical_provider is not None:
+            historical_provider.freeze(
+                ticker_ids=resolution.id_map,
+                asset_class=runtime.spec.asset_class,
+                start=data_start_date,
+                end=config.end_date,
+                benchmark={benchmark_ticker: InstrumentId(int(benchmark_id))}
+                if benchmark_ticker is not None and benchmark_id is not None
+                else None,
+                calendar_end=(
+                    date.fromisoformat(config.end_date) + timedelta(days=31)
+                ).isoformat(),
+                include_fundamentals=runtime.spec.asset_class == "stock",
+            )
+        rule_provider = build_ordinary_rules(
+            self._metadata_service,
+            [int(iid) for iid in resolution.id_map.values()],
+            asset_class=runtime.spec.asset_class,
+            commission_rate=runtime.spec.execution.cost_model.commission_rate,
+            start=config.start_date,
+            end=config.end_date,
+            historical_reconstruction=config.historical_reconstruction,
+        )
+
+        # 基本面快照闭包:注入 DataFeed 数据通道,供 quality_roe / value_pe 等因子引用。
+        # maturity gate 经 facade 的 allow_experimental_data 生效。
+        fundamental_snapshot_fn = None
+        fundamental_facade = historical_provider or self._fundamental_read_facade
+        if fundamental_facade is not None:
+            fundamental_snapshot_fn = build_fundamental_snapshot_fn(
+                fundamental_facade,
+                allow_experimental_data=allow_experimental_data,
+            )
+        # 分类快照闭包:注入 DataFeed 数据通道,供 sector_id 列(stock_sector_rotation
+        # 结构列校验 + 因子中性化 neutralize_by="sector_id")使用。industry 数据未进
+        # catalog maturity,无需 allow_experimental_data gate。
+        classification_snapshot_fn = None
+        if historical_provider is None and self._classification_read_facade is not None:
+            classification_snapshot_fn = build_classification_snapshot_fn(
+                self._classification_read_facade,
+            )
+        snapshot_providers = SnapshotProviders(
+            fundamental=fundamental_snapshot_fn,
+            classification=classification_snapshot_fn,
+            require_source_snapshot_lineage=True,
+            market=ordinary_market_transform(
+                rule_provider, start_date=config.start_date
+            ),
+            requirements=FeedInputRequirements(
+                start_date=config.start_date,
+                warmup_days=max_lookback,
+                knowledge_lag_days=config.knowledge_lag_days,
+                benchmark_ticker=benchmark_ticker,
+            ),
+        )
+        data_feed = ProviderBackedDataFeed(
+            provider,
+            tickers=resolution.tickers,
+            start_date=data_start_date,
+            end_date=config.end_date,
+            id_map=resolution.id_map,
+            benchmark_id=benchmark_id,
+            snapshot_providers=snapshot_providers,
+        )
+        data_feed.validate_inputs()
+        return data_feed, provider, rule_provider
 
 
 # ===========================================================================

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import orjson
 from ditto_application.config import DEFAULT_INITIAL_CASH
@@ -186,6 +186,10 @@ class CreateBacktestRunRequest(BaseModel):
         gt=0,
         description="初始资金",
     )
+    historical_reconstruction: bool = Field(
+        default=False,
+        description="普通历史重建:冻结实际留存来源;不认证本地历史持有或严格快照重放",
+    )
     parameter_overrides: list[str] = Field(default_factory=list, description="参数覆盖")
     cost_config: CostConfigRequest | None = Field(
         default=None,
@@ -357,3 +361,42 @@ __all__ = [
     "TradeResponse",
     "to_audit_record_response",
 ]
+
+
+class HistoricalSourceResponse(BaseModel):
+    """Verified retained identity and its actual local receipt."""
+
+    dataset: str
+    source: str
+    snapshot_id: str
+    checksum: str
+    request_start: str
+    request_end: str
+    received_at: str
+    observed_at: str
+    rows: int
+    verified: bool
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+
+class BacktestRequestResponse(BaseModel):
+    """Saved request remains readable even when no report can be produced."""
+
+    run_id: str
+    purpose: Literal[
+        "historical_reconstruction",
+        "limited_historical_research",
+        "strict_snapshot_replay",
+        "unclassified",
+    ]
+    start_date: str | None = None
+    end_date: str | None = None
+    initial_cash: float | None = None
+    universe: str = ""
+    input_status: Literal["pending", "ready", "blocked", "unrecorded"]
+    frozen_at: str = ""
+    reason: str = ""
+    members: list[str] = Field(default_factory=list)
+    sources: list[HistoricalSourceResponse] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    model_config = ConfigDict(strict=True, extra="forbid")

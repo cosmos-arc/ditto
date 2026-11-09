@@ -94,6 +94,7 @@ def build_flow_params(
         "initial_cash": command.initial_cash,
         "parameter_overrides": command.parameter_overrides,
         "allow_experimental_data": command.allow_experimental_data,
+        "historical_reconstruction": command.historical_reconstruction,
     }
     if result.strategy_version is not None:
         params["strategy_version"] = result.strategy_version
@@ -136,6 +137,7 @@ def restore_flow_params_from_config(
         "initial_cash",
         "parameter_overrides",
         "allow_experimental_data",
+        "historical_reconstruction",
         "resume_from_run_id",
         "resume_checkpoint_trade_date",
         "resume_checkpoint_completed_days",
@@ -212,12 +214,18 @@ async def trigger_backtest(
         parameter_overrides=tuple(body.parameter_overrides),
         cost_config=to_cost_config(body),
         allow_experimental_data=body.allow_experimental_data,
+        historical_reconstruction=body.historical_reconstruction,
         idempotency=(
             mutation_idempotency(
                 operation_id="backtests_trigger_backtest",
                 resource_id="backtests",
                 raw_key=idempotency_key,
-                request_payload=body.model_dump(mode="json"),
+                request_payload=body.model_dump(
+                    mode="json",
+                    exclude={"historical_reconstruction"}
+                    if not body.historical_reconstruction
+                    else set(),
+                ),
             )
             if idempotency_key is not None
             else None
@@ -285,12 +293,25 @@ async def retry_run(
     facade: Annotated[BacktestQueryFacade, FromComponent()],
     handler: Annotated[RetryRunHandler, FromComponent()],
     run_service: Annotated[RunLifecycleService, FromComponent()],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> APIResponse[RetryRunResponse]:
     """重试回测运行 — 检查 status in {failed, cancelled}，创建新 Run 并提交 flow."""
     try:
         new_run_id = await run_blocking(
             handler.handle,
-            RetryRunCommand(run_id=run_id),
+            RetryRunCommand(
+                run_id=run_id,
+                idempotency=(
+                    mutation_idempotency(
+                        operation_id="backtests_retry_run",
+                        resource_id=run_id,
+                        raw_key=idempotency_key,
+                        request_payload={"run_id": run_id},
+                    )
+                    if idempotency_key is not None
+                    else None
+                ),
+            ),
         )
     except (AppError, ValueError) as exc:
         raise_business_error(exc, default_conflict=True)
@@ -314,7 +335,11 @@ async def retry_run(
     if record.config_json:
         flow_params.update(restore_flow_params_from_config(record.config_json))
     on_failure = make_failure_callback(run_service)
-    submit_backtest_flow(flow_params=flow_params, on_failure=on_failure)
+    submit_backtest_flow(
+        flow_params=flow_params,
+        on_failure=on_failure,
+        claim_run=run_service.mark_running,
+    )
 
     return APIResponse(
         data=RetryRunResponse(
