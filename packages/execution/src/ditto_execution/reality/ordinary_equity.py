@@ -548,6 +548,18 @@ def ordinary_execution_fields(
     """Validate daily execution state and derive verified ETF price bands."""
     definition, rule, _ = rules
     iid, day = definition.instrument_id, str(row["trade_date"])
+    factor_quantum = (
+        _STOCK_ADJ_FACTOR_QUANTUM
+        if definition.asset_class == "stock"
+        else _ETF_ADJ_FACTOR_QUANTUM
+    )
+    # ETF-only: share conversions are declared fund events; stocks keep the
+    # dividend/share-distribution accounting of #759/#760.
+    conversion_explains = (
+        definition.asset_class != "stock"
+        and conversion_ratio != 0
+        and _conversion_factor_matches(row, conversion_ratio, factor_quantum)
+    )
     if (
         day >= start_date
         and row.get("_previous_adj") is not None
@@ -564,17 +576,9 @@ def ordinary_execution_fields(
                     cash_dividend,
                     share_ratio,
                     definition.tick_size,
-                    _STOCK_ADJ_FACTOR_QUANTUM
-                    if definition.asset_class == "stock"
-                    else _ETF_ADJ_FACTOR_QUANTUM,
+                    factor_quantum,
                 )
-                or _conversion_factor_matches(
-                    row,
-                    conversion_ratio,
-                    _STOCK_ADJ_FACTOR_QUANTUM
-                    if definition.asset_class == "stock"
-                    else _ETF_ADJ_FACTOR_QUANTUM,
-                )
+                or conversion_explains
             )
         )
     ):

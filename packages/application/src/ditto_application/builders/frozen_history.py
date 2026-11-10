@@ -17,6 +17,9 @@ from ditto_data.services.cash_dividends import (
 from ditto_data.services.market_adjustment import adjust_retained_bars
 from ditto_data.services.market_status import stock_execution_bars
 from ditto_data.services.market_types import AdjType
+from ditto_data.sources.etf_share_conversions import (
+    ETF_SHARE_CONVERSION_FRAME_COLUMNS,
+)
 from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.accounting.conversions import (
     ShareConversion,
@@ -127,27 +130,17 @@ class FrozenHistoryProvider:
         except ValueError as exc:
             raise AppBuilderError(str(exc)) from exc
 
-    def freeze_share_conversions(self, *, start: str, end: str) -> None:
-        """
-        Pin maintainer-declared conversions effective inside the run window.
-
-        The declaration file is not a completeness claim: runs without any
-        retained declaration snapshot simply see no conversions, and any real
-        factor jump stays fail-closed in execution validation. Per-ticker the
-        latest declaration receipt at or before ``frozen_at`` wins.
-        """
+    def _latest_config_snapshots(
+        self, dataset_id: str
+    ) -> dict[str, tuple[ProviderSnapshot, list[str]]]:
+        """Per member, the latest config snapshot receipt at or before frozen_at."""
         candidates = [
             replace(
                 s, observations=tuple(t for t in s.observations if t <= self.frozen_at)
             )
-            for s in self._reader.list_snapshots(
-                dataset_id="etf_share_conversions", source="config"
-            )
+            for s in self._reader.list_snapshots(dataset_id=dataset_id, source="config")
             if s.created_at <= self.frozen_at
         ]
-        if not candidates:
-            self.share_conversions = ()
-            return
         selected: dict[str, list[str]] = {}
         snapshots = {s.snapshot_id: s for s in candidates}
         for ticker in self.members:
@@ -162,17 +155,27 @@ class FrozenHistoryProvider:
             )
             if latest is not None:
                 selected.setdefault(latest.snapshot_id, []).append(ticker)
+        return {
+            identity: (snapshots[identity], tickers)
+            for identity, tickers in selected.items()
+        }
+
+    def freeze_share_conversions(self, *, start: str, end: str) -> None:
+        """
+        Pin maintainer-declared conversions effective inside the run window.
+
+        The declaration file is not a completeness claim: runs without any
+        retained declaration snapshot simply see no conversions, and any real
+        factor jump stays fail-closed in execution validation.
+        """
+        selected = self._latest_config_snapshots("etf_share_conversions")
+        if not selected:
+            self.share_conversions = ()
+            return
         conversions: list[ShareConversion] = []
-        for identity, tickers in selected.items():
-            frame = self._read_verified_snapshot(snapshots[identity])
-            required = {
-                "source_ticker",
-                "ratio",
-                "announcement_date",
-                "effective_date",
-                "basis",
-                "rounding_note",
-            }
+        for identity, (snapshot, tickers) in selected.items():
+            frame = self._read_verified_snapshot(snapshot)
+            required = set(ETF_SHARE_CONVERSION_FRAME_COLUMNS)
             if not required.issubset(frame.columns):
                 raise AppBuilderError(
                     "etf_share_conversions retained payload lacks "
@@ -221,33 +224,14 @@ class FrozenHistoryProvider:
         """Freeze dated declarations by receipt, not by the historical bar window."""
         if self._etf_reference is not None:
             return self._etf_reference
-        candidates = [
-            replace(
-                s, observations=tuple(t for t in s.observations if t <= self.frozen_at)
-            )
-            for s in self._reader.list_snapshots(
-                dataset_id="etf_reference", source="config"
-            )
-            if s.created_at <= self.frozen_at
-        ]
-        selected: dict[str, list[str]] = {}
-        snapshots = {s.snapshot_id: s for s in candidates}
-        for ticker in self.members:
-            latest = max(
-                (
-                    s
-                    for s in candidates
-                    if not s.source_ticker_scope or ticker in s.source_ticker_scope
-                ),
-                key=lambda s: (observed_at(s), s.snapshot_id),
-                default=None,
-            )
-            if latest is None:
-                raise AppBuilderError(f"missing retained etf_reference: {ticker}")
-            selected.setdefault(latest.snapshot_id, []).append(ticker)
+        selected = self._latest_config_snapshots("etf_reference")
+        covered = {ticker for _, tickers in selected.values() for ticker in tickers}
+        missing = set(self.members) - covered
+        if missing:
+            raise AppBuilderError(f"missing retained etf_reference: {sorted(missing)}")
         frames: list[pl.DataFrame] = []
-        for identity, tickers in selected.items():
-            frame = self._read_verified_snapshot(snapshots[identity])
+        for identity, (snapshot, tickers) in selected.items():
+            frame = self._read_verified_snapshot(snapshot)
             required = {
                 "source_ticker",
                 "field",

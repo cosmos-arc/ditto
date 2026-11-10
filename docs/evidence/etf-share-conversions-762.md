@@ -36,8 +36,8 @@ ETF 无状态表；已公布行（volume=0、close=携带 pre_close）是交易�
 
 ## 固定样例、真实运行与真人验收
 
-- **固定样例（已做）**：系统测试 `tests/system/backtest-share-conversions.spec.ts`（fixture `share_conversions_backtest_app`，登记于 `tooling/dev/system_tests.py`）走正式 UI→真实 API→持久化→重读边界：未声明先失败（corporate action 拒绝文案可见）→repair 留存声明→补证后沿原配置新建运行 completed；声明事件/份额×4/成本重摊/NAV 从实际成交与折算 entry 手算复验；07-06 零成交日 `zero_volume` 拒单且无成交、07-07 复牌按 0.61 成交；同请求重提不二次折算；重开读已保存报告、键盘可达、导出 JSON、axe 无 critical/serious。
-- **单测（已做）**：声明加载器校验、ShareConversion 语义（整倍/非整数拒绝/identity 冲突/可见性）、账本换算与幂等、执行字段（折算参考价/因子容差/未解释跳变仍拒/零成交行）、变换、冻结、checkpoint（账本+成交匹配）、序列化/DTO、Web 映射。
+- **固定样例（已做）**：系统测试 `tests/system/backtest-share-conversions.spec.ts`（fixture `share_conversions_backtest_app`，登记于 `tooling/dev/system_tests.py`）走正式 UI→真实 API→持久化→重读边界：未声明先失败（corporate action 拒绝文案可见）→repair 留存声明→补证后沿原配置新建运行 completed；声明事件/份额×4/成本重摊/NAV 从实际成交与折算 entry 手算复验；07-06 零成交日 `zero_volume` 拒单且无成交、07-07 复牌按 0.61 成交；账本内事件按 identity 去重、单次折算，重提请求沿原配置新建运行而非二次入账（checkpoint resume 幂等由单测覆盖）；重开读已保存报告、键盘可达、导出 JSON、axe 无 critical/serious。
+- **单测（已做）**：声明加载器校验、ShareConversion 语义（整倍/非整数拒绝/identity 冲突/可见性）、账本换算与幂等（含 checkpoint 恢复不二次折算）、执行字段（折算参考价/因子容差/未解释跳变仍拒/零成交行）、变换、冻结、checkpoint（账本+成交匹配）、序列化/DTO、Web 映射。
 - **真实运行（未做）**：真实 159941 窗口的普通运行需要 (a) 真实 `etf_share_conversions` 声明快照留存（当前仅 fixture/维护者手动路径，夜间链摄取任务未接入）与 (b) 159941.SZ 的 `etf_reference` 参考规则声明（其不在 #758 六品类固定名单内）。此前真实运行在折算日按守卫拒绝，是诚实的不完整。
 - **真人验收（未做）**：键盘/焦点/日期/单位的人工核验未做；系统测试的 axe 与键盘断言不代替真人签收。
 

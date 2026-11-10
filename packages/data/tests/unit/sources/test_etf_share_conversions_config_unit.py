@@ -7,19 +7,13 @@ from pathlib import Path
 import orjson
 import pytest
 from ditto_data.sources.etf_share_conversions import (
+    ETF_SHARE_CONVERSION_FRAME_COLUMNS,
     EtfShareConversionsConfigError,
     EtfShareConversionsConfigSource,
     get_default_etf_share_conversions_config_path,
 )
 
-_FRAME_COLUMNS = [
-    "source_ticker",
-    "ratio",
-    "announcement_date",
-    "effective_date",
-    "basis",
-    "rounding_note",
-]
+_FRAME_COLUMNS = list(ETF_SHARE_CONVERSION_FRAME_COLUMNS)
 
 
 def _document(

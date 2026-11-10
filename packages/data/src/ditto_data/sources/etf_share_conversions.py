@@ -21,12 +21,14 @@ import polars as pl
 from ditto_platform.foundation import logger
 
 __all__ = [
+    "ETF_SHARE_CONVERSION_FRAME_COLUMNS",
     "EtfShareConversionsConfigError",
     "EtfShareConversionsConfigSource",
     "get_default_etf_share_conversions_config_path",
 ]
 
-_FRAME_COLUMNS: tuple[str, ...] = (
+# 冻结侧按同一集合校验留存快照载荷，schema 身份单点维护。
+ETF_SHARE_CONVERSION_FRAME_COLUMNS: tuple[str, ...] = (
     "source_ticker",
     "ratio",
     "announcement_date",
@@ -78,12 +80,12 @@ class EtfShareConversionsConfigSource:
         return self._path
 
     def fetch_etf_share_conversions(self) -> pl.DataFrame:
-        """解析声明文件为 ``_FRAME_COLUMNS`` 列的确定性长表。"""
+        """解析声明文件为确定性长表，列恒等于声明的 frame columns。"""
         conversions = self._load_declarations()
         frame = pl.DataFrame(
             {
                 column: [getattr(item, column) for item in conversions]
-                for column in _FRAME_COLUMNS
+                for column in ETF_SHARE_CONVERSION_FRAME_COLUMNS
             },
             schema=_FRAME_SCHEMA,
         )
