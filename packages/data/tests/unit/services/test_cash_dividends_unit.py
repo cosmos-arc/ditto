@@ -142,3 +142,44 @@ def test_implemented_shares_require_listing_and_matched_issuer_tax_evidence():
         bind_stock_distribution_terms(
             frame, (term.model_copy(update={"announcement_date": date(2020, 6, 3)}),)
         )
+
+
+@pytest.mark.pit
+def test_completed_empty_etf_announcement_frame_selects_zero_rows_without_poisoning():
+    """空 fund_div 载荷经真实 transformer 路径保持 Float64，选出 0 行且不毒化合并。"""
+    from ditto_data.sources.tushare.processors.mappings.capital import (
+        ETF_DIVIDEND_MAPPING,
+    )
+    from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
+
+    empty = TushareDataTransformer.transform(
+        pl.DataFrame(), "etf_dividend", ETF_DIVIDEND_MAPPING
+    ).with_columns(
+        pl.lit(2_001_001, dtype=pl.Int64).alias("instrument_id"),
+        pl.lit("source:empty", dtype=pl.String).alias("source_snapshot_id"),
+    )
+    assert empty.schema["stock_dividend_ratio"] == pl.Float64
+    assert (
+        implemented_cash_dividends(empty, start="2014-01-01", end="2026-01-01").height
+        == 0
+    )
+
+    events = pl.DataFrame(
+        {
+            "instrument_id": [2_001_001],
+            "source_snapshot_id": ["source:1"],
+            "div_proc": ["实施"],
+            "record_date": [date(2014, 1, 20)],
+            "ex_dividend_date": [date(2014, 1, 21)],
+            "pay_date": [date(2014, 1, 27)],
+            "implementation_date": [date(2014, 1, 15)],
+            "gross_dividend_per_share": [0.048],
+            "stock_dividend_ratio": [0.0],
+        }
+    )
+    merged = pl.concat([empty, events], how="diagonal_relaxed")
+    assert merged.schema["stock_dividend_ratio"] == pl.Float64
+    assert (
+        implemented_cash_dividends(merged, start="2014-01-01", end="2014-12-31").height
+        == 1
+    )

@@ -286,10 +286,16 @@ class TushareDataTransformer:
         """
         for col_name, expr in mapping.computed_columns.items():
             if columns_to_include is None or col_name in columns_to_include:
-                # 如果计算列覆盖 date_columns，直接使用 Date 类型
-                # 避免复杂表达式类型推断失败
+                # 声明类型优先于表达式推断：空响应走 schema 构建路径时，
+                # lit 表达式推断不出 dtype 会退成 String 并毒化下游数值校验。
                 if col_name in mapping.date_columns:
                     schema[col_name] = pl.Date
+                elif col_name in mapping.float_columns:
+                    schema[col_name] = pl.Float64
+                elif col_name in mapping.int_columns:
+                    schema[col_name] = pl.Int64
+                elif col_name in mapping.boolean_columns:
+                    schema[col_name] = pl.Boolean
                 else:
                     schema[col_name] = (
                         TushareDataTransformer._infer_computed_column_type(

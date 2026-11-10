@@ -96,6 +96,22 @@ def test_fund_dividend_uses_trading_identity_and_later_publication(
         )
 
 
+@pytest.mark.pit
+def test_fund_dividend_empty_response_keeps_numeric_schema(mocker):
+    """空公告载荷的数值列必须是 Float64，否则下游 is_finite 校验崩成非 ValueError。"""
+    client = _client_mock(
+        mocker,
+        {"etf_basic": _etf_basic_response(), "fund_div": pl.DataFrame()},
+    )
+    frame = ETFTushareAdapter(_client=client).fetch_etf_dividend(
+        source_ticker=_ETF, start_date="2014-01-01", end_date="2026-01-01"
+    )
+    assert frame.is_empty()
+    assert frame.schema["stock_dividend_ratio"] == pl.Float64
+    assert frame.schema["taxable_share_income"] == pl.Float64
+    assert frame.schema["knowledge_date"] == pl.Date
+
+
 class TestFundDailyUniverseIntersection:
     """fund_daily 按日拉取与 etf_basic universe 交集（#513）."""
 
