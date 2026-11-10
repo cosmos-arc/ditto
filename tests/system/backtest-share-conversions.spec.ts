@@ -51,6 +51,7 @@ test("declared split rescales holdings, halts without fills and resumes at the n
 	await expect(
 		page.getByText(/corporate action requires cash\/share accounting.*2008941.*2022-07-05/).first(),
 	).toBeVisible();
+	await page.screenshot({ path: test.info().outputPath("conversion-refused.png"), fullPage: true });
 	// 2. Retain the maintainer declaration and rerun the identical request.
 	expect(
 		(await page.request.post(`${apiOrigin}/system-fixture/share-conversions/repair`)).ok(),
@@ -69,6 +70,7 @@ test("declared split rescales holdings, halts without fills and resumes at the n
 	await expect(page.getByTestId("backtest-detail-meta")).toContainText("completed", {
 		timeout: 60000,
 	});
+	await page.screenshot({ path: test.info().outputPath("conversion-completed.png"), fullPage: true });
 
 	const request = await saved(page, id, "request");
 	expect(
@@ -222,6 +224,7 @@ test("declared split rescales holdings, halts without fills and resumes at the n
 		page.getByText(/159941\.SZ · 份额折算 1 折 4 · 生效 2022-07-05/),
 	).toBeVisible();
 	await expect(page.getByText(/份额折算（数量重标定）/).first()).toBeVisible();
+	await page.screenshot({ path: test.info().outputPath("conversion-ledger.png"), fullPage: true });
 	await page.getByRole("button", { name: "导出报告", exact: true }).click();
 	const download = page.waitForEvent("download");
 	await page.getByRole("button", { name: "下载 JSON", exact: true }).press("Enter");
