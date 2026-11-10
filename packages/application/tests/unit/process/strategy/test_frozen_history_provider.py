@@ -497,6 +497,62 @@ def test_long_halt_search_crosses_empty_snapshot_windows_but_not_invalid_evidenc
     assert execution["source_snapshot_id"].to_list() == [anchor_id] * 2
 
 
+def test_frozen_exit_fact_rejects_quotes_on_or_after_delisting():
+    """A frozen delist_date must shadow any retained post-exit quote rows."""
+    provider, _, _ = _provider(stock=True)
+    provider.roster.append(
+        {
+            "instrument_id": int(_IID),
+            "list_date": "2014-01-01",
+            "delist_date": "2014-10-16",
+            "ticker": "000001",
+            "exchange": "SZSE",
+            "asset_class": "stock",
+            "source_ticker": "000001.SZ",
+            "effective_from": "2014-10-13",
+            "effective_to": None,
+        }
+    )
+    with pytest.raises(
+        AppBuilderError,
+        match=r"delisted instrument quoted after exit.*000001.SZ.*2014-10-16",
+    ):
+        provider.get_bars(
+            BarQuery(
+                instruments=("000001.SZ",),
+                start="2014-10-13",
+                end="2014-10-17",
+                with_execution_state=True,
+            )
+        )
+
+
+def test_quotes_before_the_frozen_exit_fact_still_reach_both_channels():
+    provider, _, _ = _provider(stock=True)
+    provider.roster.append(
+        {
+            "instrument_id": int(_IID),
+            "list_date": "2014-01-01",
+            "delist_date": "2014-10-18",
+            "ticker": "000001",
+            "exchange": "SZSE",
+            "asset_class": "stock",
+            "source_ticker": "000001.SZ",
+            "effective_from": "2014-10-13",
+            "effective_to": None,
+        }
+    )
+    execution = provider.get_bars(
+        BarQuery(
+            instruments=("000001.SZ",),
+            start="2014-10-13",
+            end="2014-10-17",
+            with_execution_state=True,
+        )
+    )
+    assert execution.height == 5
+
+
 def test_etf_rule_versions_freeze_from_current_receipt_without_backdating():
     facts = pl.DataFrame(
         {
