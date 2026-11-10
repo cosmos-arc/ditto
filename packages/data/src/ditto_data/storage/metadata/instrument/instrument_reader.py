@@ -45,11 +45,17 @@ def _like_pattern(term: str) -> str:
     return f"%{escaped}%"
 
 
-# 名称/裸代码/源代码子串检索谓词；三个占位符共用同一个转义后的模式。
+# 名称/裸代码/源代码子串检索谓词。源代码用 EXISTS 扫描该来源的全部映射行
+# （含 is_primary=0 别名老码，与 source_tickers 宽 JOIN 语义对齐），
+# 不受择优单行 JOIN 只带主码的限制。
 SEARCH_PREDICATE_SQL = (
     " AND (s.name LIKE ? ESCAPE '\\'"
     " OR s.ticker LIKE ? ESCAPE '\\'"
-    " OR m.source_ticker LIKE ? ESCAPE '\\')"
+    " OR EXISTS ("
+    "     SELECT 1 FROM instrument_mapping mm"
+    "     WHERE mm.instrument_id = s.instrument_id"
+    "       AND mm.source = ?"
+    "       AND mm.source_ticker LIKE ? ESCAPE '\\'))"
 )
 
 
@@ -86,7 +92,14 @@ def _security_filter_conditions(query: SecurityQuery) -> tuple[str, list[Any]]:
 
     if query.search:
         sql += SEARCH_PREDICATE_SQL
-        params.extend([_like_pattern(query.search)] * 3)
+        params.extend(
+            [
+                _like_pattern(query.search),
+                _like_pattern(query.search),
+                query.source,
+                _like_pattern(query.search),
+            ]
+        )
 
     if query.exchange:
         sql += " AND s.exchange = ?"
@@ -103,6 +116,9 @@ def _security_filter_conditions(query: SecurityQuery) -> tuple[str, list[Any]]:
             " - julianday(s.list_date, 'start of day') >= ?)"
         )
         params.extend([query.asof, query.min_list_days])
+
+    # 分页依赖确定顺序；显式按 instrument_id 排序，不依赖存储引擎扫描序。
+    sql += " ORDER BY s.instrument_id"
 
     return sql, params
 

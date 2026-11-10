@@ -58,6 +58,57 @@ describe("WatchlistPage", () => {
 		await expect(screen.findByText(/没有匹配的标的/)).resolves.toBeInTheDocument();
 	});
 
+	it("检索失败后同词重提交真实重取并恢复", async () => {
+		server.use(http.get("/api/v1/metadata/instruments", () => HttpResponse.json({ detail: "boom" }, { status: 500 })));
+		const user = userEvent.setup();
+		render(<WatchlistPage />, { wrapper: wrapper() });
+		await user.click(screen.getByRole("button", { name: "添加标的" }));
+		await user.type(screen.getByLabelText("搜索代码或名称"), "茅台");
+		await user.click(screen.getByRole("button", { name: "检索" }));
+		await expect(screen.findByText(/检索失败/)).resolves.toBeInTheDocument();
+
+		// 同一个词再次提交：不能停在错误态，必须重新发起真实请求。
+		server.resetHandlers();
+		await user.click(screen.getByRole("button", { name: "检索" }));
+		await expect(screen.findByRole("button", { name: /加入自选 贵州茅台/ })).resolves.toBeInTheDocument();
+	});
+
+	it("超过一页的命中展示总数与截断证据，并可加载全部", async () => {
+		const matches = Array.from({ length: 25 }, (_, index) => ({
+			asset_class: "stock",
+			exchange: "SSE",
+			instrument_id: 2_000_000 + index,
+			is_active: true,
+			list_date: "2001-08-27",
+			name: `多样本股${String(index + 1).padStart(2, "0")}`,
+			ticker: `6100${String(index + 1).padStart(2, "0")}`,
+		}));
+		server.use(
+			http.get("/api/v1/metadata/instruments", ({ request }) => {
+				const query = new URL(request.url).searchParams;
+				const offset = Number(query.get("offset") ?? 0);
+				const limit = Number(query.get("limit") ?? 100);
+				return HttpResponse.json({
+					data: matches.slice(offset, offset + limit),
+					pagination: { has_more: offset + limit < 25, limit, offset, total: 25 },
+				});
+			}),
+		);
+		const user = userEvent.setup();
+		render(<WatchlistPage />, { wrapper: wrapper() });
+		await user.click(screen.getByRole("button", { name: "添加标的" }));
+		await user.type(screen.getByLabelText("搜索代码或名称"), "多样本股");
+		await user.click(screen.getByRole("button", { name: "检索" }));
+
+		// 截断证据：总数与已加载数量明示，不静默只给前 20。
+		await expect(screen.findByText(/共 25 项 · 已加载 20/)).resolves.toBeInTheDocument();
+		expect(screen.getAllByRole("button", { name: /^加入自选/ })).toHaveLength(20);
+
+		await user.click(screen.getByRole("button", { name: "加载更多" }));
+		await expect(screen.getAllByRole("button", { name: /^加入自选/ })).toHaveLength(25);
+		await expect(screen.findByText(/共 25 项 · 已加载 25/)).resolves.toBeInTheDocument();
+	});
+
 	it("未知对象不静默消失：目录未找到的 ID 明确展示并保留", async () => {
 		localStorage.setItem("ditto.market-watchlist.v1", "[9999999]");
 		render(<WatchlistPage />, { wrapper: wrapper() });

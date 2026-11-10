@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ApiError } from "@/api/errors";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
@@ -12,8 +12,8 @@ const watchlistActions = [
 	{ id: "bulk-delete", label: "批量删除" },
 ] as const;
 
-/** 名称/代码检索由 workflow 注入，markets 能力不依赖 instruments 能力。 */
-export type WatchlistSearchFn = (term: string) => Promise<MarketCatalog>;
+/** 名称/代码检索由 workflow 注入（按 offset 分页），markets 能力不依赖 instruments 能力。 */
+export type WatchlistSearchFn = (term: string, offset: number) => Promise<MarketCatalog>;
 /** 自选对象按精确身份解析（现有单对象解析），由 workflow 注入。 */
 export type WatchlistEntryFn = (instrumentId: number) => Promise<MarketCatalogInstrument>;
 
@@ -252,16 +252,29 @@ function WatchlistSearchForm({
 }) {
 	const [draft, setDraft] = useState("");
 	const [term, setTerm] = useState("");
-	const results = useQuery({
+	const results = useInfiniteQuery({
 		queryKey: ["watchlist-search", term],
-		queryFn: () => searchCatalog(term),
+		queryFn: ({ pageParam }) => searchCatalog(term, pageParam),
+		initialPageParam: 0,
+		getNextPageParam: (lastPage, allPages) => {
+			const loaded = allPages.reduce((count, page) => count + page.items.length, 0);
+			return loaded < lastPage.total && lastPage.items.length > 0 ? loaded : undefined;
+		},
 		enabled: term.length > 0,
 		retry: false,
 	});
+	const items = results.data?.pages.flatMap((page) => page.items) ?? [];
+	const total = results.data?.pages.at(0)?.total ?? 0;
 
 	function submit(event: React.FormEvent): void {
 		event.preventDefault();
-		setTerm(draft.trim());
+		const next = draft.trim();
+		if (next === term) {
+			// 同值重提交：React 状态 bailout 后仍要真实重取（错误态恢复路径）。
+			void results.refetch();
+			return;
+		}
+		setTerm(next);
 	}
 
 	return (
@@ -290,44 +303,59 @@ function WatchlistSearchForm({
 			)}
 			{term.length > 0 && results.isError && (
 				<p role="alert" className="text-xs text-(--color-risk-warning-fg)">
-					检索失败：{results.error instanceof Error ? results.error.message : "未知错误"}。清单未修改。
+					检索失败：{results.error instanceof Error ? results.error.message : "未知错误"}。清单未修改，可重试。
 				</p>
 			)}
-			{term.length > 0 && !results.isLoading && !results.isError && (results.data?.items.length ?? 0) === 0 && (
+			{term.length > 0 && !results.isLoading && !results.isError && items.length === 0 && (
 				<p role="alert" className="text-xs text-(--color-foreground-tertiary)">
 					没有匹配的标的；请调整名称或代码后重试。
 				</p>
 			)}
-			{term.length > 0 && !results.isLoading && !results.isError && (results.data?.items.length ?? 0) > 0 && (
-				<ul className="grid gap-2" aria-label="候选结果">
-					{results.data?.items.map((candidate) => (
-						<li
-							key={candidate.instrument_id}
-							className="flex items-center justify-between gap-3 rounded-md border border-(--color-border-subtle) px-3 py-2"
-						>
-							<div className="min-w-0">
-								<p className="truncate text-sm font-medium">{candidate.name}</p>
-								<p className="truncate font-mono text-xs text-(--color-foreground-tertiary)">
-									{candidate.ticker} · {candidate.exchange} · {candidate.asset_class}
-									{candidate.is_active ? "" : " · 已退出"}
-								</p>
-							</div>
-							<button
-								type="button"
-								aria-label={`加入自选 ${candidate.name}`}
-								disabled={savedIds.includes(candidate.instrument_id)}
-								onClick={() => {
-									onAdd(candidate.instrument_id);
-									setDraft("");
-									setTerm("");
-								}}
-								className="shrink-0 rounded-md border border-(--color-border-subtle) px-2 py-1 text-xs hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-50"
+			{term.length > 0 && !results.isLoading && !results.isError && items.length > 0 && (
+				<>
+					<p className="text-xs text-(--color-foreground-tertiary)" data-testid="watchlist-search-evidence">
+						共 {total} 项 · 已加载 {items.length}
+					</p>
+					<ul className="grid gap-2" aria-label="候选结果">
+						{items.map((candidate) => (
+							<li
+								key={candidate.instrument_id}
+								className="flex items-center justify-between gap-3 rounded-md border border-(--color-border-subtle) px-3 py-2"
 							>
-								{savedIds.includes(candidate.instrument_id) ? "已在自选" : "加入自选"}
-							</button>
-						</li>
-					))}
-				</ul>
+								<div className="min-w-0">
+									<p className="truncate text-sm font-medium">{candidate.name}</p>
+									<p className="truncate font-mono text-xs text-(--color-foreground-tertiary)">
+										{candidate.ticker} · {candidate.exchange} · {candidate.asset_class}
+										{candidate.is_active ? "" : " · 已退出"}
+									</p>
+								</div>
+								<button
+									type="button"
+									aria-label={`加入自选 ${candidate.name}`}
+									disabled={savedIds.includes(candidate.instrument_id)}
+									onClick={() => {
+										onAdd(candidate.instrument_id);
+										setDraft("");
+										setTerm("");
+									}}
+									className="shrink-0 rounded-md border border-(--color-border-subtle) px-2 py-1 text-xs hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-50"
+								>
+									{savedIds.includes(candidate.instrument_id) ? "已在自选" : "加入自选"}
+								</button>
+							</li>
+						))}
+					</ul>
+					{results.hasNextPage && (
+						<button
+							type="button"
+							onClick={() => void results.fetchNextPage()}
+							disabled={results.isFetchingNextPage}
+							className="w-full rounded-md border border-(--color-border-subtle) px-3 py-2 text-xs hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-50"
+						>
+							{results.isFetchingNextPage ? "正在加载…" : "加载更多"}
+						</button>
+					)}
+				</>
 			)}
 		</div>
 	);

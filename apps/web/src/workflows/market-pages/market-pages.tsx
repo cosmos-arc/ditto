@@ -48,9 +48,10 @@ export function ASharesPage() {
 
 /** Cross-feature composition for the browser-local watchlist. */
 export function WatchlistPage() {
-	// 名称/代码检索走 metadata 目录；每个已保存对象按精确身份经现有单对象解析重开。
-	const searchCatalog = async (term: string): Promise<MarketCatalog> => {
-		const catalog = await fetchInstrumentCatalog({ search: term, limit: 20 });
+	// 名称/代码检索走 metadata 目录（分页拉取，UI 负责按 offset 续载）；
+	// 每个已保存对象按精确身份经现有单对象解析重开。
+	const searchCatalog = async (term: string, offset: number): Promise<MarketCatalog> => {
+		const catalog = await fetchInstrumentCatalog({ search: term, limit: 20, offset });
 		return { items: catalog.items.map(toMarketInstrument), total: catalog.total };
 	};
 	const resolveEntry = async (instrumentId: number): Promise<MarketCatalogInstrument> => {

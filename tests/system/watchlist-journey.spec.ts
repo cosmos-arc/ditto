@@ -97,6 +97,21 @@ test.describe.serial("watchlist name/code search and durable reopen over a seede
 		await expect(page.getByRole("button", { name: /^加入自选/ })).toHaveCount(0);
 	});
 
+	test("large result sets show total evidence and load every match", async ({ page }) => {
+		await openAddOverlay(page);
+		// 「目录样本股」命中 fixture 全部 120 只股票，远超单页 20。
+		await page.getByLabel("搜索代码或名称").fill("目录样本股");
+		await page.getByRole("button", { name: "检索" }).click();
+		const evidence = page.getByTestId("watchlist-search-evidence");
+		await expect(evidence).toContainText("共 120 项 · 已加载 20");
+		await expect(page.getByRole("button", { name: /^加入自选/ })).toHaveCount(20);
+
+		// 全部命中可达：加载更多按 offset 续载下一页。
+		await page.getByRole("button", { name: "加载更多" }).click();
+		await expect(page.getByRole("button", { name: /^加入自选/ })).toHaveCount(40);
+		await expect(evidence).toContainText("共 120 项 · 已加载 40");
+	});
+
 	test("unknown saved object is explained, never silently dropped or replaced", async ({ page }) => {
 		await page.addInitScript(
 			(ids: string) => {
