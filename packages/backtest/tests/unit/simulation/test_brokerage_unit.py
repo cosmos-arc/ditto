@@ -360,6 +360,56 @@ class TestProcessMarketOrder:
         fills = brokerage.process_pending(sd)
         assert fills[0].event_time == step_time
 
+    def test_exit_held_sell_without_market_never_fills_or_liquidates(self) -> None:
+        """A delisted holding keeps quantity, mark and cash; the exit order waits."""
+        exited = InstrumentId(7)
+        account = _account()
+        account.apply_fill(
+            FillEvent(
+                fill_id="fill-exit-1",
+                order_id="BUY-EXIT",
+                instrument_id=exited,
+                direction=OrderSide.BUY,
+                filled_quantity=300,
+                fill_price=1.7,
+                fee=0.0,
+                slippage=0.0,
+                event_time=datetime(2026, 1, 1, 15, 0),
+                cumulative_quantity=300,
+                leaves_quantity=0,
+            ),
+            "2026-01-01",
+            on_frozen=None,
+        )
+        account.thaw_position(exited, 300)
+        account.mark_to_market({exited: 1.7})
+        brk = BacktestBrokerage(
+            account=account,
+            order_book=_order_book(),
+            model=BrokerageModel(slippage_model=FixedBpsSlippage(bps=0)),
+        )
+        brk.place_order(
+            _order(
+                order_id="EXIT-SELL",
+                instrument_id=exited,
+                direction=OrderSide.SELL,
+                quantity=300,
+            )
+        )
+
+        # The exit day carries no market snapshot for the delisted instrument.
+        fills = brk.process_pending(_process_input(bars={}))
+
+        assert fills == ()
+        view = brk.get_account()
+        pos = view.positions[exited]
+        assert pos.quantity == 300
+        assert pos.market_value == pytest.approx(510.0)
+        assert view.cash.available == pytest.approx(1_000_000.0 - 1.7 * 300)
+        ticket = brk._order_book.get(ClientOrderId(value="EXIT-SELL"))
+        assert ticket is not None
+        assert ticket.status is OrderStatus.SUBMITTED
+
 
 # ---------------------------------------------------------------------------
 # process_pending — partial fill

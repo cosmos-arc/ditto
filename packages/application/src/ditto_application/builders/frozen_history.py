@@ -568,6 +568,8 @@ class FrozenHistoryProvider:
         bars = self._range(dataset, query)
         if dataset == "index_daily":
             return bars
+        if dataset == "stock_daily":
+            self._reject_post_exit_quotes(bars)
         factors = self._range(
             "fund_adj" if self._asset_class == "etf" else "adj_factor", query
         )
@@ -604,14 +606,19 @@ class FrozenHistoryProvider:
         """Require exact daily execution factors, status and price limits."""
         if self._asset_class == "stock":
             try:
+                # The pre-start slice feeds suspension anchoring; a conflicting
+                # post-exit quote must fail closed here too, not only inside
+                # the queried window (get_bars runs the same guard).
+                valuation_history = self._frames["stock_daily"].filter(
+                    pl.col("source_ticker").is_in(query.instruments)
+                    & (pl.col("trade_date") < date.fromisoformat(query.start))
+                )
+                self._reject_post_exit_quotes(valuation_history)
                 bars = stock_execution_bars(
                     bars,
                     self._range("stock_status", query),
                     self._range("stock_limit", query),
-                    valuation_history=self._frames["stock_daily"].filter(
-                        pl.col("source_ticker").is_in(query.instruments)
-                        & (pl.col("trade_date") < date.fromisoformat(query.start))
-                    ),
+                    valuation_history=valuation_history,
                 )
                 bars = cash_adjusted_suspension_marks(
                     bars,
@@ -641,6 +648,39 @@ class FrozenHistoryProvider:
         if bars["adj_factor"].null_count():
             raise AppBuilderError("missing frozen execution adjustment factors")
         return bars
+
+    def _reject_post_exit_quotes(self, bars: pl.DataFrame) -> None:
+        """
+        Fail closed when retained quotes contradict a frozen exit fact.
+
+        The roster's delist_date is the request's frozen exit fact. A quote on
+        or after that day is a conflict between two retained sources, not an
+        executable price; it must not silently enter the execution or signal
+        channels under the exit-day participation gate.
+        """
+        exits = pl.DataFrame(
+            [
+                {
+                    "source_ticker": str(row["source_ticker"]),
+                    "delist_date": str(row["delist_date"]),
+                }
+                for row in self.roster
+                if row.get("delist_date")
+                and str(row.get("asset_class", self._asset_class)) == "stock"
+            ],
+            schema={"source_ticker": pl.String, "delist_date": pl.String},
+        )
+        if exits.is_empty() or bars.is_empty():
+            return
+        offenders = bars.join(exits, on="source_ticker", how="inner").filter(
+            pl.col("trade_date").cast(pl.String) >= pl.col("delist_date")
+        )
+        if not offenders.is_empty():
+            sample = offenders.select("source_ticker", "trade_date").head(5).rows()
+            raise AppBuilderError(
+                "delisted instrument quoted after exit: "
+                + ", ".join(f"{ticker} {day}" for ticker, day in sample)
+            )
 
     def _range(self, dataset: str, query: BarQuery) -> pl.DataFrame:
         frame = self._frames.get(dataset)

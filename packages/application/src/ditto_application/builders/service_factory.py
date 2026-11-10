@@ -78,6 +78,7 @@ from ditto_application.builders._resolution import (
     resolve_benchmark,
     resolve_instrument_display,
 )
+from ditto_application.builders.exit_valuation import exit_held_valuation_notes
 from ditto_application.builders.frozen_history import FrozenHistoryProvider
 from ditto_application.builders.historical_members import (
     freeze_membership_intervals,
@@ -710,7 +711,9 @@ class BacktestRuntimeBuilder:
             pool_description = str(pool.get("description") or "")
             pool_description += (
                 f" 普通规则核对时间 {RULES_OBSERVED_AT};仅覆盖已核实名单,"
-                + "未认证历史可得性。股票退出或无报价停牌拒绝估值;"
+                + "未认证历史可得性。股票终止上市后持仓保留,"
+                + "估值锚定退出前最后已证报价,不虚构清算或回款;"
+                + "无报价停牌沿用停牌估值语义。"
                 + "ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。"
                 + "最低佣金 5 元为保守研究假设;拆并份或退市清算仍缺会计证据。"
                 + (
@@ -1034,6 +1037,11 @@ class BacktestRuntimeBuilder:
                         .otherwise(pl.lit("")),
                     ).alias("_market_note"),
                 )
+                exit_notes = exit_held_valuation_notes(
+                    participation,
+                    historical_provider.roster,
+                    execution_facts,
+                )
                 participation = (
                     participation.join(
                         notes,
@@ -1041,12 +1049,20 @@ class BacktestRuntimeBuilder:
                         how="left",
                         validate="1:1",
                     )
+                    .join(
+                        exit_notes,
+                        on=["instrument_id", "trade_date"],
+                        how="left",
+                        validate="1:1",
+                    )
                     .with_columns(
                         pl.concat_str(
-                            "execution_rule", pl.col("_market_note").fill_null("")
+                            "execution_rule",
+                            pl.col("_market_note").fill_null(""),
+                            pl.col("_exit_note").fill_null(""),
                         ).alias("execution_rule")
                     )
-                    .drop("_market_note")
+                    .drop("_market_note", "_exit_note")
                     .sort("trade_date", "instrument_id")
                 )
             descriptions = participation.filter(

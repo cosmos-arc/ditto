@@ -406,11 +406,15 @@ def ordinary_equity_rules(
         raise ValueError(
             "ordinary rule coverage is " + f"{effective_from}..{RULES_OBSERVED_AT[:10]}"
         )
-    if (
-        not historical_stock
-        and (date.fromisoformat(start) - date.fromisoformat(listing.list_date)).days
+    if not historical_stock and (
+        (date.fromisoformat(start) - date.fromisoformat(listing.list_date)).days
         < MIN_ORDINARY_LISTED_DAYS
-    ) or (listing.delist_date is not None and listing.delist_date <= end):
+        or (listing.delist_date is not None and listing.delist_date <= end)
+    ):
+        # Live paths still refuse an unresolved exit valuation outright. A
+        # frozen historical run instead keeps the position at the last
+        # verified quote after the roster's delist_date (#763): no quote is
+        # required, no order fills, and no liquidation is invented.
         raise ValueError(
             "unresolved listing/exit valuation for "
             + f"{listing.instrument_id}; refuse liquidation or dropping held positions"
