@@ -70,6 +70,9 @@ test("declared split rescales holdings, halts without fills and resumes at the n
 	await expect(page.getByTestId("backtest-detail-meta")).toContainText("completed", {
 		timeout: 60000,
 	});
+	// Recharts measures its container then animates the line in (~1.5s);
+	// under load both lag the status flip, so settle before the evidence shot.
+	await page.waitForTimeout(3000);
 	await page.screenshot({ path: test.info().outputPath("conversion-completed.png"), fullPage: true });
 
 	const request = await saved(page, id, "request");
