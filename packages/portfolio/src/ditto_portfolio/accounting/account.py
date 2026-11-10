@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
+from datetime import date
 from types import MappingProxyType
 
 from ditto_kernel.events import EventBus
@@ -11,7 +12,12 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.dividends import Distribution, DividendBook
+from ditto_portfolio.accounting.conversions import ShareConversion
+from ditto_portfolio.accounting.dividends import (
+    Distribution,
+    DividendBook,
+    DividendEntry,
+)
 from ditto_portfolio.accounting.fills import FillEvent
 from ditto_portfolio.accounting.position import Position
 from ditto_portfolio.events import PositionChanged
@@ -67,6 +73,7 @@ class Account:
         event_bus: EventBus | None = None,
         dividends: tuple[Distribution, ...] = (),
         dividend_state: DividendBook | None = None,
+        conversions: tuple[ShareConversion, ...] = (),
     ) -> None:
         """
         初始化账户。
@@ -77,6 +84,7 @@ class Account:
             dividend_state: 恢复的权益账本
             cash: 现金账本
             event_bus: 事件总线（可选，用于发布 PositionChanged 事件）
+            conversions: 已冻结的 ETF 份额折算声明
 
         """
         object.__setattr__(
@@ -98,7 +106,9 @@ class Account:
         self._event_bus = event_bus
         if dividends and positions and dividend_state is None:
             raise ValueError("dividend tax requires opening acquisition lots")
-        self._dividends = dividend_state or DividendBook.start(dividends)
+        self._dividends = dividend_state or DividendBook.start(
+            dividends, conversions=conversions
+        )
         self._dividend_day_open: DividendBook | None = None
 
     @property
@@ -129,6 +139,12 @@ class Account:
             if event.announcement_date.isoformat()
             < max(self._dividends.settled_day, self._dividends.closed_day)
         )
+        visible_conversions = tuple(
+            conversion
+            for conversion in self._dividends.conversions
+            if conversion.announcement_date.isoformat()
+            < max(self._dividends.settled_day, self._dividends.closed_day)
+        )
         visible_ids = {event.instrument_id for event in visible_events}
         return AccountView(
             positions=MappingProxyType(dict(self._positions)),
@@ -145,13 +161,14 @@ class Account:
             dividends=replace(
                 self._dividends,
                 events=visible_events,
+                conversions=visible_conversions,
                 lots=tuple(
                     lot
                     for lot in self._dividends.lots
                     if lot.instrument_id in visible_ids
                 ),
             )
-            if visible_events
+            if visible_events or visible_conversions
             else DividendBook(),
         )
 
@@ -207,6 +224,61 @@ class Account:
             frozen=self._cash.frozen - released,
         )
         self._dividends = state
+
+    def apply_share_conversions(self, day: str) -> tuple[ShareConversion, ...]:
+        """
+        Rescale held positions once at the declared effective date.
+
+        Runs at the same pre-trading point as :meth:`settle_dividends`. The
+        total acquisition cost is preserved and re-spread over the converted
+        quantity; the day's published reference price divides by the same
+        ratio, so net assets are unchanged. No cash and no tax move. The
+        conversion is recorded even without holdings: shares acquired later
+        are already post-conversion shares.
+        """
+        book = self._dividends
+        if not book.conversions:
+            return ()
+        current = date.fromisoformat(day)
+        applied: list[ShareConversion] = []
+        entries = list(book.entries)
+        positions = dict(self._positions)
+        for conversion in book.conversions:
+            if current < conversion.effective_date or any(
+                entry.event_id == conversion.identity
+                and entry.kind == "share_conversion"
+                for entry in entries
+            ):
+                continue
+            position = positions.get(conversion.instrument_id)
+            held = position if position is not None and position.quantity > 0 else None
+            quantity = conversion.converted(held.quantity) if held else 0
+            available = (
+                conversion.converted(held.available_quantity)
+                if held and held.available_quantity > 0
+                else 0
+            )
+            cost = held.quantity * held.average_cost if held else 0.0
+            entries.append(
+                DividendEntry(
+                    conversion.identity,
+                    day,
+                    "share_conversion",
+                    0.0,
+                    quantity - (held.quantity if held else 0),
+                )
+            )
+            if held is not None:
+                positions[conversion.instrument_id] = replace(
+                    held,
+                    quantity=quantity,
+                    available_quantity=available,
+                    average_cost=cost / quantity,
+                )
+            applied.append(conversion)
+        self._positions = positions
+        self._dividends = replace(book, entries=tuple(entries))
+        return tuple(applied)
 
     def close_dividend_day(self, day: str) -> None:
         """Freeze daily-net holdings and reserve tax before the daily report."""

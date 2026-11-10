@@ -12,6 +12,11 @@ from typing import Literal
 
 from ditto_kernel.identity import InstrumentId
 
+from ditto_portfolio.accounting.conversions import (
+    ShareConversion,
+    validate_share_conversions,
+)
+
 
 @dataclass(frozen=True)
 class Distribution:
@@ -164,6 +169,7 @@ class DividendBook:
     lots: tuple[DividendLot, ...] = ()
     rights: tuple[DividendRight, ...] = ()
     entries: tuple[DividendEntry, ...] = ()
+    conversions: tuple[ShareConversion, ...] = ()
     tax_payable: float = 0.0
     closed_day: str = ""
     settled_day: str = ""
@@ -180,14 +186,22 @@ class DividendBook:
         )
 
     @classmethod
-    def start(cls, events: tuple[Distribution, ...]) -> DividendBook:
-        """Collapse identical events and reject conflicting identities."""
+    def start(
+        cls,
+        events: tuple[Distribution, ...],
+        *,
+        conversions: tuple[ShareConversion, ...] = (),
+    ) -> DividendBook:
+        """Collapse identical events/conversions and reject conflicts."""
         unique: dict[str, Distribution] = {}
         for event in events:
             previous = unique.setdefault(event.identity, event)
             if previous != event:
                 raise ValueError(f"conflicting dividend revision: {event.identity}")
-        return cls(events=tuple(sorted(unique.values(), key=lambda e: e.identity)))
+        return cls(
+            events=tuple(sorted(unique.values(), key=lambda e: e.identity)),
+            conversions=validate_share_conversions(conversions),
+        )
 
     @property
     def receivable(self) -> float:
@@ -204,7 +218,9 @@ class DividendBook:
 
     def settle(self, day: str) -> tuple[DividendBook, float]:
         """Accrue at ex date and pay only when due, before trading that session."""
-        if not self.events or day == self.settled_day:
+        # Conversion-only books still advance the clock: announcement visibility
+        # and conversion idempotency are anchored to the settled/closed days.
+        if not (self.events or self.conversions) or day == self.settled_day:
             return self, 0.0
         if day < self.settled_day or day < self.closed_day:
             raise ValueError("dividend clock cannot move backwards")
@@ -311,7 +327,7 @@ class DividendBook:
 
     def close(self, day: str, holdings: Mapping[InstrumentId, int]) -> DividendBook:
         """Track net daily changes, then freeze record-date rights after trading."""
-        if not self.events or day == self.closed_day:
+        if not (self.events or self.conversions) or day == self.closed_day:
             return self
         if day < self.closed_day or day < self.settled_day:
             raise ValueError("dividend clock cannot move backwards")
