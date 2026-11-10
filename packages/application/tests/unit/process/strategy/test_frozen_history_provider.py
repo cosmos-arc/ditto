@@ -36,6 +36,7 @@ def _provider(
     start: str = "2014-10-13",
     prior_quote: bool = True,
     etf_reference: pl.DataFrame | None = None,
+    etf_share_conversions: pl.DataFrame | None = None,
 ):
     days = [date(2014, 10, 13) + timedelta(days=i) for i in range(5)]
     bars = pl.DataFrame(
@@ -109,18 +110,22 @@ def _provider(
         }
     if etf_reference is not None:
         frames["etf_reference"] = etf_reference
+    if etf_share_conversions is not None:
+        frames["etf_share_conversions"] = etf_share_conversions
     snapshots = []
     contents = {}
     for index, (dataset, frame) in enumerate(frames.items()):
         snapshot = ProviderSnapshot.create(
             ProviderSnapshotDraft(
                 dataset_id=dataset,
-                source="config" if dataset == "etf_reference" else "tushare",
+                source="config"
+                if dataset in {"etf_reference", "etf_share_conversions"}
+                else "tushare",
                 request_start="2026-11-09"
-                if dataset == "etf_reference"
+                if dataset in {"etf_reference", "etf_share_conversions"}
                 else "2014-10-13",
                 request_end="2026-11-09"
-                if dataset == "etf_reference"
+                if dataset in {"etf_reference", "etf_share_conversions"}
                 else "2014-10-17",
                 schema_version=f"{dataset}.v1",
                 checksum=f"{index:032x}",
@@ -567,3 +572,76 @@ def test_etf_latest_receipt_must_be_complete_without_future_or_old_fallback(revi
     else:
         with pytest.raises(AppBuilderError, match="lacks declarations"):
             provider.freeze_etf_reference()
+
+
+def _conversion_frame(**overrides: object) -> pl.DataFrame:
+    row: dict[str, object] = {
+        "source_ticker": "510300.SH",
+        "ratio": 4.0,
+        "announcement_date": "2024-06-28",
+        "effective_date": "2024-07-01",
+        "basis": "synthetic issuer split announcement",
+        "rounding_note": "1:4 整倍拆分、无碎份",
+    }
+    row.update(overrides)
+    return pl.DataFrame([row])
+
+
+def test_share_conversions_freeze_from_retained_config_declaration():
+    provider, snapshots, _ = _provider(etf_share_conversions=_conversion_frame())
+    provider.freeze_share_conversions(start="2014-10-13", end="2014-10-17")
+    assert provider.share_conversions == ()
+    provider.freeze_share_conversions(start="2024-07-01", end="2024-07-05")
+    declaration = next(s for s in snapshots if s.dataset_id == "etf_share_conversions")
+    (conversion,) = provider.share_conversions
+    assert conversion.instrument_id == _IID
+    assert conversion.effective_date == date(2024, 7, 1)
+    assert conversion.announcement_date == date(2024, 6, 28)
+    assert conversion.ratio == 4.0
+    assert conversion.source_snapshot_id == declaration.snapshot_id
+    assert declaration.source == "config"
+
+
+def test_share_conversions_out_of_window_are_not_declared_for_the_run():
+    provider, _, _ = _provider(
+        etf_share_conversions=pl.concat(
+            [
+                _conversion_frame(),
+                _conversion_frame(
+                    source_ticker="510300.SH",
+                    announcement_date="2014-10-01",
+                    effective_date="2014-10-15",
+                    ratio=2.0,
+                ),
+            ]
+        )
+    )
+    provider.freeze_share_conversions(start="2014-10-13", end="2014-10-17")
+    assert len(provider.share_conversions) == 1
+    assert provider.share_conversions[0].effective_date == date(2014, 10, 15)
+
+
+def test_missing_declaration_snapshots_do_not_block_the_run():
+    provider, _, _ = _provider()
+    provider.freeze_share_conversions(start="2014-10-13", end="2014-10-17")
+    assert provider.share_conversions == ()
+
+
+def test_conflicting_share_conversion_declarations_fail_closed():
+    provider, _, _ = _provider(
+        etf_share_conversions=pl.concat(
+            [
+                _conversion_frame(),
+                _conversion_frame(ratio=2.0, basis="conflicting revision"),
+            ]
+        )
+    )
+    with pytest.raises(AppBuilderError, match="conflicting conversion revision"):
+        provider.freeze_share_conversions(start="2024-06-30", end="2024-07-02")
+
+
+def test_future_share_conversion_declaration_receipt_is_invisible():
+    provider, _, _ = _provider(etf_share_conversions=_conversion_frame())
+    provider.frozen_at = _RECEIPT - timedelta(days=1)
+    provider.freeze_share_conversions(start="2024-07-01", end="2024-07-05")
+    assert provider.share_conversions == ()

@@ -6,6 +6,10 @@ from typing import cast
 
 import orjson
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.accounting.conversions import (
+    ShareConversion,
+    validate_share_conversions,
+)
 from ditto_portfolio.accounting.dividends import (
     Distribution,
     DividendBook,
@@ -54,6 +58,19 @@ def _event(payload: object) -> Distribution:
         taxable_share_income=payload_float(row, "taxable_share_income"),
         share_tax_basis=payload_str(row, "share_tax_basis"),
         asset_class=asset_class,
+    )
+
+
+def _conversion(payload: object) -> ShareConversion:
+    row = payload_mapping(payload)
+    return ShareConversion(
+        instrument_id=InstrumentId(payload_int(row, "instrument_id")),
+        effective_date=date.fromisoformat(payload_str(row, "effective_date")),
+        ratio=payload_float(row, "ratio"),
+        announcement_date=date.fromisoformat(payload_str(row, "announcement_date")),
+        source_snapshot_id=payload_str(row, "source_snapshot_id"),
+        source_ticker=payload_str(row, "source_ticker"),
+        rounding_note=payload_str(row, "rounding_note"),
     )
 
 
@@ -107,6 +124,9 @@ def dividend_from_payload(payload: object) -> DividendBook:
         lots=tuple(lots),
         rights=tuple(rights),
         entries=tuple(entries),
+        conversions=tuple(
+            _conversion(item) for item in payload_sequence(data, "conversions")
+        ),
         tax_payable=payload_float(data, "tax_payable"),
         closed_day=payload_str(data, "closed_day"),
         settled_day=payload_str(data, "settled_day"),
@@ -127,4 +147,5 @@ def dividend_from_payload(payload: object) -> DividendBook:
         if day and date.fromisoformat(day).isoformat() != day:
             raise ValueError("invalid dividend checkpoint date")
     DividendBook.start(book.events)
+    validate_share_conversions(book.conversions)
     return book

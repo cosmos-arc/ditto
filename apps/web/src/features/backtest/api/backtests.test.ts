@@ -97,6 +97,82 @@ it.each(["valid", "nav", "kind", "locked", "cost", "listing", "asset", "etfShare
 	},
 );
 
+it.each(["valid", "ratio", "dates", "kind"])(
+	"validates saved share-conversion evidence over HTTP: %s",
+	async (field) => {
+		const statement = {
+			currency: "CNY",
+			policy: "saved",
+			events: [],
+			conversions: [
+				{
+					event_id: "2000941:2022-07-05",
+					instrument_id: 2000941,
+					source_ticker: "159941.SZ",
+					source_snapshot_id: "config:etf-share-conversions:snap1",
+					announcement_date: "2022-06-29",
+					effective_date: "2022-07-05",
+					ratio: 4,
+					rounding_note: "1:4 whole split",
+				},
+			],
+			entries: [
+				{
+					event_id: "2000941:2022-07-05",
+					day: "2022-07-05",
+					kind: "share_conversion",
+					amount: 0,
+					quantity: 300,
+					acquired: "",
+				},
+			],
+			balances: [
+				{
+					trade_date: "2022-07-05",
+					cash: 9761.6,
+					available_cash: 9761.6,
+					receivable: 0,
+					tax_payable: 0,
+					market_value: 238.4,
+					nav: 10000,
+					positions: [
+						{
+							instrument_id: 2000941,
+							source_ticker: "159941.SZ",
+							quantity: 400,
+							available_quantity: 400,
+							locked_quantity: 0,
+							average_cost: 0.596,
+							total_cost: 238.4,
+							market_value: 238.4,
+						},
+					],
+				},
+			],
+		};
+		if (field === "ratio") statement.conversions[0]!.ratio = 1;
+		if (field === "dates") statement.conversions[0]!.announcement_date = "2022-07-05";
+		if (field === "kind") statement.entries[0]!.kind = "share_conversion_typo";
+		vi.stubGlobal(
+			"fetch",
+			vi.fn<typeof fetch>(async () =>
+				Response.json({ data: { ...mockBacktestReport, dividend_statement: statement } }),
+			),
+		);
+		if (field === "valid") {
+			const report = await fetchBacktestReport("run-1");
+			expect(report.dividendStatement?.conversions[0]).toMatchObject({
+				eventId: "2000941:2022-07-05",
+				ratio: 4,
+				announcement: "2022-06-29",
+				effective: "2022-07-05",
+				roundingNote: "1:4 whole split",
+			});
+			expect(report.dividendStatement?.entries[0]?.kind).toBe("share_conversion");
+		} else await expect(fetchBacktestReport("run-1")).rejects.toThrow("分红账本金额或来源不一致");
+	},
+);
+
 describe("backtest API view-model boundaries", () => {
 	it("keeps report scope and original provenance through mapping, with conservative legacy defaults", () => {
 		const provenance = { strategy_version: "7", data_catalog_identities: ["snapshot:retained"] };

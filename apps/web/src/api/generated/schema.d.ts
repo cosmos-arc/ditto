@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 86086f5b87bbcf586243320059e8f7a30e951085dc0c82f2005d276b4edfc884
+ * Schema SHA-256: acf557fb00c50ddbe97ff2968c8e33656aa8b8ba9f9385bce9187b92cf38de90
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -9976,6 +9976,28 @@ export interface components {
             /** Trade Date */
             trade_date: string;
         };
+        /**
+         * DividendConversionResponse
+         * @description A maintainer-declared exchange-traded fund share conversion (#762).
+         */
+        DividendConversionResponse: {
+            /** Announcement Date */
+            announcement_date: string;
+            /** Effective Date */
+            effective_date: string;
+            /** Event Id */
+            event_id: string;
+            /** Instrument Id */
+            instrument_id: number;
+            /** Ratio */
+            ratio: number;
+            /** Rounding Note */
+            rounding_note: string;
+            /** Source Snapshot Id */
+            source_snapshot_id: string;
+            /** Source Ticker */
+            source_ticker: string;
+        };
         /** DividendEntryResponse */
         DividendEntryResponse: {
             /** Acquired */
@@ -9990,7 +10012,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "receivable" | "cash_payment" | "tax_reserved" | "tax_payment" | "share_credit" | "share_release" | "share_tax_payment";
+            kind: "receivable" | "cash_payment" | "tax_reserved" | "tax_payment" | "share_credit" | "share_release" | "share_tax_payment" | "share_conversion";
             /** Quantity */
             quantity: number;
         };
@@ -10057,6 +10079,11 @@ export interface components {
         DividendStatementResponse: {
             /** Balances */
             balances: components["schemas"]["DividendBalanceResponse"][];
+            /**
+             * Conversions
+             * @default []
+             */
+            conversions: components["schemas"]["DividendConversionResponse"][];
             /**
              * Currency
              * @constant

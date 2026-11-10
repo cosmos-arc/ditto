@@ -579,9 +579,9 @@ def _serialize_instrument_id(instrument_id: int | str) -> tuple[str, str]:
 
 
 def _dividend_statement(report: BacktestReport) -> dict[str, object] | None:
-    if (
-        report.final_account_state is None
-        or not report.final_account_state.dividends.events
+    if report.final_account_state is None or not (
+        report.final_account_state.dividends.events
+        or report.final_account_state.dividends.conversions
     ):
         return None
     book = report.final_account_state.dividends
@@ -607,6 +607,14 @@ def _dividend_statement(report: BacktestReport) -> dict[str, object] | None:
                 if any(e.asset_class == "etf" for e in book.events)
                 else ""
             )
+            + (
+                "ETF 份额折算研究假设: 折算以维护者留档的发行人公告声明为准; "
+                + "除权日开盘前按折算比例重计份额与可卖份额, 总成本不变、"
+                + "平均成本重摊, 无现金与税; 非整数换算需公告取整规则。"
+                + "未声明的因子跳变仍被拒绝, 声明集不承诺全域完整性。"
+                if book.conversions
+                else ""
+            )
         ),
         "events": [
             {
@@ -619,6 +627,10 @@ def _dividend_statement(report: BacktestReport) -> dict[str, object] | None:
                 ),
             }
             for event in book.events
+        ],
+        "conversions": [
+            {**dataclasses.asdict(conversion), "event_id": conversion.identity}
+            for conversion in book.conversions
         ],
         "entries": [dataclasses.asdict(entry) for entry in book.entries],
         "balances": [
@@ -641,12 +653,15 @@ def _dividend_statement(report: BacktestReport) -> dict[str, object] | None:
                         "total_cost": p.quantity * p.average_cost,
                         "source_ticker": next(
                             e.source_ticker
-                            for e in book.events
+                            for e in (*book.events, *book.conversions)
                             if e.instrument_id == iid
                         ),
                     }
                     for iid, p in sorted(view.positions.items())
-                    if any(e.instrument_id == iid for e in book.events)
+                    if any(
+                        e.instrument_id == iid
+                        for e in (*book.events, *book.conversions)
+                    )
                 ],
             }
             for day, view in report.account_series

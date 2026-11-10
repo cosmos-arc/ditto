@@ -1020,3 +1020,135 @@ class TestFlatToFlatFees:
         # gross: (100*13 + 100*14) - (100*10 + 100*12) = 2700 - 2200 = 500
         assert closed[0].gross_pnl == pytest.approx(500.0)
         assert closed[0].net_pnl == pytest.approx(485.0)
+
+
+# ---------------------------------------------------------------------------
+# Share conversion sync (#762)
+# ---------------------------------------------------------------------------
+
+
+class TestShareConversionSync:
+    def test_fifo_rescales_open_entries_once_with_cost_preserved(
+        self, account_view: AccountView
+    ) -> None:
+        from datetime import date
+
+        from ditto_portfolio.accounting.conversions import ShareConversion
+
+        builder = FifoTradeBuilder()
+        builder.on_fill(_fill("f1", quantity=100, price=2.384, fee=2.0), account_view)
+        builder.on_fill(
+            _fill(
+                "f2",
+                order_id="order-2",
+                quantity=300,
+                price=2.0,
+                fee=3.0,
+                event_time=datetime(2026, 3, 2, 9, 30),
+            ),
+            account_view,
+        )
+        conversion = ShareConversion(
+            InstrumentId(1), date(2026, 3, 3), 4.0, date(2026, 2, 28), "snap"
+        )
+        builder.apply_conversions((conversion,), day="2026-03-02")
+        assert builder.get_open_trades() != ()
+        before = [(t.quantity, t.entry_price) for t in builder.get_open_trades()]
+        assert before == [(100, 2.384), (300, 2.0)]
+        builder.apply_conversions((conversion,), day="2026-03-03")
+        trades = builder.get_open_trades()
+        assert [(t.quantity, t.entry_price) for t in trades] == [
+            (400, pytest.approx(2.384 / 4)),
+            (1200, pytest.approx(0.5)),
+        ]
+        assert sum(t.quantity * t.entry_price for t in trades) == pytest.approx(
+            100 * 2.384 + 300 * 2.0
+        )
+        # A second sync after the effective date never converts again.
+        builder.apply_conversions((conversion,), day="2026-03-04")
+        assert [(t.quantity, t.entry_price) for t in builder.get_open_trades()] == [
+            (400, pytest.approx(0.596)),
+            (1200, pytest.approx(0.5)),
+        ]
+
+    def test_flat_to_flat_rescales_net_quantity_without_new_cost(
+        self, account_view: AccountView
+    ) -> None:
+        from datetime import date
+
+        from ditto_portfolio.accounting.conversions import ShareConversion
+
+        builder = FlatToFlatTradeBuilder()
+        builder.on_fill(_fill("f1", quantity=100, price=2.384, fee=2.0), account_view)
+        conversion = ShareConversion(
+            InstrumentId(1), date(2026, 3, 3), 4.0, date(2026, 2, 28), "snap"
+        )
+        builder.apply_conversions((conversion,), day="2026-03-03")
+        (trade,) = builder.get_open_trades()
+        assert trade.quantity == 400
+        assert trade.entry_price == pytest.approx(2.384 / 4)
+        assert trade.fees == pytest.approx(2.0)
+        builder.apply_conversions((conversion,), day="2026-03-04")
+        assert builder.get_open_trades()[0].quantity == 400
+
+    def test_flat_to_flat_exit_price_stays_on_one_share_scale_across_conversion(
+        self, account_view: AccountView
+    ) -> None:
+        """Pre-split partial sells must not mix share scales in exit VWAP."""
+        from datetime import date
+
+        from ditto_portfolio.accounting.conversions import ShareConversion
+
+        builder = FlatToFlatTradeBuilder()
+        builder.on_fill(_fill("f1", quantity=400, price=2.384, fee=2.0), account_view)
+        builder.on_fill(
+            _fill(
+                "f2",
+                order_id="sell-1",
+                direction=OrderSide.SELL,
+                quantity=100,
+                price=2.30,
+                fee=1.0,
+            ),
+            account_view,
+        )
+        conversion = ShareConversion(
+            InstrumentId(1), date(2026, 3, 3), 4.0, date(2026, 2, 28), "snap"
+        )
+        builder.apply_conversions((conversion,), day="2026-03-03")
+        builder.on_fill(
+            _fill(
+                "f3",
+                order_id="sell-2",
+                direction=OrderSide.SELL,
+                quantity=1200,
+                price=0.60,
+                fee=1.0,
+            ),
+            account_view,
+        )
+        (trade,) = builder.get_closed_trades()
+        # Sold 100 pre-split + 1200 post-split = 1600 new-scale shares for
+        # 950.0 CNY proceeds; both vwap prices share the post-split scale.
+        assert trade.exit_price == pytest.approx(950.0 / 1600)
+        assert trade.entry_price == pytest.approx(400 * 2.384 / 1600)
+
+    def test_snapshot_state_round_trips_applied_conversions(
+        self, account_view: AccountView
+    ) -> None:
+        from datetime import date
+
+        from ditto_portfolio.accounting.conversions import ShareConversion
+
+        builder = FifoTradeBuilder()
+        builder.on_fill(_fill("f1", quantity=100, price=2.384), account_view)
+        conversion = ShareConversion(
+            InstrumentId(1), date(2026, 3, 3), 4.0, date(2026, 2, 28), "snap"
+        )
+        builder.apply_conversions((conversion,), day="2026-03-03")
+        snapshot = builder.snapshot_state()
+        assert snapshot.applied_conversions == (conversion.identity,)
+        restored = FifoTradeBuilder()
+        restored.restore_state(snapshot)
+        restored.apply_conversions((conversion,), day="2026-03-04")
+        assert restored.get_open_trades()[0].quantity == 400

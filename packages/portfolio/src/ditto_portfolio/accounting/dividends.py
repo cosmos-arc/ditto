@@ -12,6 +12,11 @@ from typing import Literal
 
 from ditto_kernel.identity import InstrumentId
 
+from ditto_portfolio.accounting.conversions import (
+    ShareConversion,
+    validate_share_conversions,
+)
+
 
 @dataclass(frozen=True)
 class Distribution:
@@ -164,6 +169,7 @@ class DividendBook:
     lots: tuple[DividendLot, ...] = ()
     rights: tuple[DividendRight, ...] = ()
     entries: tuple[DividendEntry, ...] = ()
+    conversions: tuple[ShareConversion, ...] = ()
     tax_payable: float = 0.0
     closed_day: str = ""
     settled_day: str = ""
@@ -180,14 +186,59 @@ class DividendBook:
         )
 
     @classmethod
-    def start(cls, events: tuple[Distribution, ...]) -> DividendBook:
-        """Collapse identical events and reject conflicting identities."""
+    def start(
+        cls,
+        events: tuple[Distribution, ...],
+        *,
+        conversions: tuple[ShareConversion, ...] = (),
+    ) -> DividendBook:
+        """Collapse identical events/conversions and reject conflicts."""
         unique: dict[str, Distribution] = {}
         for event in events:
             previous = unique.setdefault(event.identity, event)
             if previous != event:
                 raise ValueError(f"conflicting dividend revision: {event.identity}")
-        return cls(events=tuple(sorted(unique.values(), key=lambda e: e.identity)))
+        return cls(
+            events=tuple(sorted(unique.values(), key=lambda e: e.identity)),
+            conversions=validate_share_conversions(conversions),
+        )
+
+    def merge_declarations(
+        self,
+        events: tuple[Distribution, ...],
+        *,
+        conversions: tuple[ShareConversion, ...] = (),
+    ) -> DividendBook:
+        """
+        Union provider-frozen declarations back into a restored book.
+
+        A checkpoint captures the PIT-filtered view book, so declarations
+        announced after the checkpoint day are absent on resume. Effective
+        dates always follow announcement dates, so re-adding them here cannot
+        re-settle anything already past; runtime state (lots, rights, entries,
+        clock) is preserved verbatim.
+        """
+        merged = {event.identity: event for event in self.events}
+        for event in events:
+            previous = merged.setdefault(event.identity, event)
+            if previous != event:
+                raise ValueError(f"conflicting dividend revision: {event.identity}")
+        merged_conversions = {
+            conversion.identity: conversion for conversion in self.conversions
+        }
+        for conversion in validate_share_conversions(conversions):
+            previous = merged_conversions.setdefault(conversion.identity, conversion)
+            if previous != conversion:
+                raise ValueError(
+                    f"conflicting conversion revision: {conversion.identity}"
+                )
+        return replace(
+            self,
+            events=tuple(sorted(merged.values(), key=lambda e: e.identity)),
+            conversions=tuple(
+                sorted(merged_conversions.values(), key=lambda c: c.identity)
+            ),
+        )
 
     @property
     def receivable(self) -> float:
@@ -204,7 +255,9 @@ class DividendBook:
 
     def settle(self, day: str) -> tuple[DividendBook, float]:
         """Accrue at ex date and pay only when due, before trading that session."""
-        if not self.events or day == self.settled_day:
+        # Conversion-only books still advance the clock: announcement visibility
+        # and conversion idempotency are anchored to the settled/closed days.
+        if not (self.events or self.conversions) or day == self.settled_day:
             return self, 0.0
         if day < self.settled_day or day < self.closed_day:
             raise ValueError("dividend clock cannot move backwards")
@@ -311,14 +364,20 @@ class DividendBook:
 
     def close(self, day: str, holdings: Mapping[InstrumentId, int]) -> DividendBook:
         """Track net daily changes, then freeze record-date rights after trading."""
-        if not self.events or day == self.closed_day:
+        if not (self.events or self.conversions) or day == self.closed_day:
             return self
         if day < self.closed_day or day < self.settled_day:
             raise ValueError("dividend clock cannot move backwards")
         current = date.fromisoformat(day)
         lots, rights, entries = list(self.lots), list(self.rights), list(self.entries)
         payable = self.tax_payable
-        for iid in sorted({e.instrument_id for e in self.events}):
+        # Conversion instruments track acquisition lots too: a later cash
+        # distribution needs their record-date lineage in the post-conversion
+        # share scale.
+        for iid in sorted(
+            {e.instrument_id for e in self.events}
+            | {c.instrument_id for c in self.conversions}
+        ):
             previous = sum(lot.quantity for lot in lots if lot.instrument_id == iid)
             change = holdings.get(iid, 0) - previous
             if change > 0:

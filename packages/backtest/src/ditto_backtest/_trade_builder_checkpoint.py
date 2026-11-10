@@ -33,6 +33,7 @@ def trade_builder_to_payload(state: TradeBuilderStateSnapshot) -> dict[str, obje
     payload: dict[str, object] = {
         "counter": state.counter,
         "applied_distributions": list(state.applied_distributions),
+        "applied_conversions": list(state.applied_conversions),
         "method": state.method.value,
     }
     if state.method is TradeMatchingMethod.FIFO:
@@ -75,7 +76,13 @@ def trade_builder_from_payload(
         if strict:
             require_exact_keys(
                 data,
-                ("counter", "fifo_open_entries", "method", "applied_distributions"),
+                (
+                    "counter",
+                    "fifo_open_entries",
+                    "method",
+                    "applied_distributions",
+                    "applied_conversions",
+                ),
                 subject="trade builder",
             )
         entries = tuple(
@@ -87,12 +94,19 @@ def trade_builder_from_payload(
             method=method,
             counter=counter,
             applied_distributions=_payload_str_tuple(data, "applied_distributions"),
+            applied_conversions=_payload_str_tuple(data, "applied_conversions"),
             fifo_open_entries=entries,
         )
     if strict:
         require_exact_keys(
             data,
-            ("counter", "flat_to_flat_accumulators", "method", "applied_distributions"),
+            (
+                "counter",
+                "flat_to_flat_accumulators",
+                "method",
+                "applied_distributions",
+                "applied_conversions",
+            ),
             subject="trade builder",
         )
     accumulators = tuple(
@@ -107,6 +121,7 @@ def trade_builder_from_payload(
         method=method,
         counter=counter,
         applied_distributions=_payload_str_tuple(data, "applied_distributions"),
+        applied_conversions=_payload_str_tuple(data, "applied_conversions"),
         flat_to_flat_accumulators=accumulators,
     )
 

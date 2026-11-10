@@ -1,0 +1,15 @@
+{
+  "confirmed_at": "2026-11-10",
+  "confirmed_by": "Public issuer announcements reviewed for #762; see docs/evidence/etf-share-conversions-762.md",
+  "notes": "维护者确认的 ETF 份额折算（拆分/合并）声明。tushare 无折算事件接口（fund_div 明确不含折算），发行人公告是唯一权威口径；本文件不声明全域完整性——未声明的折算日仍被执行层因子跳变守卫 fail-closed 拒绝。ratio 为每 1 份旧份额折算为新份额的倍数（4.0 = 1 份折 4 份）。announcement_date 是 PIT 可知日（计划公告），effective_date 是除权日（账本事件日）。",
+  "conversions": [
+    {
+      "source_ticker": "159941.SZ",
+      "ratio": 4.0,
+      "announcement_date": "2022-06-29",
+      "effective_date": "2022-07-05",
+      "basis": "广发纳斯达克100ETF（159941.SZ）实施份额拆分业务并调整最小申购赎回单位：计划公告 2022-06-29《实施份额拆分业务并调整最小申购赎回单位的公告》；结果公告 2022-07-05 http://static.cninfo.com.cn/finalpage/2022-07-05/1213942300.PDF （含 06-29/06-30 前序公告引用）。拆分实施于 2022-07-04 收盘后，除权日 2022-07-05；1:4 拆分。二级市场交易正常办理；暂停的仅申赎（06-30..07-04，07-05 恢复）；最小申赎单位 100万→130万份。生产库核验：fund_share 07-04→07-05 353705.2541→1414821.0164 万份（精确 ×4）；bars 07-04 close=2.384 → 07-05 pre_close=0.596（=2.384/4 精确）；fund_adj 1.0→4.0；07-05 volume 5.39M 正常交易。",
+      "rounding_note": "1:4 整倍拆分、持有人份额恒整数、无碎份（3,537,052,541.00 → 14,148,210,164.00 份精确 ×4）"
+    }
+  ]
+}

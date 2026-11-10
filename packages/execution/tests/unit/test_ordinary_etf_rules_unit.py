@@ -193,3 +193,102 @@ def test_etf_cash_reconciles_source_factor_and_ex_price_without_accepting_folds(
                 cash_dividend=cash,
                 share_ratio=shares,
             )
+
+
+def _conversion_row(**overrides: object) -> dict[str, object]:
+    """159941.SZ 2022-07-05 1:4 split session as retained by the production store."""
+    row: dict[str, object] = {
+        "trade_date": "2022-07-05",
+        "_previous_close": 2.384,
+        "_previous_adj": 1.0,
+        "adj_factor": 4.0,
+        "pre_close": 0.596,
+        "volume": 5_390_000.0,
+    }
+    row.update(overrides)
+    return row
+
+
+def test_declared_conversion_reconciles_factor_jump_and_reference_price():
+    rules = _history(_facts("equity"), ["2022-07-05"])[0]
+    assert ordinary_execution_fields(
+        _conversion_row(), rules, start_date="2022-07-05", conversion_ratio=4.0
+    ) == {"limit_up": 0.656, "limit_down": 0.536, "is_suspended": False}
+    # A factor quantum of provider rounding stays explained at source precision.
+    assert (
+        ordinary_execution_fields(
+            _conversion_row(adj_factor=3.9999),
+            rules,
+            start_date="2022-07-05",
+            conversion_ratio=4.0,
+        )["limit_up"]
+        == 0.656
+    )
+    # No declared event, or the wrong one: the jump stays unexplained.
+    for kwargs, changed in [
+        ({}, {}),
+        ({"conversion_ratio": 2.0}, {}),
+        ({"conversion_ratio": 4.0}, {"adj_factor": 3.999}),
+        ({"conversion_ratio": 4.0}, {"adj_factor": 2.0}),
+    ]:
+        with pytest.raises(ValueError, match=r"corporate action|conversion"):
+            ordinary_execution_fields(
+                _conversion_row(**changed),
+                rules,
+                start_date="2022-07-05",
+                **kwargs,
+            )
+    # The published ex-rights reference must equal the rounded split price.
+    for changed in ({"pre_close": 0.5}, {"pre_close": 2.384}, {"pre_close": 0.597}):
+        with pytest.raises(ValueError, match="unverified ETF conversion reference"):
+            ordinary_execution_fields(
+                _conversion_row(**changed),
+                rules,
+                start_date="2022-07-05",
+                conversion_ratio=4.0,
+            )
+
+
+def test_zero_volume_published_row_valuates_without_trading():
+    rules = _history(_facts("equity"), ["2022-07-06"])[0]
+    halted = {
+        "trade_date": "2022-07-06",
+        "pre_close": 0.596,
+        "close": 0.596,
+        "volume": 0.0,
+    }
+    # An exchange-published zero-turnover row carries its own close and
+    # reference; orders reject on zero volume instead of failing the run.
+    assert ordinary_execution_fields(halted, rules, start_date="2022-07-06") == {
+        "limit_up": None,
+        "limit_down": None,
+        "is_suspended": False,
+    }
+    with pytest.raises(ValueError, match="unknown ETF suspension/valuation"):
+        ordinary_execution_fields(
+            {**halted, "volume": -1.0}, rules, start_date="2022-07-06"
+        )
+    with pytest.raises(ValueError, match="unknown ETF suspension/valuation"):
+        ordinary_execution_fields(
+            {**halted, "volume": None}, rules, start_date="2022-07-06"
+        )
+    with pytest.raises(ValueError, match="missing ETF limit inputs"):
+        ordinary_execution_fields(
+            {**halted, "pre_close": 0.0}, rules, start_date="2022-07-06"
+        )
+
+
+def test_same_day_conversion_and_cash_distribution_aborts_honestly():
+    """No verifier models the combined jump; this pin documents the refusal."""
+    rules = _history(_facts("equity"), ["2022-07-05"])[0]
+    # 2.384 close − 0.02 cash per share, then 1:4: neither single-event
+    # verifier can explain the compound reference/factor move together.
+    row = _conversion_row(pre_close=0.591)
+    with pytest.raises(ValueError, match=r"corporate action|unverified"):
+        ordinary_execution_fields(
+            row,
+            rules,
+            start_date="2022-07-05",
+            cash_dividend=0.02,
+            conversion_ratio=4.0,
+        )

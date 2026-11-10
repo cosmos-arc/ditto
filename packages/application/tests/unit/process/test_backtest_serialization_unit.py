@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime
+from typing import Any
 
 import orjson
+import pytest
 from ditto_application.processes.execution.backtest_serialization import (
     serialize_report,
 )
@@ -384,3 +387,88 @@ class TestSerializeReportEdgeCases:
         assert "fill_log" not in parquet_tables
         assert "nav" in parquet_tables
         assert "portfolio_stats" in parquet_tables
+
+
+class TestShareConversionStatement:
+    """折算事件进入持久化分红账本报表（#762）。"""
+
+    def _report_with_conversion(self) -> tuple[dict[str, Any], BacktestReport]:
+        from datetime import date, datetime
+
+        from ditto_kernel.order import OrderSide
+        from ditto_portfolio.accounting.account import Account
+        from ditto_portfolio.accounting.cash import CashBook
+        from ditto_portfolio.accounting.conversions import ShareConversion
+        from ditto_portfolio.accounting.fills import FillEvent
+
+        conversion = ShareConversion(
+            InstrumentId(2_000_941),
+            date(2022, 7, 5),
+            4.0,
+            date(2022, 6, 29),
+            "config:etf-share-conversions:snap1",
+            source_ticker="159941.SZ",
+        )
+        account = Account(cash=CashBook(10_000, 10_000, 0), conversions=(conversion,))
+        account.apply_fill(
+            FillEvent(
+                "2022-07-04",
+                "2022-07-04",
+                InstrumentId(2_000_941),
+                OrderSide.BUY,
+                100,
+                2.384,
+                0,
+                0,
+                datetime.fromisoformat("2022-07-04"),
+                100,
+                0,
+            ),
+            "2022-07-04",
+        )
+        account.thaw_position(InstrumentId(2_000_941), 100)
+        account.mark_to_market({InstrumentId(2_000_941): 2.384})
+        account.close_dividend_day("2022-07-04")
+        account.settle_dividends("2022-07-05")
+        account.apply_share_conversions("2022-07-05")
+        account.mark_to_market({InstrumentId(2_000_941): 0.596})
+        view = account.get_view()
+        report = _make_report()
+        report = replace(
+            report,
+            final_account_state=view,
+            account_series=(("2022-07-05", view),),
+        )
+        json_bytes, _ = serialize_report(report)
+        return orjson.loads(json_bytes), report
+
+    def test_conversion_events_and_entries_reach_the_report(self) -> None:
+        data, _ = self._report_with_conversion()
+        statement = data["dividend_statement"]
+        assert statement["conversions"] == [
+            {
+                "instrument_id": 2_000_941,
+                "effective_date": "2022-07-05",
+                "ratio": 4.0,
+                "announcement_date": "2022-06-29",
+                "source_snapshot_id": "config:etf-share-conversions:snap1",
+                "source_ticker": "159941.SZ",
+                "rounding_note": "",
+                "event_id": "2000941:2022-07-05",
+            }
+        ]
+        assert statement["entries"] == [
+            {
+                "event_id": "2000941:2022-07-05",
+                "day": "2022-07-05",
+                "kind": "share_conversion",
+                "amount": 0.0,
+                "quantity": 300,
+                "acquired": "",
+            }
+        ]
+        assert "份额折算" in statement["policy"]
+        (position,) = statement["balances"][0]["positions"]
+        assert position["source_ticker"] == "159941.SZ"
+        assert position["quantity"] == 400
+        assert position["average_cost"] == pytest.approx(0.596)

@@ -446,6 +446,7 @@ class TestBacktestCheckpoint:
             "trade_builder_state": {
                 "counter": 0,
                 "applied_distributions": [],
+                "applied_conversions": [],
                 "fifo_open_entries": [],
                 "method": "fifo",
             },
@@ -505,6 +506,7 @@ class TestBacktestCheckpoint:
             "trade_builder_state": {
                 "counter": 0,
                 "applied_distributions": [],
+                "applied_conversions": [],
                 "fifo_open_entries": [],
                 "method": "fifo",
             },

@@ -151,7 +151,24 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 						"share_credit",
 						"share_release",
 						"share_tax_payment",
+						"share_conversion",
 					].includes(entry.kind),
+			) ||
+			(dividends.conversions ?? []).some(
+				(conversion) =>
+					!Number.isSafeInteger(conversion.instrument_id) ||
+					conversion.instrument_id <= 0 ||
+					!conversion.source_snapshot_id ||
+					!conversion.event_id ||
+					!Number.isFinite(conversion.ratio) ||
+					conversion.ratio <= 0 ||
+					conversion.ratio === 1 ||
+					!(
+						conversion.announcement_date &&
+						conversion.effective_date &&
+						conversion.announcement_date < conversion.effective_date
+					) ||
+					!conversion.rounding_note,
 			))
 	)
 		throw new Error("分红账本金额或来源不一致，请重新读取报告。");
@@ -195,6 +212,16 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 		dividendStatement: dividends
 			? {
 					policy: dividends.policy,
+					conversions: (dividends.conversions ?? []).map((conversion) => ({
+						eventId: conversion.event_id,
+						instrumentId: conversion.instrument_id,
+						symbol: conversion.source_ticker || String(conversion.instrument_id),
+						source: conversion.source_snapshot_id,
+						announcement: conversion.announcement_date,
+						effective: conversion.effective_date,
+						ratio: conversion.ratio,
+						roundingNote: conversion.rounding_note,
+					})),
 					events: dividends.events.map((event) => ({
 						eventId: event.event_id,
 						assetClass: event.asset_class,

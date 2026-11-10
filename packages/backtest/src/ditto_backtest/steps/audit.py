@@ -51,6 +51,9 @@ class AuditStep:
         )
 
         self._trade_builder.apply_distributions(account_view.dividends)
+        self._trade_builder.apply_conversions(
+            account_view.dividends.conversions, day=ctx.time_context.trade_date
+        )
 
         # 记录每个 fill + 传给 trade_builder
         for fill in ctx.step_fills:

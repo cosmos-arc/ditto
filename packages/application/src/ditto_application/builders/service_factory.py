@@ -46,6 +46,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider, InstrumentRules
 from ditto_portfolio.accounting import Account, CashBook, Position
+from ditto_portfolio.accounting.conversions import ShareConversion
 from ditto_portfolio.accounting.dividends import Distribution
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
@@ -308,11 +309,13 @@ def _build_account(
     initial_cash: float,
     account_state: BacktestAccountStateSnapshot | None,
     dividends: tuple[Distribution, ...] = (),
+    conversions: tuple[ShareConversion, ...] = (),
 ) -> Account:
     """Build a mutable Account from initial cash or checkpoint state."""
     if account_state is None:
         return Account(
             dividends=dividends,
+            conversions=conversions,
             cash=CashBook(
                 available=initial_cash,
                 settled=initial_cash,
@@ -320,7 +323,12 @@ def _build_account(
             ),
         )
     return Account(
-        dividend_state=account_state.dividends,
+        # Checkpoints store the PIT-filtered view book; declarations announced
+        # after the checkpoint day must be re-merged or resume silently loses
+        # them (identity conflicts still rejected loudly).
+        dividend_state=account_state.dividends.merge_declarations(
+            dividends, conversions=conversions
+        ),
         positions={
             position.instrument_id: Position(
                 instrument_id=position.instrument_id,
@@ -757,6 +765,9 @@ class BacktestRuntimeBuilder:
                 dividends=historical_provider.cash_dividends
                 if historical_provider
                 else (),
+                conversions=historical_provider.share_conversions
+                if historical_provider
+                else (),
             ),
             order_book=_build_order_book(runtime_state),
             model=BrokerageModel(
@@ -888,6 +899,10 @@ class BacktestRuntimeBuilder:
             historical_provider.freeze_cash_dividends(
                 start=config.start_date, end=config.end_date
             )
+            if runtime.spec.asset_class == "etf":
+                historical_provider.freeze_share_conversions(
+                    start=config.start_date, end=config.end_date
+                )
         participation = None
         etf_reference = (
             historical_provider.freeze_etf_reference()
@@ -1068,6 +1083,9 @@ class BacktestRuntimeBuilder:
                 start_date=config.start_date,
                 participation=participation,
                 cash_dividends=historical_provider.cash_dividends
+                if historical_provider
+                else (),
+                share_conversions=historical_provider.share_conversions
                 if historical_provider
                 else (),
             ),
