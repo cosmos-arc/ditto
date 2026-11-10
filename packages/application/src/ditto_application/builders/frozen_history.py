@@ -314,7 +314,7 @@ class FrozenHistoryProvider:
             if financial and self._frames[dataset].is_empty():
                 raise AppBuilderError(
                     f"missing retained {dataset}: no disclosures frozen for "
-                    f"{sorted(scope)} ..{end}"
+                    + f"{sorted(scope)} ..{end}"
                 )
         if asset_class == "stock":
             self._freeze_suspension_anchors(start)
