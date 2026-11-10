@@ -17,6 +17,7 @@ from typing import Protocol
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import AccountView, FillEvent
+from ditto_portfolio.accounting.conversions import ShareConversion
 from ditto_portfolio.accounting.dividends import Distribution, DividendBook
 
 __all__ = [
@@ -112,6 +113,7 @@ class TradeBuilderStateSnapshot:
     method: TradeMatchingMethod
     counter: int
     applied_distributions: tuple[str, ...] = ()
+    applied_conversions: tuple[str, ...] = ()
     fifo_open_entries: tuple[FifoOpenEntrySnapshot, ...] = ()
     flat_to_flat_accumulators: tuple[FlatToFlatAccumulatorSnapshot, ...] = ()
 
@@ -125,6 +127,12 @@ class TradeBuilderStateSnapshot:
         ) or any(not identity for identity in self.applied_distributions):
             raise ValueError(
                 "trade builder distribution identities must be unique strings"
+            )
+        if len(set(self.applied_conversions)) != len(self.applied_conversions) or any(
+            not identity for identity in self.applied_conversions
+        ):
+            raise ValueError(
+                "trade builder conversion identities must be unique strings"
             )
         invalid_variant = (
             bool(self.flat_to_flat_accumulators)
@@ -150,6 +158,12 @@ class TradeBuilder(Protocol):
 
     def apply_distributions(self, book: DividendBook) -> None:
         """Synchronize credited shares before matching the session fills."""
+        ...
+
+    def apply_conversions(
+        self, conversions: tuple[ShareConversion, ...], *, day: str
+    ) -> None:
+        """Rescale open quantities once at each declared effective date."""
         ...
 
     def get_open_trades(self) -> tuple[TradeRecord, ...]:
@@ -208,6 +222,7 @@ class FifoTradeBuilder:
         self._closed: list[TradeRecord] = []
         self._counter = 0
         self._applied_distributions: set[str] = set()
+        self._applied_conversions: set[str] = set()
 
     # -- public API ---------------------------------------------------------
 
@@ -245,6 +260,25 @@ class FifoTradeBuilder:
                 sorted(queue, key=lambda e: e.entry_date)
             )
             self._applied_distributions.add(event.identity)
+
+    def apply_conversions(
+        self, conversions: tuple[ShareConversion, ...], *, day: str
+    ) -> None:
+        """Rescale open entry quantities and per-share costs, once per event."""
+        current = date.fromisoformat(day)
+        for conversion in conversions:
+            if (
+                conversion.identity in self._applied_conversions
+                or current < conversion.effective_date
+            ):
+                continue
+            for entry in self._open.get(conversion.instrument_id, ()):
+                entry.remaining_quantity = conversion.converted(
+                    entry.remaining_quantity
+                )
+                entry.original_quantity = conversion.converted(entry.original_quantity)
+                entry.entry_price /= conversion.ratio
+            self._applied_conversions.add(conversion.identity)
 
     def get_open_trades(self) -> tuple[TradeRecord, ...]:
         """获取当前未平仓交易。"""
@@ -304,6 +338,7 @@ class FifoTradeBuilder:
             method=TradeMatchingMethod.FIFO,
             counter=self._counter,
             applied_distributions=tuple(sorted(self._applied_distributions)),
+            applied_conversions=tuple(sorted(self._applied_conversions)),
             fifo_open_entries=entries,
         )
 
@@ -343,6 +378,7 @@ class FifoTradeBuilder:
         self._closed = []
         self._counter = snapshot.counter
         self._applied_distributions = set(snapshot.applied_distributions)
+        self._applied_conversions = set(snapshot.applied_conversions)
 
     # -- internals ----------------------------------------------------------
 
@@ -444,6 +480,7 @@ class FlatToFlatTradeBuilder:
         self._closed: list[TradeRecord] = []
         self._counter = 0
         self._applied_distributions: set[str] = set()
+        self._applied_conversions: set[str] = set()
 
     # -- public API ---------------------------------------------------------
 
@@ -499,6 +536,23 @@ class FlatToFlatTradeBuilder:
             acc.net_quantity += quantity
             acc.buy_quantity += quantity
             self._applied_distributions.add(event.identity)
+
+    def apply_conversions(
+        self, conversions: tuple[ShareConversion, ...], *, day: str
+    ) -> None:
+        """Rescale the open cycle's quantities; totals keep their CNY cost."""
+        current = date.fromisoformat(day)
+        for conversion in conversions:
+            if (
+                conversion.identity in self._applied_conversions
+                or current < conversion.effective_date
+            ):
+                continue
+            acc = self._accumulators.get(conversion.instrument_id)
+            if acc is not None and acc.net_quantity > 0:
+                acc.net_quantity = conversion.converted(acc.net_quantity)
+                acc.buy_quantity = conversion.converted(acc.buy_quantity)
+            self._applied_conversions.add(conversion.identity)
 
     def get_open_trades(self) -> tuple[TradeRecord, ...]:
         """获取当前未平仓交易（按品种 VWAP entry price）。"""
@@ -565,6 +619,7 @@ class FlatToFlatTradeBuilder:
             method=TradeMatchingMethod.FLAT_TO_FLAT,
             counter=self._counter,
             applied_distributions=tuple(sorted(self._applied_distributions)),
+            applied_conversions=tuple(sorted(self._applied_conversions)),
             flat_to_flat_accumulators=accumulators,
         )
 
@@ -603,6 +658,7 @@ class FlatToFlatTradeBuilder:
         self._closed = []
         self._counter = snapshot.counter
         self._applied_distributions = set(snapshot.applied_distributions)
+        self._applied_conversions = set(snapshot.applied_conversions)
 
     # -- internals ----------------------------------------------------------
 

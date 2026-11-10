@@ -5,7 +5,14 @@ from datetime import date
 import pytest
 from ditto_backtest.audit.collector import ExecutionAuditCollector
 from ditto_backtest.audit.state import ExecutionAuditStateSnapshot
-from ditto_backtest.result import BacktestAccountStateSnapshot
+from ditto_backtest.brokerage import BacktestBrokerage
+from ditto_backtest.result import (
+    BacktestAccountStateSnapshot,
+    BacktestFrozenQuantitySnapshot,
+    BacktestSettlementStateSnapshot,
+)
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
@@ -263,3 +270,85 @@ def test_fifo_attributes_whole_share_credit_across_fractional_cost_lots():
     assert None not in gross_pnls
     assert sum(pnl for pnl in gross_pnls if pnl is not None) == pytest.approx(0)
     assert sum(t.fees for t in builder.get_closed_trades()) == pytest.approx(3)
+
+
+def test_share_conversion_checkpoint_resume_never_converts_twice():
+    from ditto_portfolio.accounting.conversions import ShareConversion
+
+    conversion = ShareConversion(
+        InstrumentId(1),
+        date(2020, 6, 3),
+        4.0,
+        date(2020, 5, 28),
+        "config:etf-share-conversions:snap",
+    )
+    account = Account(
+        cash=CashBook(5000, 5000, 0),
+        positions={
+            InstrumentId(1): Position(InstrumentId(1), 100, 0, 2.384, 238.4, 0, 0, 0)
+        },
+        conversions=(conversion,),
+    )
+    brokerage = BacktestBrokerage(
+        account=account,
+        order_book=OrderBook(journal=InMemoryOrderEventJournal()),
+    )
+    # 100 shares bought on 06-02 stay T+1-frozen through the conversion open.
+    brokerage.restore_settlement_state(
+        BacktestSettlementStateSnapshot(
+            frozen_quantities=(
+                BacktestFrozenQuantitySnapshot(InstrumentId(1), "2020-06-03", 100),
+            )
+        )
+    )
+    brokerage.settle("2020-06-03")
+    position = account.positions[InstrumentId(1)]
+    assert position.quantity == 400
+    assert position.available_quantity == 400
+    assert position.average_cost == pytest.approx(2.384 / 4)
+    assert account.get_view().nav == pytest.approx(5000 + 400 * 2.384 / 4)
+
+    snapshot = BacktestAccountStateSnapshot.from_account_view(account.get_view())
+    restored = BacktestAccountStateSnapshot.from_json(snapshot.to_json())
+    assert restored.state_hash == snapshot.state_hash
+    assert restored.dividends.conversions == (conversion,)
+    assert restored.dividends.entries[-1].kind == "share_conversion"
+    resumed = Account(
+        cash=account.cash,
+        positions=dict(account.positions),
+        dividend_state=restored.dividends,
+    )
+    resumed.settle_dividends("2020-06-04")
+    resumed.apply_share_conversions("2020-06-04")
+    assert resumed.positions[InstrumentId(1)].quantity == 400
+
+
+def test_conflicting_conversion_checkpoint_fails_closed():
+    from ditto_portfolio.accounting.conversions import ShareConversion
+
+    conversion = ShareConversion(
+        InstrumentId(1),
+        date(2020, 6, 3),
+        4.0,
+        date(2020, 5, 28),
+        "config:etf-share-conversions:snap",
+    )
+    declared = {
+        "instrument_id": 1,
+        "effective_date": "2020-06-03",
+        "ratio": 4.0,
+        "announcement_date": "2020-05-28",
+        "source_snapshot_id": "config:etf-share-conversions:snap",
+        "source_ticker": "159941.SZ",
+        "rounding_note": "1:4 whole-split",
+    }
+    account = Account(cash=CashBook(10, 10, 0), conversions=(conversion,))
+    payload = BacktestAccountStateSnapshot.from_account_view(
+        account.get_view()
+    ).to_payload()
+    payload["dividends"]["conversions"] = [
+        declared,
+        {**declared, "ratio": 2.0},
+    ]
+    with pytest.raises(ValueError, match="conflicting conversion revision"):
+        BacktestAccountStateSnapshot.from_payload(payload)

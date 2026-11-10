@@ -36,6 +36,7 @@ from ditto_kernel.trading import (
     TradingRuleSet,
 )
 from ditto_portfolio.accounting import Account, AccountView, FillEvent, Position
+from ditto_portfolio.accounting.conversions import ShareConversion
 
 from ditto_backtest.result import BacktestSettlementStateSnapshot
 from ditto_backtest.simulation import BrokerageModel
@@ -175,6 +176,18 @@ class BacktestBrokerage:
         self._current_trade_date = trade_date
         self._thaw_frozen(trade_date)
         self._account.settle_dividends(trade_date)
+        for conversion in self._account.apply_share_conversions(trade_date):
+            self._scale_frozen_shares(conversion)
+
+    def _scale_frozen_shares(self, conversion: ShareConversion) -> None:
+        """Rescale pending settlement quantities to the converted share scale."""
+        by_date = self._frozen_quantities.get(conversion.instrument_id)
+        if not by_date:
+            return
+        self._frozen_quantities[conversion.instrument_id] = {
+            settle_date: conversion.converted(quantity)
+            for settle_date, quantity in by_date.items()
+        }
 
     def get_order_book(self) -> OrderBookReadOnly:
         """获取订单簿只读快照。"""
