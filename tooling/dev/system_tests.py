@@ -758,6 +758,25 @@ def main() -> int:
                 ),
             )
 
+            # Ordinary stock multi-factor selection consumes financial
+            # disclosures by publication time inside one frozen run (#765).
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.financial_factors_backtest_app:app",
+                        api_port,
+                    ),
+                    prefix="ditto-system-financial-factors-",
+                    spec="backtest-financial-factors.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             # The same two completed engine runs drive the catalog multi-run
             # NAV overlay with legend toggles and the metrics diff table
             # (#215 ②).
