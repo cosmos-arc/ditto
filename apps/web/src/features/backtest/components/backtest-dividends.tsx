@@ -2,6 +2,9 @@ import type { BacktestDividendStatement } from "../types";
 
 const money = (value: number) => value.toLocaleString("zh-CN", { maximumFractionDigits: 6 });
 const unit = (assetClass: string | undefined) => (assetClass === "etf" ? "份" : "股");
+const entryAssetClass = (statement: BacktestDividendStatement, eventId: string) =>
+	statement.events.find((event) => event.eventId === eventId)?.assetClass ??
+	(statement.conversions.some((conversion) => conversion.eventId === eventId) ? "etf" : undefined);
 const labels: Record<string, string> = {
 	receivable: "除息应收",
 	cash_payment: "分红到账",
@@ -10,6 +13,7 @@ const labels: Record<string, string> = {
 	share_credit: "送转计入总份额",
 	share_release: "送转股份上市可卖",
 	share_tax_payment: "送股初始扣税",
+	share_conversion: "份额折算（数量重标定）",
 };
 
 export function BacktestDividends({ statement }: { readonly statement: BacktestDividendStatement | null | undefined }) {
@@ -18,10 +22,23 @@ export function BacktestDividends({ statement }: { readonly statement: BacktestD
 	return (
 		<details className="mb-3 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-3 text-xs">
 			<summary className="cursor-pointer rounded-(--radius-sm) font-medium focus-visible:outline-2 focus-visible:outline-offset-4">
-				分红与送转账本（{statement.events.length} 个事件）
+				分红与送转账本（{statement.events.length + statement.conversions.length} 个事件）
 			</summary>
 			<p className="my-3">{statement.policy}</p>
 			<p>金额单位：人民币元（CNY）；日期：交易所当地日期。净资产 = 现金 + 应收 + 持仓市值 − 待扣税款。</p>
+			{statement.conversions.map((conversion) => (
+				<details key={conversion.eventId} className="my-3">
+					<summary className="cursor-pointer focus-visible:outline-2">
+						{conversion.symbol} · 份额折算 1 折 {money(conversion.ratio)} · 生效 {conversion.effective}
+					</summary>
+					<p>
+						实施公告 {conversion.announcement}；除权生效 {conversion.effective}。生效日开盘前总份额与可卖份额 ×
+						{money(conversion.ratio)}，总成本不变、平均成本重摊；无现金与税，当日净资产不变。
+					</p>
+					<p className="break-all">取整说明：{conversion.roundingNote}</p>
+					<p className="break-all">来源：{conversion.source}</p>
+				</details>
+			))}
 			{statement.events.map((event) => (
 				<details key={event.eventId} className="my-3">
 					<summary className="cursor-pointer focus-visible:outline-2">
@@ -47,9 +64,7 @@ export function BacktestDividends({ statement }: { readonly statement: BacktestD
 				{statement.entries.map((entry) => (
 					<li key={`${entry.eventId}-${entry.day}-${entry.kind}-${entry.acquired}`}>
 						{entry.day} · {labels[entry.kind]} · {money(entry.amount)} 元
-						{entry.quantity
-							? ` · ${entry.quantity} ${unit(statement.events.find((event) => event.eventId === entry.eventId)?.assetClass)}`
-							: ""}
+						{entry.quantity ? ` · ${entry.quantity} ${unit(entryAssetClass(statement, entry.eventId))}` : ""}
 						{entry.acquired ? ` · 取得日 ${entry.acquired}` : ""}
 					</li>
 				))}

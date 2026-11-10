@@ -88,6 +88,16 @@ export interface BacktestFeeStatement {
 
 export interface BacktestDividendStatement {
 	readonly policy: string;
+	readonly conversions: readonly {
+		readonly eventId: string;
+		readonly symbol: string;
+		readonly source: string;
+		readonly announcement: string;
+		readonly effective: string;
+		readonly ratio: number;
+		readonly roundingNote: string;
+		readonly instrumentId: number;
+	}[];
 	readonly events: readonly {
 		readonly eventId: string;
 		readonly assetClass: "stock" | "etf";
