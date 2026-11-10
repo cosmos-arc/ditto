@@ -649,7 +649,12 @@ class FrozenHistoryProvider:
         if dataset == "index_daily":
             return bars
         if dataset == "stock_daily":
-            self._reject_post_exit_quotes(bars)
+            self._reject_post_exit_quotes(bars, asset_class="stock")
+        if dataset == "etf_daily":
+            # ETF termination facts get the same conflict guard as stock
+            # delistings: a retained quote on/after the frozen exit day is a
+            # contradiction, not an executable price (#764).
+            self._reject_post_exit_quotes(bars, asset_class="etf")
         factors = self._range(
             "fund_adj" if self._asset_class == "etf" else "adj_factor", query
         )
@@ -693,7 +698,7 @@ class FrozenHistoryProvider:
                     pl.col("source_ticker").is_in(query.instruments)
                     & (pl.col("trade_date") < date.fromisoformat(query.start))
                 )
-                self._reject_post_exit_quotes(valuation_history)
+                self._reject_post_exit_quotes(valuation_history, asset_class="stock")
                 bars = stock_execution_bars(
                     bars,
                     self._range("stock_status", query),
@@ -729,14 +734,15 @@ class FrozenHistoryProvider:
             raise AppBuilderError("missing frozen execution adjustment factors")
         return bars
 
-    def _reject_post_exit_quotes(self, bars: pl.DataFrame) -> None:
+    def _reject_post_exit_quotes(self, bars: pl.DataFrame, *, asset_class: str) -> None:
         """
         Fail closed when retained quotes contradict a frozen exit fact.
 
         The roster's delist_date is the request's frozen exit fact. A quote on
         or after that day is a conflict between two retained sources, not an
         executable price; it must not silently enter the execution or signal
-        channels under the exit-day participation gate.
+        channels under the exit-day participation gate. ``asset_class`` binds
+        the guard to the channel's roster rows (stock_daily vs etf_daily).
         """
         exits = pl.DataFrame(
             [
@@ -746,7 +752,7 @@ class FrozenHistoryProvider:
                 }
                 for row in self.roster
                 if row.get("delist_date")
-                and str(row.get("asset_class", self._asset_class)) == "stock"
+                and str(row.get("asset_class", self._asset_class)) == asset_class
             ],
             schema={"source_ticker": pl.String, "delist_date": pl.String},
         )

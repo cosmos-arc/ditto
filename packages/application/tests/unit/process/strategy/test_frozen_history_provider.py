@@ -532,6 +532,35 @@ def test_frozen_exit_fact_rejects_quotes_on_or_after_delisting():
         )
 
 
+def test_frozen_etf_exit_fact_rejects_quotes_on_or_after_termination():
+    """The ETF channel enforces the same conflict the stock channel does."""
+    provider, _, _ = _provider()
+    provider.roster.append(
+        {
+            "instrument_id": int(_IID),
+            "list_date": "2014-01-01",
+            "delist_date": "2014-10-16",
+            "ticker": "510300",
+            "exchange": "SSE",
+            "asset_class": "etf",
+            "source_ticker": "510300.SH",
+            "effective_from": "2014-10-13",
+            "effective_to": None,
+        }
+    )
+    with pytest.raises(
+        AppBuilderError,
+        match=r"delisted instrument quoted after exit.*510300.SH.*2014-10-16",
+    ):
+        provider.get_bars(
+            BarQuery(
+                instruments=("510300.SH",),
+                start="2014-10-13",
+                end="2014-10-17",
+            )
+        )
+
+
 def test_quotes_before_the_frozen_exit_fact_still_reach_both_channels():
     provider, _, _ = _provider(stock=True)
     provider.roster.append(
@@ -550,6 +579,32 @@ def test_quotes_before_the_frozen_exit_fact_still_reach_both_channels():
     execution = provider.get_bars(
         BarQuery(
             instruments=("000001.SZ",),
+            start="2014-10-13",
+            end="2014-10-17",
+            with_execution_state=True,
+        )
+    )
+    assert execution.height == 5
+
+
+def test_etf_quotes_before_the_frozen_exit_fact_still_reach_both_channels():
+    provider, _, _ = _provider()
+    provider.roster.append(
+        {
+            "instrument_id": int(_IID),
+            "list_date": "2014-01-01",
+            "delist_date": "2014-10-18",
+            "ticker": "510300",
+            "exchange": "SSE",
+            "asset_class": "etf",
+            "source_ticker": "510300.SH",
+            "effective_from": "2014-10-13",
+            "effective_to": None,
+        }
+    )
+    execution = provider.get_bars(
+        BarQuery(
+            instruments=("510300.SH",),
             start="2014-10-13",
             end="2014-10-17",
             with_execution_state=True,
