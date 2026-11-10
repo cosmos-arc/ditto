@@ -101,7 +101,12 @@ test("delisted holding survives exit with evidenced anchor; missing final-status
 	await page.locator("summary").filter({ hasText: "请求与冻结来源" }).press("Enter");
 	const dates = page.getByLabel("逐日参与日期");
 	await dates.selectOption("2017-07-07");
-	await expect(page.getByRole("row", { name: /000033\.SZ.*已退出上市 2017-07-07; 持仓保留, 估值锚定 2017-07-06 收盘 1\.7 元/ })).toBeVisible();
+	const exitRow = page.getByRole("row", { name: /000033\.SZ.*已退出上市 2017-07-07; 持仓保留, 估值锚定 2017-07-06 收盘 1\.7 元/ });
+	await expect(exitRow).toBeVisible();
+	// The bounded ledger is keyboard-scrollable by design; a full-page raster
+	// clips it, so bring the row fully into view the way a reading user would.
+	await exitRow.scrollIntoViewIfNeeded();
+	await page.screenshot({ path: test.info().outputPath("delisting-exit-note.png"), fullPage: true });
 	await dates.focus();
 	await expect(dates).toBeFocused();
 
@@ -131,6 +136,7 @@ test("a missing exit fact fails closed and recovers through a new request identi
 	const failed = await request(page, failedId);
 	await page.reload();
 	await expect(page.getByText(/missing backtest member\/date inputs.*1005762.*2016-05-13/).first()).toBeVisible();
+	await page.screenshot({ path: test.info().outputPath("delisting-exit-fact-refused.png"), fullPage: true });
 
 	await page.request.post(`${apiOrigin}/system-fixture/delisting/repair-exit-fact`);
 
