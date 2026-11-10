@@ -37,7 +37,7 @@ ETF_SHARE_CONVERSION_FRAME_COLUMNS: tuple[str, ...] = (
     "rounding_note",
 )
 
-_FRAME_SCHEMA: dict[str, pl.DataType] = {
+_FRAME_SCHEMA: dict[str, type[pl.DataType]] = {
     "source_ticker": pl.String,
     "ratio": pl.Float64,
     "announcement_date": pl.String,

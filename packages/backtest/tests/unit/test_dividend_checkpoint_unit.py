@@ -1,6 +1,7 @@
 """Checkpoint and persisted report retain the same unspent entitlement."""
 
 from datetime import date
+from typing import Any
 
 import pytest
 from ditto_backtest.audit.collector import ExecutionAuditCollector
@@ -343,7 +344,7 @@ def test_conflicting_conversion_checkpoint_fails_closed():
         "rounding_note": "1:4 whole-split",
     }
     account = Account(cash=CashBook(10, 10, 0), conversions=(conversion,))
-    payload = BacktestAccountStateSnapshot.from_account_view(
+    payload: dict[str, Any] = BacktestAccountStateSnapshot.from_account_view(
         account.get_view()
     ).to_payload()
     payload["dividends"]["conversions"] = [

@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from datetime import date, datetime
+from typing import Any
 
 import pytest
 from ditto_kernel.identity import InstrumentId
@@ -15,8 +16,8 @@ from ditto_portfolio.accounting.fills import FillEvent
 _IID = InstrumentId(2_000_941)
 
 
-def _conversion(**overrides: object) -> ShareConversion:
-    facts: dict[str, object] = {
+def _conversion(**overrides: Any) -> ShareConversion:
+    facts: dict[str, Any] = {
         "instrument_id": _IID,
         "effective_date": date(2022, 7, 5),
         "ratio": 4.0,

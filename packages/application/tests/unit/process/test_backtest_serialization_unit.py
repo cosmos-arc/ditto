@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime
+from typing import Any
 
 import orjson
 import pytest
@@ -391,7 +392,7 @@ class TestSerializeReportEdgeCases:
 class TestShareConversionStatement:
     """折算事件进入持久化分红账本报表（#762）。"""
 
-    def _report_with_conversion(self) -> tuple[dict[str, object], BacktestReport]:
+    def _report_with_conversion(self) -> tuple[dict[str, Any], BacktestReport]:
         from datetime import date, datetime
 
         from ditto_kernel.order import OrderSide
