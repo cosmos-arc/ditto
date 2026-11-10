@@ -114,6 +114,8 @@ config/**/*.json
 !config/**/*.example.json
 # 维护者确认的 ETF 参考事实声明（#408）：版本化事实，非本地产物
 !config/default/etf_reference.json
+# 维护者确认的 ETF 份额折算声明（#762）：同上，公告为权威口径
+!config/default/etf_share_conversions.json
 
 # ===================================================================
 #                    Jupyter & IPython
