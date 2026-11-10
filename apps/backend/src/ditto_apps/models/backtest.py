@@ -394,10 +394,24 @@ class DividendEntryResponse(BaseModel):
         "share_credit",
         "share_release",
         "share_tax_payment",
+        "share_conversion",
     ]
     amount: float
     quantity: int
     acquired: str
+
+
+class DividendConversionResponse(BaseModel):
+    """A maintainer-declared exchange-traded fund share conversion (#762)."""
+
+    event_id: str
+    instrument_id: int
+    source_ticker: str
+    source_snapshot_id: str
+    announcement_date: str
+    effective_date: str
+    ratio: float
+    rounding_note: str
 
 
 class DividendPositionResponse(BaseModel):
@@ -428,6 +442,8 @@ class DividendStatementResponse(BaseModel):
     events: list[DividendEventResponse]
     entries: list[DividendEntryResponse]
     balances: list[DividendBalanceResponse]
+    # Reports saved before ETF share conversions existed hold none (#762).
+    conversions: list[DividendConversionResponse] = []
 
 
 class BacktestReportResponse(BaseModel):

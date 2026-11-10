@@ -14293,6 +14293,55 @@
         "title": "DividendBalanceResponse",
         "type": "object"
       },
+      "DividendConversionResponse": {
+        "description": "A maintainer-declared exchange-traded fund share conversion (#762).",
+        "properties": {
+          "announcement_date": {
+            "title": "Announcement Date",
+            "type": "string"
+          },
+          "effective_date": {
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "instrument_id": {
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "ratio": {
+            "title": "Ratio",
+            "type": "number"
+          },
+          "rounding_note": {
+            "title": "Rounding Note",
+            "type": "string"
+          },
+          "source_snapshot_id": {
+            "title": "Source Snapshot Id",
+            "type": "string"
+          },
+          "source_ticker": {
+            "title": "Source Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "instrument_id",
+          "source_ticker",
+          "source_snapshot_id",
+          "announcement_date",
+          "effective_date",
+          "ratio",
+          "rounding_note"
+        ],
+        "title": "DividendConversionResponse",
+        "type": "object"
+      },
       "DividendEntryResponse": {
         "properties": {
           "acquired": {
@@ -14319,7 +14368,8 @@
               "tax_payment",
               "share_credit",
               "share_release",
-              "share_tax_payment"
+              "share_tax_payment",
+              "share_conversion"
             ],
             "title": "Kind",
             "type": "string"
@@ -14497,6 +14547,14 @@
               "$ref": "#/components/schemas/DividendBalanceResponse"
             },
             "title": "Balances",
+            "type": "array"
+          },
+          "conversions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DividendConversionResponse"
+            },
+            "title": "Conversions",
             "type": "array"
           },
           "currency": {
