@@ -1,11 +1,2 @@
 schema: ditto.approved-breaks.v1
-breaks:
-  - fingerprint: 3b4f828ef06b
-    id: response-property-enum-value-added
-    approved-by: zcode (#762)
-    added: "2026-11-10"
-    note: >-
-      GET /api/v1/backtests/runs/{run_id}/report 的 DividendEntryResponse.kind 新增
-      share_conversion 枚举值（#762 ETF 份额折算账本条目）。报告为服务端持久化
-      单写产物，旧报告不含该 kind；严格客户端须将未知 kind 按无效报告处理
-      （Web 校验层已同步放行该值）。
+breaks: []
