@@ -50,7 +50,7 @@ def _retain(dataset: str, frame: pl.DataFrame) -> None:
     retain_history_payload(dataset, frame, period=_PERIOD)
 
 
-def _income(extra_b_rows: list[dict[str, object]] = ()) -> pl.DataFrame:
+def _income(extra_b_rows: list[dict[str, object]] | None = None) -> pl.DataFrame:
     rows: list[dict[str, object]] = [
         # A：运行窗口前已披露，全窗口可见 roe = 10 / 100 = 0.1。
         {
@@ -87,7 +87,7 @@ def _income(extra_b_rows: list[dict[str, object]] = ()) -> pl.DataFrame:
             "revenue": 100.0,
             "eps": 1.0,
         },
-        *extra_b_rows,
+        *(extra_b_rows or []),
     ]
     return pl.DataFrame(
         rows,
