@@ -18,6 +18,10 @@ from ditto_data.services.market_adjustment import adjust_retained_bars
 from ditto_data.services.market_status import stock_execution_bars
 from ditto_data.services.market_types import AdjType
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.accounting.conversions import (
+    ShareConversion,
+    validate_share_conversions,
+)
 from ditto_portfolio.accounting.dividends import Distribution
 
 from ditto_application.builders.data_provider import resolve_frozen_snapshot_rows
@@ -56,6 +60,7 @@ class FrozenHistoryProvider:
         self._asset_class = ""
         self._etf_reference: pl.DataFrame | None = None
         self.cash_dividends: tuple[Distribution, ...] = ()
+        self.share_conversions: tuple[ShareConversion, ...] = ()
 
     def freeze_cash_dividends(self, *, start: str, end: str) -> None:
         """Pin implementation facts selected by the raw announcement date."""
@@ -119,6 +124,96 @@ class FrozenHistoryProvider:
                 )
                 for row in selected.to_dicts()
             )
+        except ValueError as exc:
+            raise AppBuilderError(str(exc)) from exc
+
+    def freeze_share_conversions(self, *, start: str, end: str) -> None:
+        """
+        Pin maintainer-declared conversions effective inside the run window.
+
+        The declaration file is not a completeness claim: runs without any
+        retained declaration snapshot simply see no conversions, and any real
+        factor jump stays fail-closed in execution validation. Per-ticker the
+        latest declaration receipt at or before ``frozen_at`` wins.
+        """
+        candidates = [
+            replace(
+                s, observations=tuple(t for t in s.observations if t <= self.frozen_at)
+            )
+            for s in self._reader.list_snapshots(
+                dataset_id="etf_share_conversions", source="config"
+            )
+            if s.created_at <= self.frozen_at
+        ]
+        if not candidates:
+            self.share_conversions = ()
+            return
+        selected: dict[str, list[str]] = {}
+        snapshots = {s.snapshot_id: s for s in candidates}
+        for ticker in self.members:
+            latest = max(
+                (
+                    s
+                    for s in candidates
+                    if not s.source_ticker_scope or ticker in s.source_ticker_scope
+                ),
+                key=lambda s: (observed_at(s), s.snapshot_id),
+                default=None,
+            )
+            if latest is not None:
+                selected.setdefault(latest.snapshot_id, []).append(ticker)
+        conversions: list[ShareConversion] = []
+        for identity, tickers in selected.items():
+            frame = self._read_verified_snapshot(snapshots[identity])
+            required = {
+                "source_ticker",
+                "ratio",
+                "announcement_date",
+                "effective_date",
+                "basis",
+                "rounding_note",
+            }
+            if not required.issubset(frame.columns):
+                raise AppBuilderError(
+                    "etf_share_conversions retained payload lacks "
+                    + str(sorted(required - set(frame.columns)))
+                )
+            frame = (
+                frame.filter(pl.col("source_ticker").is_in(tickers))
+                .with_columns(
+                    pl.col("effective_date").cast(pl.String),
+                    pl.col("announcement_date").cast(pl.String),
+                    pl.col("ratio").cast(pl.Float64),
+                )
+                .filter(
+                    pl.col("effective_date").is_between(pl.lit(start), pl.lit(end))
+                    & pl.col("source_ticker").is_in(self._ticker_ids)
+                )
+            )
+            for row in frame.to_dicts():
+                try:
+                    conversions.append(
+                        ShareConversion(
+                            instrument_id=self._ticker_ids[row["source_ticker"]],
+                            effective_date=date.fromisoformat(
+                                str(row["effective_date"])
+                            ),
+                            ratio=float(row["ratio"]),
+                            announcement_date=date.fromisoformat(
+                                str(row["announcement_date"])
+                            ),
+                            source_snapshot_id=identity,
+                            source_ticker=str(row["source_ticker"]),
+                            rounding_note=str(row["rounding_note"]),
+                        )
+                    )
+                except ValueError as exc:
+                    raise AppBuilderError(str(exc)) from exc
+        try:
+            self.share_conversions = tuple(
+                sorted(conversions, key=lambda c: c.identity)
+            )
+            validate_share_conversions(self.share_conversions)
         except ValueError as exc:
             raise AppBuilderError(str(exc)) from exc
 

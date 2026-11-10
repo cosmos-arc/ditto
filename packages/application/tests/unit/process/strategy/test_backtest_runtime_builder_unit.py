@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, fields, replace
+from datetime import date
 from unittest.mock import MagicMock
 
 import pytest
@@ -821,3 +822,106 @@ def test_identity_failure_preserves_all_member_intervals_before_repair(missing):
     assert isinstance(repaired_roster, list)
     assert isinstance(original_roster, list)
     assert repaired_roster[0] == original_roster[0]
+
+
+class TestShareConversionTransform:
+    """ordinary_market_transform 的折算声明消费（#762）。"""
+
+    @staticmethod
+    def _split_frame():
+        import polars as pl
+
+        return pl.DataFrame(
+            {
+                "instrument_id": [2_000_001, 2_000_001],
+                "trade_date": ["2024-07-04", "2024-07-05"],
+                "knowledge_date": ["2024-07-05", "2024-07-06"],
+                "open": [2.384, 0.6],
+                "high": [2.4, 0.61],
+                "low": [2.37, 0.59],
+                "close": [2.384, 0.6],
+                "pre_close": [2.37, 0.596],
+                "volume": [1_000_000.0, 5_390_000.0],
+                "amount": [100_000.0, 200_000.0],
+                "adj_factor": [1.0, 4.0],
+                "source": ["tushare", "tushare"],
+                "source_ticker": ["510300.SH", "510300.SH"],
+                "source_snapshot_id": ["synthetic:1", "synthetic:1"],
+            }
+        )
+
+    def test_declared_conversion_session_passes_the_factor_guard(self) -> None:
+        from ditto_application.builders.ordinary_backtest import (
+            build_ordinary_rules,
+            ordinary_market_transform,
+        )
+        from ditto_portfolio.accounting.conversions import ShareConversion
+
+        rules = build_ordinary_rules(
+            make_metadata(),
+            [2_000_001],
+            asset_class="etf",
+            commission_rate=0.0003,
+            period=("2024-07-04", "2024-07-05"),
+        )
+        conversion = ShareConversion(
+            InstrumentId(2_000_001),
+            date(2024, 7, 5),
+            4.0,
+            date(2024, 6, 29),
+            "config:etf-share-conversions:synthetic",
+        )
+        result = ordinary_market_transform(
+            rules,
+            start_date="2024-07-04",
+            share_conversions=(conversion,),
+        )(self._split_frame())
+        assert result["limit_up"].to_list() == [2.607, 0.656]
+        assert result["limit_down"].to_list() == [2.133, 0.536]
+
+    def test_undeclared_conversion_session_still_fails_closed(self) -> None:
+        from ditto_application.builders.ordinary_backtest import (
+            build_ordinary_rules,
+            ordinary_market_transform,
+        )
+
+        rules = build_ordinary_rules(
+            make_metadata(),
+            [2_000_001],
+            asset_class="etf",
+            commission_rate=0.0003,
+            period=("2024-07-04", "2024-07-05"),
+        )
+        with pytest.raises(AppBuilderError, match="corporate action"):
+            ordinary_market_transform(rules, start_date="2024-07-04")(
+                self._split_frame()
+            )
+
+    def test_zero_volume_rows_keep_valuation_without_inventing_bands(self) -> None:
+        import polars as pl
+        from ditto_application.builders.ordinary_backtest import (
+            build_ordinary_rules,
+            ordinary_market_transform,
+        )
+
+        rules = build_ordinary_rules(
+            make_metadata(),
+            [2_000_001],
+            asset_class="etf",
+            commission_rate=0.0003,
+            period=("2024-07-04", "2024-07-05"),
+        )
+        frame = self._split_frame().with_columns(
+            pl.when(pl.col("trade_date") == "2024-07-05")
+            .then(0.0)
+            .otherwise(pl.col("volume"))
+            .alias("volume"),
+            pl.when(pl.col("trade_date") == "2024-07-05")
+            .then(0.596)
+            .otherwise(pl.col("close"))
+            .alias("close"),
+            pl.lit(1.0).alias("adj_factor"),
+        )
+        result = ordinary_market_transform(rules, start_date="2024-07-04")(frame)
+        assert result["limit_up"].to_list()[1] is None
+        assert result["volume"].to_list()[1] == 0.0
