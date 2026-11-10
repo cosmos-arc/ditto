@@ -508,6 +508,34 @@ def _cash_factor_matches(
     return abs(current - previous * ratio) <= tolerance
 
 
+def _conversion_factor_matches(
+    row: Mapping[str, object],
+    conversion_ratio: float,
+    factor_quantum: float,
+) -> bool:
+    """
+    Reconcile a declared share conversion against the factor jump.
+
+    The declared ratio is the authority; the fund_adj jump only verifies it
+    within the source's four-decimal precision. Never the reverse.
+    """
+    previous, current = row.get("_previous_adj"), row.get("adj_factor")
+    if not (
+        isfinite(conversion_ratio)
+        and conversion_ratio > 0
+        and conversion_ratio != 1
+        and isinstance(previous, (int, float))
+        and isfinite(previous)
+        and previous > 0
+        and isinstance(current, (int, float))
+        and isfinite(current)
+        and current > 0
+    ):
+        return False
+    tolerance = factor_quantum * (1 + conversion_ratio) / 2
+    return abs(current - previous * conversion_ratio) <= tolerance
+
+
 def ordinary_execution_fields(
     row: Mapping[str, object],
     rules: _InstrumentRules,
@@ -515,6 +543,7 @@ def ordinary_execution_fields(
     start_date: str,
     cash_dividend: float | None = None,
     share_ratio: float = 0.0,
+    conversion_ratio: float = 0.0,
 ) -> dict[str, float | bool | None]:
     """Validate daily execution state and derive verified ETF price bands."""
     definition, rule, _ = rules
@@ -522,17 +551,30 @@ def ordinary_execution_fields(
     if (
         day >= start_date
         and row.get("_previous_adj") is not None
-        and (cash_dividend is not None or row.get("adj_factor") != row["_previous_adj"])
+        and (
+            cash_dividend is not None
+            or conversion_ratio != 0
+            or row.get("adj_factor") != row["_previous_adj"]
+        )
         and not (
             (definition.asset_class == "stock" or share_ratio == 0)
-            and _cash_factor_matches(
-                row,
-                cash_dividend,
-                share_ratio,
-                definition.tick_size,
-                _STOCK_ADJ_FACTOR_QUANTUM
-                if definition.asset_class == "stock"
-                else _ETF_ADJ_FACTOR_QUANTUM,
+            and (
+                _cash_factor_matches(
+                    row,
+                    cash_dividend,
+                    share_ratio,
+                    definition.tick_size,
+                    _STOCK_ADJ_FACTOR_QUANTUM
+                    if definition.asset_class == "stock"
+                    else _ETF_ADJ_FACTOR_QUANTUM,
+                )
+                or _conversion_factor_matches(
+                    row,
+                    conversion_ratio,
+                    _STOCK_ADJ_FACTOR_QUANTUM
+                    if definition.asset_class == "stock"
+                    else _ETF_ADJ_FACTOR_QUANTUM,
+                )
             )
         )
     ):
@@ -541,9 +583,11 @@ def ordinary_execution_fields(
         )
     if definition.asset_class == "stock":
         return _stock_execution_fields(row, rules)
-    # Recorded turnover proves trading occurred; missing quotes cannot prove a halt.
+    # Recorded turnover proves trading occurred, and a published zero-volume
+    # row with its carried close is an exchange fact. Missing rows stay
+    # missing: absence cannot prove a halt either.
     volume, previous = row.get("volume"), row.get("pre_close")
-    if not isinstance(volume, (int, float)) or not isfinite(volume) or volume <= 0:
+    if not isinstance(volume, (int, float)) or not isfinite(volume) or volume < 0:
         raise ValueError(f"unknown ETF suspension/valuation: {iid} {day}")
     if (
         not isinstance(previous, (int, float))
@@ -563,6 +607,21 @@ def ordinary_execution_fields(
             )
         ):
             raise ValueError(f"unverified ETF ex reference: {iid} {day}")
+    if day >= start_date and conversion_ratio != 0:
+        close = row.get("_previous_close")
+        if (
+            not isinstance(close, (int, float))
+            or not isfinite(close)
+            or close <= 0
+            or previous
+            != round_to_tick(
+                Decimal(str(close)) / Decimal(str(conversion_ratio)),
+                definition.tick_size,
+            )
+        ):
+            raise ValueError(f"unverified ETF conversion reference: {iid} {day}")
+    if volume == 0:
+        return {"limit_up": None, "limit_down": None, "is_suspended": False}
     previous_decimal = Decimal(str(previous))
     band = Decimal(str(rule.price_limit_pct))
     return {
