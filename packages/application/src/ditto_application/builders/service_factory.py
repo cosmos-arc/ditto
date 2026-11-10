@@ -323,7 +323,12 @@ def _build_account(
             ),
         )
     return Account(
-        dividend_state=account_state.dividends,
+        # Checkpoints store the PIT-filtered view book; declarations announced
+        # after the checkpoint day must be re-merged or resume silently loses
+        # them (identity conflicts still rejected loudly).
+        dividend_state=account_state.dividends.merge_declarations(
+            dividends, conversions=conversions
+        ),
         positions={
             position.instrument_id: Position(
                 instrument_id=position.instrument_id,

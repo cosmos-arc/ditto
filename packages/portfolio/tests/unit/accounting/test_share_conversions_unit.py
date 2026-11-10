@@ -176,3 +176,42 @@ def test_view_hides_unannounced_conversions() -> None:
     assert account.get_view().dividends.conversions == ()
     account.settle_dividends("2022-07-05")
     assert account.get_view().dividends.conversions == (hidden,)
+
+
+def test_conversion_day_lots_rescale_without_phantom_acquisition() -> None:
+    """Lots keep their real acquisition dates; only quantity scales (#762 F2)."""
+    account = Account(cash=CashBook(10_000, 10_000, 0), conversions=(_conversion(),))
+    trade(account, "2022-07-04", OrderSide.BUY, 100, 2.384)
+    account.settle_dividends("2022-07-05")
+    account.apply_share_conversions("2022-07-05")
+    account.mark_to_market({_IID: 0.596})
+    account.close_dividend_day("2022-07-05")
+    # Lots are book-internal lineage (the PIT view only exposes lots for
+    # instruments with visible distributions), so assert on the book itself.
+    book = account._dividends
+    position = account.get_view().positions[_IID]
+    assert position.quantity == 400
+    assert [(lot.acquired, lot.quantity) for lot in book.lots] == [
+        (date(2022, 7, 4), 400)
+    ]
+    assert sum(lot.quantity for lot in book.lots) == position.quantity
+
+
+def test_merge_declarations_restores_pit_filtered_book() -> None:
+    """Resume must re-union declarations the checkpoint view dropped (#762 F1)."""
+    conversion = _conversion()
+    account = Account(cash=CashBook(10_000, 10_000, 0), conversions=(conversion,))
+    trade(account, "2022-06-28", OrderSide.BUY, 100, 2.4)
+    # Checkpoint book on/before the announcement day: the PIT view dropped
+    # the conversion, but runtime state (lots, entries, clock) is live.
+    filtered = account.get_view().dividends
+    assert conversion not in filtered.conversions
+    restored = filtered.merge_declarations((), conversions=(conversion,))
+    assert restored.conversions == (conversion,)
+    assert restored.lots == filtered.lots
+    assert restored.entries == filtered.entries
+    assert restored.settled_day == filtered.settled_day
+    assert restored.closed_day == filtered.closed_day
+    # Conflicting re-declaration of the same identity is still rejected.
+    with pytest.raises(ValueError, match="conflicting conversion revision"):
+        restored.merge_declarations((), conversions=(_conversion(ratio=2.0),))

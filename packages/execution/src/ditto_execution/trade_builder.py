@@ -552,6 +552,9 @@ class FlatToFlatTradeBuilder:
             if acc is not None and acc.net_quantity > 0:
                 acc.net_quantity = conversion.converted(acc.net_quantity)
                 acc.buy_quantity = conversion.converted(acc.buy_quantity)
+                # Proceeds are CNY and unchanged; scaling sold quantity keeps
+                # exit_vwap on the post-conversion share scale.
+                acc.sell_quantity = conversion.converted(acc.sell_quantity)
             self._applied_conversions.add(conversion.identity)
 
     def get_open_trades(self) -> tuple[TradeRecord, ...]:

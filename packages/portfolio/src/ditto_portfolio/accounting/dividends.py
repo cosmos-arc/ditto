@@ -203,6 +203,43 @@ class DividendBook:
             conversions=validate_share_conversions(conversions),
         )
 
+    def merge_declarations(
+        self,
+        events: tuple[Distribution, ...],
+        *,
+        conversions: tuple[ShareConversion, ...] = (),
+    ) -> DividendBook:
+        """
+        Union provider-frozen declarations back into a restored book.
+
+        A checkpoint captures the PIT-filtered view book, so declarations
+        announced after the checkpoint day are absent on resume. Effective
+        dates always follow announcement dates, so re-adding them here cannot
+        re-settle anything already past; runtime state (lots, rights, entries,
+        clock) is preserved verbatim.
+        """
+        merged = {event.identity: event for event in self.events}
+        for event in events:
+            previous = merged.setdefault(event.identity, event)
+            if previous != event:
+                raise ValueError(f"conflicting dividend revision: {event.identity}")
+        merged_conversions = {
+            conversion.identity: conversion for conversion in self.conversions
+        }
+        for conversion in validate_share_conversions(conversions):
+            previous = merged_conversions.setdefault(conversion.identity, conversion)
+            if previous != conversion:
+                raise ValueError(
+                    f"conflicting conversion revision: {conversion.identity}"
+                )
+        return replace(
+            self,
+            events=tuple(sorted(merged.values(), key=lambda e: e.identity)),
+            conversions=tuple(
+                sorted(merged_conversions.values(), key=lambda c: c.identity)
+            ),
+        )
+
     @property
     def receivable(self) -> float:
         """Net declared cash earned but not yet payable."""
@@ -334,7 +371,13 @@ class DividendBook:
         current = date.fromisoformat(day)
         lots, rights, entries = list(self.lots), list(self.rights), list(self.entries)
         payable = self.tax_payable
-        for iid in sorted({e.instrument_id for e in self.events}):
+        # Conversion instruments track acquisition lots too: a later cash
+        # distribution needs their record-date lineage in the post-conversion
+        # share scale.
+        for iid in sorted(
+            {e.instrument_id for e in self.events}
+            | {c.instrument_id for c in self.conversions}
+        ):
             previous = sum(lot.quantity for lot in lots if lot.instrument_id == iid)
             change = holdings.get(iid, 0) - previous
             if change > 0:

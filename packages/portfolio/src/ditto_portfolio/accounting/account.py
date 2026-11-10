@@ -243,6 +243,7 @@ class Account:
         applied: list[ShareConversion] = []
         entries = list(book.entries)
         positions = dict(self._positions)
+        lots = list(book.lots)
         for conversion in book.conversions:
             if current < conversion.effective_date or any(
                 entry.event_id == conversion.identity
@@ -268,6 +269,15 @@ class Account:
                     quantity - (held.quantity if held else 0),
                 )
             )
+            # Lots keep their real acquisition dates; only their quantity
+            # scales, so the daily close never fabricates a phantom lot for
+            # the conversion delta.
+            lots = [
+                replace(lot, quantity=conversion.converted(lot.quantity))
+                if lot.instrument_id == conversion.instrument_id
+                else lot
+                for lot in lots
+            ]
             if held is not None:
                 positions[conversion.instrument_id] = replace(
                     held,
@@ -277,7 +287,7 @@ class Account:
                 )
             applied.append(conversion)
         self._positions = positions
-        self._dividends = replace(book, entries=tuple(entries))
+        self._dividends = replace(book, entries=tuple(entries), lots=tuple(lots))
         return tuple(applied)
 
     def close_dividend_day(self, day: str) -> None:

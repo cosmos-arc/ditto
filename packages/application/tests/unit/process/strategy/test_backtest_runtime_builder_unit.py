@@ -925,3 +925,46 @@ class TestShareConversionTransform:
         result = ordinary_market_transform(rules, start_date="2024-07-04")(frame)
         assert result["limit_up"].to_list()[1] is None
         assert result["volume"].to_list()[1] == 0.0
+
+
+class TestResumeMergesDeclarations:
+    """Checkpoint views are PIT-filtered; resume must re-union declarations."""
+
+    def test_resume_account_remerges_conversions_dropped_by_pit_view(self) -> None:
+        from datetime import date
+
+        from ditto_application.builders.service_factory import _build_account
+        from ditto_portfolio.accounting.conversions import ShareConversion
+        from ditto_portfolio.accounting.dividends import DividendBook
+
+        conversion = ShareConversion(
+            InstrumentId(2_000_941),
+            date(2022, 7, 5),
+            4.0,
+            date(2022, 6, 29),
+            "config:etf-share-conversions:snap1",
+        )
+        # Checkpoint captured on the announcement day: the view book never
+        # saw the conversion, and without a merge resume would drop it forever.
+        state = BacktestAccountStateSnapshot(
+            cash_available=1_000_000.0,
+            cash_settled=1_000_000.0,
+            cash_frozen=0.0,
+            total_value=1_000_000.0,
+            nav=1_000_000.0,
+            exposure=0.0,
+            dividends=DividendBook(closed_day="2022-06-29", settled_day="2022-06-29"),
+        )
+        account = _build_account(
+            initial_cash=1_000_000.0,
+            account_state=state,
+            conversions=(conversion,),
+        )
+        # The next session makes the merged declaration visible and effective
+        # instead of silently losing the rescale forever; the restored clock
+        # (closed/settled day) is preserved verbatim through the merge.
+        account.settle_dividends("2022-06-30")
+        view = account.get_view().dividends
+        assert view.conversions == (conversion,)
+        assert view.closed_day == "2022-06-29"
+        assert view.settled_day == "2022-06-30"

@@ -276,3 +276,19 @@ def test_zero_volume_published_row_valuates_without_trading():
         ordinary_execution_fields(
             {**halted, "pre_close": 0.0}, rules, start_date="2022-07-06"
         )
+
+
+def test_same_day_conversion_and_cash_distribution_aborts_honestly():
+    """No verifier models the combined jump; this pin documents the refusal."""
+    rules = _history(_facts("equity"), ["2022-07-05"])[0]
+    # 2.384 close − 0.02 cash per share, then 1:4: neither single-event
+    # verifier can explain the compound reference/factor move together.
+    row = _conversion_row(pre_close=0.591)
+    with pytest.raises(ValueError, match=r"corporate action|unverified"):
+        ordinary_execution_fields(
+            row,
+            rules,
+            start_date="2022-07-05",
+            cash_dividend=0.02,
+            conversion_ratio=4.0,
+        )
