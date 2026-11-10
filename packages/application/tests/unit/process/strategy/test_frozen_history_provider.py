@@ -553,6 +553,42 @@ def test_quotes_before_the_frozen_exit_fact_still_reach_both_channels():
     assert execution.height == 5
 
 
+def test_exit_conflict_in_the_pre_window_valuation_slice_is_rejected():
+    """A post-exit quote before the query start must not become an anchor."""
+    provider, _, _ = _provider(stock=True)
+    provider.roster.append(
+        {
+            "instrument_id": int(_IID),
+            "list_date": "2014-01-01",
+            "delist_date": "2014-10-14",
+            "ticker": "000001",
+            "exchange": "SZSE",
+            "asset_class": "stock",
+            "source_ticker": "000001.SZ",
+            "effective_from": "2014-10-13",
+            "effective_to": None,
+        }
+    )
+    # Retained quotes stop on the frozen exit day; the queried window lies
+    # entirely after it, so only the pre-start valuation slice can leak the
+    # conflicting row into suspension anchoring.
+    provider._frames["stock_daily"] = provider._frames["stock_daily"].filter(
+        pl.col("trade_date") <= date(2014, 10, 14)
+    )
+    with pytest.raises(
+        AppBuilderError,
+        match=r"delisted instrument quoted after exit.*000001.SZ.*2014-10-14",
+    ):
+        provider.get_bars(
+            BarQuery(
+                instruments=("000001.SZ",),
+                start="2014-10-15",
+                end="2014-10-17",
+                with_execution_state=True,
+            )
+        )
+
+
 def test_etf_rule_versions_freeze_from_current_receipt_without_backdating():
     facts = pl.DataFrame(
         {

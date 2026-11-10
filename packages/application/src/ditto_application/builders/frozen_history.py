@@ -606,14 +606,19 @@ class FrozenHistoryProvider:
         """Require exact daily execution factors, status and price limits."""
         if self._asset_class == "stock":
             try:
+                # The pre-start slice feeds suspension anchoring; a conflicting
+                # post-exit quote must fail closed here too, not only inside
+                # the queried window (get_bars runs the same guard).
+                valuation_history = self._frames["stock_daily"].filter(
+                    pl.col("source_ticker").is_in(query.instruments)
+                    & (pl.col("trade_date") < date.fromisoformat(query.start))
+                )
+                self._reject_post_exit_quotes(valuation_history)
                 bars = stock_execution_bars(
                     bars,
                     self._range("stock_status", query),
                     self._range("stock_limit", query),
-                    valuation_history=self._frames["stock_daily"].filter(
-                        pl.col("source_ticker").is_in(query.instruments)
-                        & (pl.col("trade_date") < date.fromisoformat(query.start))
-                    ),
+                    valuation_history=valuation_history,
                 )
                 bars = cash_adjusted_suspension_marks(
                     bars,
