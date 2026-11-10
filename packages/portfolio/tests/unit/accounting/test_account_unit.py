@@ -218,6 +218,36 @@ class TestAccountMarkToMarket:
         assert account.cash.available == pytest.approx(1000.0)
         assert account.get_view().nav == pytest.approx(2200.0)
 
+    def test_exit_held_position_without_quote_keeps_last_mark(self) -> None:
+        """No quote keeps the exit-held asset: no removal, zeroing or liquidation."""
+        account = Account(
+            cash=CashBook(available=1000.0, settled=1000.0, frozen=0.0),
+            positions={
+                _INSTRUMENT: Position(
+                    instrument_id=_INSTRUMENT,
+                    quantity=300,
+                    available_quantity=300,
+                    average_cost=1.5,
+                    market_value=510.0,
+                    unrealized_pnl=60.0,
+                    realized_pnl=0.0,
+                    total_fees=3.0,
+                ),
+            },
+        )
+
+        account.mark_to_market({_INSTRUMENT_OTHER: 99.0})
+
+        pos = account.positions[_INSTRUMENT]
+        assert pos.quantity == 300
+        assert pos.market_value == pytest.approx(510.0)
+        assert pos.unrealized_pnl == pytest.approx(60.0)
+        assert account.cash.available == pytest.approx(1000.0)
+        assert account.cash.settled == pytest.approx(1000.0)
+        view = account.get_view()
+        assert view.nav == pytest.approx(1510.0)
+        assert _INSTRUMENT in view.positions
+
 
 class TestAccountThawPosition:
     """Settlement thaw updates only availability and tolerates closed positions."""
