@@ -205,7 +205,7 @@ market_context 请求校验三序 `publication <= knowledge <= as_of`
 
 ### 财务因子按披露锚参与选股（#765）
 
-股票多因子普通历史运行逐会话消费冻结的 `income_statement`/`balance_sheet` 披露行：会话 knowledge_date 早于披露锚（`f_ann_date`→载荷 `knowledge_date`）时因子缺失、不参与该因子排序，公告日起取当时可见版本；报告期（`report_date`）早于会话不构成可知性；同一报告期多次披露按当时可见最新披露版本收敛，披露锚晚于运行终点的行不进入冻结帧（未来哨兵）。运行保存的 `historical_inputs` 含两表快照身份与真实 receipt，作为公布、修订及来源边界。
+股票多因子普通历史运行逐会话消费冻结的 `income_statement`/`balance_sheet` 披露行：会话 knowledge_date 早于披露锚（`f_ann_date`→载荷 `knowledge_date`）时因子缺失、不参与该因子排序，公告日起取当时可见版本；报告期（`report_date`）早于会话不构成可知性；同一报告期多次披露按当时可见最新披露版本收敛，披露锚晚于运行终点的行不进入冻结帧（未来哨兵）。披露锚与快照拉取日是两个时间轴：财务冻结按（证券, 报告期, 披露锚）直接归并全部可见快照 payload（同键晚观察快照胜出，对齐活车道 #628 收敛），不按拉取日窗解析逐格 lineage——跨周末公告等只出现在后续拉取 payload 的披露行不会被静默剔除（#765 F1）。运行保存的 `historical_inputs` 含两表快照身份与真实 receipt，作为公布、修订及来源边界。
 
 股票历史冻结在运行范围内一份披露都冻不到时显式拒绝（`missing retained income_statement/balance_sheet`），不再静默空帧成全现金运行；补证走 #751 恢复入口，重跑产生新身份，旧运行报告不变。行业分类尚未进入历史冻结输入（`sector_id` 仅活车道注入），按当时生效版本参与历史选股留档于 #801。固定样例旅程、真实库代表案例与已知边界见 [验收记录](../evidence/financial-factors-765.md)。
 

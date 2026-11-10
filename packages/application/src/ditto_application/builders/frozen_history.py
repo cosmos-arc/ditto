@@ -31,6 +31,10 @@ from ditto_application.builders.data_provider import resolve_frozen_snapshot_row
 from ditto_application.catalog_freshness import observed_at
 from ditto_application.exceptions import AppBuilderError
 
+# 财务披露数据集：披露锚（公告日）与快照拉取窗是两个时间轴，冻结按披露键
+# 直接归并全部可见 payload（#765 F1），不随其余数据集走拉取窗格子 lineage。
+_FINANCIAL_DATASETS = frozenset({"income_statement", "balance_sheet"})
+
 
 class FrozenHistoryProvider:
     """
@@ -445,6 +449,8 @@ class FrozenHistoryProvider:
             raise AppBuilderError(
                 f"missing retained {dataset}: {sorted(scope)} {start}..{end}"
             )
+        if dataset in _FINANCIAL_DATASETS:
+            return self._merge_financial_payloads(dataset, candidates, scope, end)
         first = date.fromisoformat(start or min(s.request_start for s in candidates))
         if coverage_start is not None:
             first = min(first, date.fromisoformat(coverage_start))
@@ -480,6 +486,72 @@ class FrozenHistoryProvider:
         if not frames:
             raise AppBuilderError(f"no consumable retained {dataset}: {start}..{end}")
         return pl.concat(frames, how="diagonal_relaxed")
+
+    def _merge_financial_payloads(
+        self,
+        dataset: str,
+        candidates: tuple[ProviderSnapshot, ...],
+        scope: dict[str, InstrumentId],
+        end: str,
+    ) -> pl.DataFrame:
+        """
+        Merge every visible financial payload by its disclosure key (#765 F1).
+
+        Financial snapshots mix window shapes: quarter backfills carry wide
+        announcement-date windows while daily pulls carry single pull-day
+        windows whose payloads still hold disclosures announced on other days
+        (weekend earnings included). Row lineage therefore cannot resolve
+        through "a window contains the announcement day" — cells outside every
+        window would silently drop those disclosures. Instead each visible
+        payload contributes its in-scope rows directly; the same disclosure
+        key re-observed by a later snapshot wins (aligning with the live
+        lane's #628 convergence, where the freshest visible version decides).
+        Rows announced after the run end never enter (future sentinel).
+        """
+        disclosed = date.fromisoformat(end)
+        frames: list[pl.DataFrame] = []
+        for snapshot in sorted(
+            candidates, key=lambda item: (observed_at(item), item.snapshot_id)
+        ):
+            frame = self._read_verified_snapshot(snapshot)
+            missing = {"source_ticker", "knowledge_date", "report_date"} - set(
+                frame.columns
+            )
+            if missing:
+                raise AppBuilderError(
+                    f"{dataset} retained payload lacks {sorted(missing)}"
+                )
+            frame = (
+                frame.with_columns(
+                    pl.col("knowledge_date").cast(pl.Date),
+                    pl.col("report_date").cast(pl.Date),
+                    pl.lit(snapshot.source).alias("source"),
+                    pl.lit(snapshot.snapshot_id).alias("source_snapshot_id"),
+                )
+                .filter(
+                    pl.col("source_ticker").is_in(sorted(scope))
+                    & (pl.col("knowledge_date") <= pl.lit(disclosed))
+                )
+                .with_columns(
+                    pl.col("source_ticker")
+                    .replace_strict(
+                        {ticker: int(iid) for ticker, iid in scope.items()},
+                        return_dtype=pl.Int64,
+                    )
+                    .alias("instrument_id"),
+                )
+            )
+            frames.append(frame)
+        if not frames:
+            raise AppBuilderError(
+                f"missing retained {dataset}: {sorted(scope)} ..{end}"
+            )
+        merged = pl.concat(frames, how="diagonal_relaxed").unique(
+            subset=["source_ticker", "report_date", "knowledge_date"],
+            keep="last",
+            maintain_order=True,
+        )
+        return merged.sort(["source_ticker", "report_date", "knowledge_date"])
 
     def _read_selected_snapshot(
         self,

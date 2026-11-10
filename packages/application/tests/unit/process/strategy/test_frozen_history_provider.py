@@ -20,7 +20,12 @@ from ditto_data.catalog.contracts import DataAssetRef
 from ditto_data.catalog.snapshot_reader import SnapshotContents, SnapshotReadService
 from ditto_data.catalog.source_snapshot import ProviderSnapshot, ProviderSnapshotDraft
 from ditto_data.provider import BarQuery
+from ditto_data.storage.fundamental.financial.income_statement_reader import (
+    IncomeStatementReader,
+)
+from ditto_data.storage.fundamental.specs import INCOME_STATEMENT_SPEC
 from ditto_kernel.identity import InstrumentId
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 pytestmark = pytest.mark.pit
 _RECEIPT = datetime(2026, 11, 9, tzinfo=UTC)
@@ -756,8 +761,16 @@ def _financial_matrix_provider(
     balance_rows: list[dict[str, object]] | None = None,
     end: str = _RUN_END,
     omit_financial_snapshots: bool = False,
+    financial_snapshots: list[tuple[str, str, pl.DataFrame, pl.DataFrame]]
+    | None = None,
 ) -> FrozenHistoryProvider:
-    """Build one frozen stock provider around a disclosure-row matrix."""
+    """Build one frozen stock provider around a disclosure-row matrix.
+
+    ``financial_snapshots`` overrides the default single wide financial window
+    with explicit ``(request_start, request_end, income, balance)`` snapshot
+    payloads — used to reproduce the production window shapes (quarter
+    backfill wide windows vs single-day pull windows).
+    """
     days = [
         day
         for day in pl.date_range(
@@ -835,6 +848,9 @@ def _financial_matrix_provider(
     if omit_financial_snapshots:
         frames.pop("income_statement")
         frames.pop("balance_sheet")
+    if financial_snapshots is not None:
+        frames.pop("income_statement")
+        frames.pop("balance_sheet")
     for index, (dataset, frame) in enumerate(frames.items()):
         snapshot = ProviderSnapshot.create(
             ProviderSnapshotDraft(
@@ -857,6 +873,37 @@ def _financial_matrix_provider(
         contents[snapshot.snapshot_id] = SnapshotContents(
             snapshot, None, _RECEIPT, frame
         )
+    for offset, (request_start, request_end, income, balance) in enumerate(
+        financial_snapshots or []
+    ):
+        for dataset, frame in (
+            ("income_statement", income),
+            ("balance_sheet", balance),
+        ):
+            snapshot = ProviderSnapshot.create(
+                ProviderSnapshotDraft(
+                    dataset_id=dataset,
+                    source="tushare",
+                    request_start=request_start,
+                    request_end=request_end,
+                    schema_version=f"{dataset}.v1",
+                    checksum=f"{len(snapshots) + offset + 64:032x}",
+                    canonical_asset=DataAssetRef(dataset, "market"),
+                    request_parameters_hash=f"{len(snapshots) + offset + 64:032x}",
+                    response_metadata=(),
+                    row_count=frame.height,
+                    payload_uri=f"{dataset}-{offset}-window.parquet",
+                    payload_retained=True,
+                    # 观察时刻随 offset 递增但都落在冻结时点之前：
+                    # 晚观察快照在同披露键上胜出（frozen_at=_RECEIPT）。
+                    created_at=_RECEIPT
+                    - timedelta(minutes=len(financial_snapshots or []) - offset),
+                )
+            )
+            snapshots.append(snapshot)
+            contents[snapshot.snapshot_id] = SnapshotContents(
+                snapshot, None, snapshot.created_at, frame
+            )
     reader = MagicMock(spec=SnapshotReadService)
     reader.list_snapshots.side_effect = lambda **kw: tuple(
         s for s in snapshots if s.dataset_id == kw.get("dataset_id", s.dataset_id)
@@ -962,6 +1009,184 @@ def test_future_disclosure_sentinel_never_enters_any_run_session():
     # 哨兵行从未进入冻结帧：冻结网格止于运行终点。
     frozen = provider._frames["income_statement"]
     assert frozen.filter(pl.col("knowledge_date") == date(2026, 12, 31)).is_empty()
+
+
+def test_cross_weekend_disclosure_in_pull_only_snapshots_enters_freeze():
+    """F1 回归：单日拉取窗内的跨周末公告不得被窗 lineage 静默剔除。
+
+    生产形态：季度回补快照是宽公告日窗，日线增量快照窗=拉取日。公告日为
+    非交易日（如周六 2026-10-31 的三季报）只出现在之后的单日拉取 payload
+    里——窗不覆盖该公告日格。冻结必须按披露键直接归并全部候选 payload，
+    不得依赖「拉取日窗包含公告日」，否则该披露静默缺失、缺证门不触发。
+    """
+    h1 = {
+        "source_ticker": _FIN_TICKER,
+        "report_date": date(2026, 6, 30),
+        "knowledge_date": date(2026, 8, 28),
+        "net_profit": 100.0,
+        "revenue": 1000.0,
+        "eps": 1.0,
+    }
+    # 周六公告的 Q3 报告：只存在于周一 11-02 拉取快照 payload。
+    q3 = {
+        "source_ticker": _FIN_TICKER,
+        "report_date": date(2026, 9, 30),
+        "knowledge_date": date(2026, 10, 31),
+        "net_profit": 199.0,
+        "revenue": 1000.0,
+        "eps": 2.0,
+    }
+    income_schema = {
+        "source_ticker": pl.String,
+        "report_date": pl.Date,
+        "knowledge_date": pl.Date,
+        "net_profit": pl.Float64,
+        "revenue": pl.Float64,
+        "eps": pl.Float64,
+    }
+    balance_schema = {
+        "source_ticker": pl.String,
+        "report_date": pl.Date,
+        "knowledge_date": pl.Date,
+        "net_assets": pl.Float64,
+    }
+
+    def _balance(rows: list[dict[str, object]]) -> pl.DataFrame:
+        return pl.DataFrame(
+            [
+                {
+                    "source_ticker": row["source_ticker"],
+                    "report_date": row["report_date"],
+                    "knowledge_date": row["knowledge_date"],
+                    "net_assets": 1000.0,
+                }
+                for row in rows
+            ],
+            schema=balance_schema,
+        )
+
+    # 晚到拉取快照同键重发 H1（修正值 101.0）——最新观察快照胜出。
+    h1_reissued = {**h1, "net_profit": 101.0}
+    provider = _financial_matrix_provider(
+        [],
+        financial_snapshots=[
+            # 8 月宽窗回补：覆盖 H1 公告日。
+            (
+                "2026-08-01",
+                "2026-08-31",
+                pl.DataFrame([h1], schema=income_schema),
+                _balance([h1]),
+            ),
+            # 11-02 单日拉取窗：payload 含周六 10-31 公告的 Q3 与重发的 H1。
+            (
+                "2026-11-02",
+                "2026-11-02",
+                pl.DataFrame([q3, h1_reissued], schema=income_schema),
+                _balance([q3, h1]),
+            ),
+        ],
+    )
+    frozen = provider._frames["income_statement"]
+    # Q3 行必须进入冻结帧（当前窗 lineage 剔除 → 红）。
+    q3_rows = frozen.filter(pl.col("report_date") == date(2026, 9, 30))
+    assert q3_rows.height == 1
+    assert q3_rows["knowledge_date"].to_list() == [date(2026, 10, 31)]
+    # 同披露键跨快照去重：晚观察快照的修正值胜出。
+    h1_rows = frozen.filter(pl.col("report_date") == date(2026, 6, 30))
+    assert h1_rows.height == 1
+    assert h1_rows["net_profit"].to_list() == [101.0]
+    # 公告前 as-of 仍只看见 H1（修正后版本）。
+    before = provider.get_income_statement(int(_FIN_IID), date(2026, 10, 30))
+    assert before is not None
+    assert before["report_date"].to_list() == [date(2026, 6, 30)]
+    assert before["net_profit"].to_list() == [101.0]
+    # 公告日 as-of 起消费 Q3（报告期更新即最新可见版本）。
+    after = provider.get_income_statement(int(_FIN_IID), date(2026, 10, 31))
+    assert after is not None
+    assert after["report_date"].to_list() == [date(2026, 9, 30)]
+    assert after["net_profit"].to_list() == [199.0]
+
+
+def test_dirty_future_report_period_pins_lane_gates(tmp_path):
+    """F2 对照：报告期晚于披露锚的脏行在两车道的既定门控（#765 留证）。
+
+    活车道 SQLite 读取器（#628 收敛）闸门是 (knowledge_date, effective_from,
+    effective_to) 版本轴，不含 report_date<=as_of；脏行（report_date 晚于
+    knowledge_date）在其版本区间内可见并按 report_date 倒序居首。冻结车道
+    ``_financial`` 另有 report_date<=asof 门，同一脏行被剔除——保守侧，未来
+    报告期不参与历史因子。上游 ``_dedupe_fina_disclosure_key`` 去重后当前
+    无可观察差异；两侧语义由此钉住，如需统一收敛另立票裁决。
+    """
+    dirty = {
+        "source_ticker": _FIN_TICKER,
+        "report_date": date(2026, 12, 31),
+        "knowledge_date": date(2026, 10, 31),
+        "net_profit": 777.0,
+        "revenue": 1000.0,
+        "eps": 7.0,
+    }
+    clean = {
+        "source_ticker": _FIN_TICKER,
+        "report_date": date(2026, 6, 30),
+        "knowledge_date": date(2026, 8, 28),
+        "net_profit": 100.0,
+        "revenue": 1000.0,
+        "eps": 1.0,
+    }
+    provider = _financial_matrix_provider([dirty, clean])
+    frozen_visible = provider.get_income_statement(int(_FIN_IID), date(2026, 11, 6))
+    assert frozen_visible is not None
+    assert frozen_visible["report_date"].to_list() == [date(2026, 6, 30)]
+    assert frozen_visible["net_profit"].to_list() == [100.0]
+
+    # 活车道：同一行集写入真实 SQLite 读模型，#628 读取器无 report_date 门。
+    pool = SQLitePool(str(tmp_path / "live.sqlite"))
+    try:
+        client = SQLiteClient(pool)
+        pool.get_connection().execute(
+            """CREATE TABLE IF NOT EXISTS income_statement (
+            instrument_id INTEGER NOT NULL,
+            report_date DATE NOT NULL,
+            knowledge_date DATE NOT NULL,
+            effective_from DATE NOT NULL,
+            effective_to DATE,
+            revenue REAL,
+            operating_revenue REAL,
+            operating_profit REAL,
+            net_profit REAL,
+            eps REAL,
+            PRIMARY KEY (instrument_id, report_date, effective_from)
+        )"""
+        )
+        insert = (
+            "INSERT INTO income_statement VALUES "
+            "(?, ?, ?, ?, NULL, ?, NULL, NULL, ?, ?)"
+        )
+        pool.get_connection().executemany(
+            insert,
+            [
+                (
+                    int(_FIN_IID),
+                    row["report_date"].isoformat(),
+                    row["knowledge_date"].isoformat(),
+                    row["knowledge_date"].isoformat(),
+                    row["revenue"],
+                    row["net_profit"],
+                    row["eps"],
+                )
+                for row in (dirty, clean)
+            ],
+        )
+        live = IncomeStatementReader(INCOME_STATEMENT_SPEC, client).get(
+            int(_FIN_IID), date(2026, 11, 6)
+        )
+        assert live.height == 2
+        # 定序（report_date 倒序）使脏行居首——快照闭包取首行即得脏值；
+        # 这是活车道既定语义，与冻结车道的剔除构成钉住的对照。
+        # （SQLite DATE 列读回为 ISO 字符串。）
+        assert live["report_date"].to_list() == ["2026-12-31", "2026-06-30"]
+    finally:
+        pool.close_all()
 
 
 def _freeze_without_financial_evidence(evidence: str) -> None:
