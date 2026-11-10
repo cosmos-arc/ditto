@@ -46,7 +46,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider, InstrumentRules
 from ditto_portfolio.accounting import Account, CashBook, Position
-from ditto_portfolio.accounting.dividends import StockDistribution
+from ditto_portfolio.accounting.dividends import Distribution
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -307,7 +307,7 @@ def _build_account(
     *,
     initial_cash: float,
     account_state: BacktestAccountStateSnapshot | None,
-    dividends: tuple[StockDistribution, ...] = (),
+    dividends: tuple[Distribution, ...] = (),
 ) -> Account:
     """Build a mutable Account from initial cash or checkpoint state."""
     if account_state is None:
@@ -885,10 +885,9 @@ class BacktestRuntimeBuilder:
                 ).isoformat(),
                 include_fundamentals=runtime.spec.asset_class == "stock",
             )
-            if runtime.spec.asset_class == "stock":
-                historical_provider.freeze_cash_dividends(
-                    start=config.start_date, end=config.end_date
-                )
+            historical_provider.freeze_cash_dividends(
+                start=config.start_date, end=config.end_date
+            )
         participation = None
         etf_reference = (
             historical_provider.freeze_etf_reference()

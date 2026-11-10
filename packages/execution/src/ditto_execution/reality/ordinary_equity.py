@@ -462,11 +462,17 @@ def ordinary_equity_rules(
     )
 
 
-_ADJ_FACTOR_QUANTUM = 0.001
+# Source factor precision: stock adj_factor keeps three decimals, fund_adj four.
+_STOCK_ADJ_FACTOR_QUANTUM = 0.001
+_ETF_ADJ_FACTOR_QUANTUM = 0.0001
 
 
 def _cash_factor_matches(
-    row: Mapping[str, object], cash: float | None, shares: float, tick: float
+    row: Mapping[str, object],
+    cash: float | None,
+    shares: float,
+    tick: float,
+    factor_quantum: float,
 ) -> bool:
     """Reconcile independently declared cash against the rounded ex reference."""
     close, previous, current = (
@@ -496,9 +502,9 @@ def _cash_factor_matches(
     if reference <= 0:
         return False
     ratio = close / reference
-    # Retained Tushare factors have three decimal places. Bound both input
-    # roundings, rather than using an arbitrary percentage tolerance.
-    tolerance = _ADJ_FACTOR_QUANTUM * (1 + ratio) / 2
+    # Bound both input roundings at the source precision: adj_factor has
+    # three decimal places, fund_adj four. Never infer the event from factors.
+    tolerance = factor_quantum * (1 + ratio) / 2
     return abs(current - previous * ratio) <= tolerance
 
 
@@ -518,9 +524,15 @@ def ordinary_execution_fields(
         and row.get("_previous_adj") is not None
         and (cash_dividend is not None or row.get("adj_factor") != row["_previous_adj"])
         and not (
-            definition.asset_class == "stock"
+            (definition.asset_class == "stock" or share_ratio == 0)
             and _cash_factor_matches(
-                row, cash_dividend, share_ratio, definition.tick_size
+                row,
+                cash_dividend,
+                share_ratio,
+                definition.tick_size,
+                _STOCK_ADJ_FACTOR_QUANTUM
+                if definition.asset_class == "stock"
+                else _ETF_ADJ_FACTOR_QUANTUM,
             )
         )
     ):
@@ -540,6 +552,17 @@ def ordinary_execution_fields(
         or rule.price_limit_pct is None
     ):
         raise ValueError(f"missing ETF limit inputs: {iid} {day}")
+    if day >= start_date and cash_dividend is not None:
+        close = row.get("_previous_close")
+        if (
+            not isinstance(close, (int, float))
+            or not isfinite(close)
+            or previous
+            != round_to_tick(
+                Decimal(str(close)) - Decimal(str(cash_dividend)), definition.tick_size
+            )
+        ):
+            raise ValueError(f"unverified ETF ex reference: {iid} {day}")
     previous_decimal = Decimal(str(previous))
     band = Decimal(str(rule.price_limit_pct))
     return {

@@ -56,6 +56,62 @@ def _client_mock(mocker, responses: dict[str, pl.DataFrame]):
     return client
 
 
+@pytest.mark.pit
+@pytest.mark.parametrize(("end", "expected"), [("2014-01-15", 0), ("2014-01-16", 1)])
+def test_fund_dividend_uses_trading_identity_and_later_publication(
+    mocker, end, expected
+):
+    client = _client_mock(
+        mocker,
+        {
+            "etf_basic": _etf_basic_response(),
+            "fund_div": pl.DataFrame(
+                {
+                    "ts_code": [_ETF],
+                    "ann_date": ["20140115"],
+                    "imp_anndate": ["20140116"],
+                    "div_proc": ["实施"],
+                    "record_date": ["20140120"],
+                    "ex_date": ["20140121"],
+                    "pay_date": ["20140127"],
+                    "div_cash": [0.048],
+                }
+            ),
+        },
+    )
+    frame = ETFTushareAdapter(_client=client).fetch_etf_dividend(
+        source_ticker=_ETF, start_date="2014-01-01", end_date=end
+    )
+    assert frame.height == expected
+    if expected:
+        row = frame.row(0, named=True)
+        assert row["source_ticker"] == _ETF
+        assert row["gross_dividend_per_share"] == 0.048
+        assert row["stock_dividend_ratio"] == 0
+        assert row["knowledge_date"] == row["effective_from"] == date(2014, 1, 16)
+        assert (row["record_date"], row["ex_dividend_date"], row["pay_date"]) == (
+            date(2014, 1, 20),
+            date(2014, 1, 21),
+            date(2014, 1, 27),
+        )
+
+
+@pytest.mark.pit
+def test_fund_dividend_empty_response_keeps_numeric_schema(mocker):
+    """空公告载荷的数值列必须是 Float64，否则下游 is_finite 校验崩成非 ValueError。"""
+    client = _client_mock(
+        mocker,
+        {"etf_basic": _etf_basic_response(), "fund_div": pl.DataFrame()},
+    )
+    frame = ETFTushareAdapter(_client=client).fetch_etf_dividend(
+        source_ticker=_ETF, start_date="2014-01-01", end_date="2026-01-01"
+    )
+    assert frame.is_empty()
+    assert frame.schema["stock_dividend_ratio"] == pl.Float64
+    assert frame.schema["taxable_share_income"] == pl.Float64
+    assert frame.schema["knowledge_date"] == pl.Date
+
+
 class TestFundDailyUniverseIntersection:
     """fund_daily 按日拉取与 etf_basic universe 交集（#513）."""
 
@@ -281,3 +337,38 @@ class TestFundShareAdapter:
         assert rows["510300.SH"]["fd_share"] == pytest.approx(2411958.77)
         assert rows["510300.SH"]["exchange"] == "SH"
         assert rows["510300.SH"]["knowledge_date"] == date(2026, 10, 1)
+
+
+@pytest.mark.parametrize("bad", ["ticker", "announcement", "implementation", "daily"])
+def test_fund_dividend_refuses_ambiguous_identity_publication_and_daily_coverage(
+    mocker, bad
+):
+    response = pl.DataFrame(
+        {
+            "ts_code": [_ETF if bad != "ticker" else _LOF],
+            "ann_date": ["20140115" if bad != "announcement" else None],
+            "imp_anndate": ["20140115" if bad != "implementation" else None],
+            "div_proc": ["实施"],
+            "record_date": ["20140120"],
+            "ex_date": ["20140121"],
+            "pay_date": ["20140127"],
+            "div_cash": [0.048],
+        }
+    )
+    adapter = ETFTushareAdapter(
+        _client=_client_mock(
+            mocker,
+            {
+                "etf_basic": _etf_basic_response(),
+                "fund_div": response,
+            },
+        )
+    )
+    if bad == "daily":
+        with pytest.raises(ValueError, match="require ticker"):
+            adapter.fetch_etf_dividend(trade_date="2014-01-15")
+    else:
+        with pytest.raises(SourceFetchError, match="Failed to fetch etf_dividend"):
+            adapter.fetch_etf_dividend(
+                source_ticker=_ETF, start_date="2014-01-01", end_date="2014-01-31"
+            )

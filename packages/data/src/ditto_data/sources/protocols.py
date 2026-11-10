@@ -132,6 +132,16 @@ class MarketFetcher(Protocol):
         """获取 ETF/基金单位净值（#483）."""
         ...
 
+    def fetch_etf_dividend(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """获取 ETF 场内现金分红公告事实."""
+        ...
+
     def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
         """获取股票交易状态."""
         ...

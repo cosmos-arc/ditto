@@ -486,6 +486,21 @@ class TushareSource:
             end_date=end_date,
         )
 
+    def fetch_etf_dividend(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Fetch source-backed exchange ETF cash distributions."""
+        return self._etf.fetch_etf_dividend(
+            trade_date=trade_date,
+            source_ticker=source_ticker,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
     def fetch_fund_nav(
         self,
         trade_date: str | None = None,

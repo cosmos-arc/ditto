@@ -1523,6 +1523,7 @@ class IngestionDataWriter:
             Dataset.INCOME_STATEMENT: self._fundamental_store.save_income_statement,
             Dataset.CASH_FLOW: self._fundamental_store.save_cash_flow,
             Dataset.DIVIDEND: self._fundamental_store.save_dividend,
+            Dataset.ETF_DIVIDEND: self._fundamental_store.save_dividend,
             Dataset.CORPORATE_ACTIONS: self._fundamental_store.save_corporate_actions,
         }
         # #521/#522：parquet 追加观察行，签名带 year/on_duplicate，分表分发

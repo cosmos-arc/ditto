@@ -843,3 +843,31 @@ def test_new_dataset_routes_dispatch_to_stores(
     dispatched = [name for store, name in calls if getattr(store, name).call_count == 1]
     assert dispatched, f"{dataset} did not dispatch to any store"
     assert result.rows_written == 1
+
+
+def test_etf_cash_source_uses_shared_facts_with_distinct_catalog_identity(
+    data_writer,
+    mock_metadata_service,
+    mock_fundamental_store,
+):
+    mock_metadata_service.instrument.resolve_instrument_ids_batch.return_value = {
+        "510300.SH": 2_000_001
+    }
+    frame = pl.DataFrame(
+        {
+            "source_ticker": ["510300.SH"],
+            "knowledge_date": [date(2014, 1, 15)],
+            "implementation_date": [date(2014, 1, 15)],
+            "record_date": [date(2014, 1, 20)],
+            "ex_dividend_date": [date(2014, 1, 21)],
+            "pay_date": [date(2014, 1, 27)],
+            "gross_dividend_per_share": [0.048],
+            "stock_dividend_ratio": [0.0],
+            "div_proc": ["实施"],
+        }
+    )
+    result = data_writer.write_data("etf_dividend", frame, "2014-01-15")
+    saved = mock_fundamental_store.save_dividend.call_args.args[0]
+    assert saved["instrument_id"].to_list() == [2_000_001]
+    assert saved["gross_dividend_per_share"].to_list() == [0.048]
+    assert result.file_path == "etf_dividend/2014"

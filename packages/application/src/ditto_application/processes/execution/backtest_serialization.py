@@ -585,16 +585,29 @@ def _dividend_statement(report: BacktestReport) -> dict[str, object] | None:
     ):
         return None
     book = report.final_account_state.dividends
-    return {
-        "currency": "CNY",
-        "policy": "个人普通流通 A 股研究假设: 按日终净变动先进先出。"
+    stock_policy = (
+        "个人普通流通 A 股研究假设: 按日终净变动先进先出。"
         + "按自然月/年计税。"
         + "2013 起先扣 5%, 2015-09-08 起先扣 0%。"
         + "卖出日预留补税, 下一交易日扣款。"
         + "除息应收在派息日前不可再投资; 保留计算精度。"
         + "不模拟券商分币舍入。送转保留总成本, 除权日起计入总份额, "
         + "按公告上市日释放可卖份额; 新增股份以除权日记取得日。"
-        + "非整数权益需实际零碎股分配依据, 不能静默取整。",
+        + "非整数权益需实际零碎股分配依据, 不能静默取整。"
+    )
+    return {
+        "currency": "CNY",
+        "policy": (
+            (stock_policy if any(e.asset_class == "stock" for e in book.events) else "")
+            + (
+                "ETF 现金分红研究假设: 依据财税(2002)128号, "
+                + "个人投资者基金分配收入暂免所得税。"
+                + "以每份人民币金额登记权益; 除息应收在公告派息日前不可再投资。"
+                + "保留计算精度, 不模拟券商分币舍入。"
+                if any(e.asset_class == "etf" for e in book.events)
+                else ""
+            )
+        ),
         "events": [
             {
                 **dataclasses.asdict(event),

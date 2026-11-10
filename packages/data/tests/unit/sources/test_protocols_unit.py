@@ -113,6 +113,15 @@ class _StubMarketFetcher:
     ) -> pl.DataFrame:
         return pl.DataFrame()
 
+    def fetch_etf_dividend(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        return pl.DataFrame()
+
     def fetch_fund_nav(
         self,
         trade_date: str | None = None,

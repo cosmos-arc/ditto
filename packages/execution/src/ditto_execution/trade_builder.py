@@ -17,7 +17,7 @@ from typing import Protocol
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import AccountView, FillEvent
-from ditto_portfolio.accounting.dividends import DividendBook, StockDistribution
+from ditto_portfolio.accounting.dividends import Distribution, DividendBook
 
 __all__ = [
     "FifoOpenEntrySnapshot",
@@ -679,7 +679,7 @@ def _require_counter_covers_trade_ids(counter: int, trade_ids: tuple[str, ...]) 
 
 def _pending_distributions(
     book: DividendBook, applied: set[str]
-) -> tuple[tuple[StockDistribution, int], ...]:
+) -> tuple[tuple[Distribution, int], ...]:
     events = {event.identity: event for event in book.events}
     return tuple(
         (events[entry.event_id], entry.quantity)
@@ -690,7 +690,7 @@ def _pending_distributions(
 
 def _distribute_fifo(
     queue: deque[_OpenEntry],
-    event: StockDistribution,
+    event: Distribution,
     quantity: int,
     next_id: Callable[[], str],
 ) -> None:

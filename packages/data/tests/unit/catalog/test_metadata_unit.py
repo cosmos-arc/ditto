@@ -264,6 +264,7 @@ class TestDefaultMetadataMaturityAssignments:
 
     EXPERIMENTAL: ClassVar[frozenset[str]] = frozenset(
         {
+            "etf_dividend",
             "cash_flow",
             "dividend",
             "valuation_metrics",
@@ -559,6 +560,7 @@ class TestR2DataProductContracts:
     )
     DEFERRED_SCOPE: ClassVar[frozenset[str]] = frozenset(
         {
+            "etf_dividend",
             "margin_trading",
             "pledge_ratio",
             "fx_daily",
@@ -677,3 +679,17 @@ class TestR2DataProductContracts:
                 schema_version="market.other.v1",
                 dataset_spec=stock_spec,
             )
+
+
+def test_etf_dividend_declares_only_complete_instrument_coverage():
+    registry = default_dataset_metadata()
+    meta = registry.get("etf_dividend")
+    assert meta is not None
+    assert meta.asset_class == "etf"
+    assert meta.ingestion_granularities == ("instrument",)
+    assert meta.dataset_spec is not None
+    assert meta.dataset_spec.primary_key == (
+        "instrument_id",
+        "ex_dividend_date",
+        "effective_from",
+    )

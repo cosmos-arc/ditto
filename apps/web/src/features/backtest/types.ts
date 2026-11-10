@@ -90,6 +90,7 @@ export interface BacktestDividendStatement {
 	readonly policy: string;
 	readonly events: readonly {
 		readonly eventId: string;
+		readonly assetClass: "stock" | "etf";
 		readonly symbol: string;
 		readonly source: string;
 		readonly announcement: string;

@@ -100,10 +100,10 @@ def retain_history_payload(
         pool.close_all()
 
 
-def retain_empty_dividends(period: tuple[str, str]) -> None:
+def retain_empty_dividends(period: tuple[str, str], dataset: str = "dividend") -> None:
     """Declare a completed empty announcement response for a synthetic window."""
     retain_history_payload(
-        "dividend",
+        dataset,
         pl.DataFrame(
             schema={
                 "source_ticker": pl.String,
@@ -147,6 +147,7 @@ def _daily(tickers: tuple[str, ...]) -> pl.DataFrame:
 
 def _seed_history() -> None:
     today = datetime.now(UTC).date().isoformat()
+    retain_empty_dividends(("1990-01-01", today), "etf_dividend")
     retain_history_payload(
         "etf_reference",
         EtfReferenceConfigSource(

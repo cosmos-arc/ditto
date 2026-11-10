@@ -21,6 +21,7 @@ from ditto_data.sources.tushare.processors.mappings import (
     FUND_ADJ_MAPPING,
     FUND_SHARE_MAPPING,
 )
+from ditto_data.sources.tushare.processors.mappings.capital import ETF_DIVIDEND_MAPPING
 from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
 
 # 日更滚动回看窗：QDII 净值公布 T+1/T+2，7 天覆盖节假日顺延（#483）
@@ -238,6 +239,54 @@ class ETFTushareAdapter(BaseTushareAdapter):
                 dropped_code_count=len(dropped_codes),
             )
         return kept
+
+    def fetch_etf_dividend(
+        self,
+        trade_date: str | None = None,
+        source_ticker: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> pl.DataFrame:
+        """Read fund_div cash facts under the ETF's actual exchange ticker."""
+        # ann_date alone cannot prove coverage of later implementation dates.
+        # Fetch the instrument's complete history, then apply knowledge bounds.
+        if trade_date or not source_ticker or not start_date or not end_date:
+            raise ValueError("ETF dividends require ticker and announcement bounds")
+        start, end = date.fromisoformat(start_date), date.fromisoformat(end_date)
+        if start > end:
+            raise ValueError(
+                "ETF dividend history requires ordered announcement bounds"
+            )
+        self._require_etf_ticker(source_ticker, "etf_dividend")
+        with tushare_fetch_error_handler("etf_dividend", "fund_div"):
+            response = self._client.query(
+                api_name="fund_div",
+                fields="ts_code,ann_date,imp_anndate,div_proc,record_date,ex_date,"
+                + "pay_date,div_cash",
+                ts_code=source_ticker,
+            )
+            if (
+                not response.is_empty()
+                and response.filter(pl.col("ts_code") != source_ticker).height
+            ):
+                raise ValueError("fund_div returned a different trading identity")
+            frame = TushareDataTransformer.transform(
+                response, "etf_dividend", ETF_DIVIDEND_MAPPING
+            )
+            # Only implemented rows must be datable: 预案/决案 announcements
+            # legitimately lack imp_anndate and are filtered downstream by
+            # div_proc; an undatable 实施 row would silently shrink coverage.
+            if frame.filter(pl.col("div_proc") == "实施")[
+                "knowledge_date"
+            ].null_count():
+                raise ValueError(
+                    "ETF dividend announcement/implementation date unknown"
+                )
+            frame = frame.filter(pl.col("knowledge_date").is_between(start, end))
+            return frame.with_columns(
+                pl.col("knowledge_date").alias("effective_from"),
+                pl.lit(None, dtype=pl.Date).alias("effective_to"),
+            )
 
     def _fetch_etf_daily_by_ticker(
         self,

@@ -12,7 +12,7 @@ import {
 
 afterEach(() => vi.unstubAllGlobals());
 
-it.each(["valid", "nav", "kind", "locked", "cost", "listing"])(
+it.each(["valid", "nav", "kind", "locked", "cost", "listing", "asset", "etfShares"])(
 	"validates saved distribution evidence over HTTP: %s",
 	async (field) => {
 		const statement = {
@@ -21,6 +21,7 @@ it.each(["valid", "nav", "kind", "locked", "cost", "listing"])(
 			events: [
 				{
 					event_id: "1:2020-06-02",
+					asset_class: "stock",
 					instrument_id: 1,
 					source_ticker: "600000.SH",
 					source_snapshot_id: "source:shares",
@@ -70,6 +71,8 @@ it.each(["valid", "nav", "kind", "locked", "cost", "listing"])(
 				},
 			],
 		};
+		if (field === "asset") statement.events[0]!.asset_class = "unknown";
+		if (field === "etfShares") statement.events[0]!.asset_class = "etf";
 		if (field === "nav") statement.balances[0]!.nav = 2100;
 		if (field === "kind") statement.entries[0]!.kind = "unknown";
 		if (field === "locked") statement.balances[0]!.positions[0]!.locked_quantity = 0;

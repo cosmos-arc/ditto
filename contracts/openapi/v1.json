@@ -14347,6 +14347,15 @@
             "title": "Announcement Date",
             "type": "string"
           },
+          "asset_class": {
+            "default": "stock",
+            "enum": [
+              "stock",
+              "etf"
+            ],
+            "title": "Asset Class",
+            "type": "string"
+          },
           "event_id": {
             "title": "Event Id",
             "type": "string"

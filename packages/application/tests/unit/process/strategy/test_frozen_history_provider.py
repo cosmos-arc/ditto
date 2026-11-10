@@ -184,13 +184,16 @@ def _provider(
     return provider, snapshots, contents
 
 
+@pytest.mark.parametrize("stock", [True, False])
 @pytest.mark.parametrize("covered_start", ["2014-10-16", "2014-10-13", "2014-10-01"])
-def test_dividend_coverage_includes_listing_to_run_announcements(covered_start):
-    provider, snapshots, contents = _provider(stock=True)
-    provider.roster.append({"source_ticker": "000001.SZ", "list_date": "2014-10-01"})
+def test_dividend_coverage_includes_listing_to_run_announcements(covered_start, stock):
+    provider, snapshots, contents = _provider(stock=stock)
+    ticker = "000001.SZ" if stock else "510300.SH"
+    dataset = "dividend" if stock else "etf_dividend"
+    provider.roster.append({"source_ticker": ticker, "list_date": "2014-10-01"})
     frame = pl.DataFrame(
         {
-            "source_ticker": ["000001.SZ"],
+            "source_ticker": [ticker],
             "knowledge_date": [date(2014, 10, 2)],
             "implementation_date": [date(2014, 10, 10)],
             "div_proc": ["实施"],
@@ -205,13 +208,13 @@ def test_dividend_coverage_includes_listing_to_run_announcements(covered_start):
         frame = frame.head(0)
     snapshot = ProviderSnapshot.create(
         ProviderSnapshotDraft(
-            dataset_id="dividend",
+            dataset_id=dataset,
             source="tushare",
             request_start=covered_start,
             request_end="2014-10-17",
             schema_version="fundamental.dividend.v3",
             checksum="d" * 32,
-            canonical_asset=DataAssetRef("dividend", "fundamental"),
+            canonical_asset=DataAssetRef(dataset, "fundamental"),
             request_parameters_hash="e" * 32,
             response_metadata=(),
             row_count=frame.height,
@@ -224,13 +227,15 @@ def test_dividend_coverage_includes_listing_to_run_announcements(covered_start):
     contents[snapshot.snapshot_id] = SnapshotContents(snapshot, None, _RECEIPT, frame)
     if covered_start != "2014-10-01":
         with pytest.raises(
-            AppBuilderError, match="incomplete retained dividend coverage"
+            AppBuilderError, match=f"incomplete retained {dataset} coverage"
         ):
             provider.freeze_cash_dividends(start="2014-10-13", end="2014-10-17")
     else:
         provider.freeze_cash_dividends(start="2014-10-13", end="2014-10-17")
         assert len(provider.cash_dividends) == 1
         assert provider.cash_dividends[0].ex_date == date(2014, 10, 20)
+
+        assert provider.cash_dividends[0].asset_class == ("stock" if stock else "etf")
 
 
 def test_ordinary_history_reads_2014_with_2026_receipt_and_excludes_future():
