@@ -46,8 +46,6 @@ def etf_rule_history(
         raise ValueError(
             "ETF history requires a period starting on or after 2014-01-01"
         )
-    if listing.delist_date is not None and listing.delist_date <= end:
-        raise ValueError(f"unresolved ETF exit valuation: {listing.instrument_id}")
     if not isfinite(commission_rate) or commission_rate < 0:
         raise ValueError("commission_rate must be finite and non-negative")
     if not trading_days or trading_days != sorted(set(trading_days)):
@@ -55,7 +53,18 @@ def etf_rule_history(
     history: list[_InstrumentRules] = []
     previous: tuple[dict[str, str], str, bool] | None = None
     days = [date.fromisoformat(day).isoformat() for day in trading_days]
-    for day in (day for day in days if max(start, listing.list_date) <= day <= end):
+    # The roster's delist_date is the request's frozen exit fact (#764): a
+    # session on/after it demands no dated declarations a terminated fund no
+    # longer publishes — the last pre-exit rule carries those days via the PIT
+    # lookup, the participation gate keeps them out of execution, and no
+    # liquidation is invented. A window with no pre-exit session keeps the
+    # honest "no covered ETF trading session" refusal below.
+    for day in (
+        day
+        for day in days
+        if max(start, listing.list_date) <= day <= end
+        and (listing.delist_date is None or day < listing.delist_date)
+    ):
         values, effective_from = _declared_values(facts, listing.instrument_id, day)
         closing = listing.exchange == "SZSE" or day >= "2026-07-06"
         effective_from = max(

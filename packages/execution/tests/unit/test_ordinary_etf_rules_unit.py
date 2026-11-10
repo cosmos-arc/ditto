@@ -161,8 +161,30 @@ def test_verified_etf_listing_does_not_wait_thirty_calendar_days():
     listing = replace(_listing("SZSE"), ticker="159985", list_date="2019-12-05")
     history = _history(_facts("commodity_futures", "0"), ["2019-12-05"], listing)
     assert history[0][0].ipo_date == "2019-12-05"
-    with pytest.raises(ValueError, match="exit"):
+    # A termination on the only session day leaves no covered session: the
+    # refusal is honest about coverage, no trading rule is invented.
+    with pytest.raises(ValueError, match="no covered ETF trading session"):
         _history(_facts(), ["2019-12-05"], replace(listing, delist_date="2019-12-05"))
+
+
+def test_frozen_exit_fact_inside_window_keeps_rules_and_stops_declarations():
+    """A frozen ETF termination keeps rules; post-exit sessions demand nothing.
+
+    Mirrors #763's stock stance: the roster's delist_date is the request's
+    frozen exit fact. Sessions on/after it carry the last pre-exit rule via
+    the PIT lookup instead of demanding dated declarations a terminated fund
+    no longer publishes.
+    """
+    listing = replace(_listing(), delist_date="2014-01-16")
+    history = _history(_facts(), ["2014-01-15", "2014-01-16", "2014-01-17"], listing)
+    assert [row[1].as_of_date for row in history] == ["2014-01-01"]
+    assert history[0][0].delisting_date == "2014-01-16"
+
+
+def test_exit_fact_after_the_window_changes_nothing():
+    listing = replace(_listing(), delist_date="2014-02-01")
+    history = _history(_facts(), ["2014-01-15", "2014-01-16"], listing)
+    assert [row[1].as_of_date for row in history] == ["2014-01-01"]
 
 
 def test_etf_cash_reconciles_source_factor_and_ex_price_without_accepting_folds():
