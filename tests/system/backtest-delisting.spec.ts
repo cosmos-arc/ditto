@@ -136,12 +136,12 @@ test("a missing exit fact fails closed and recovers through a new request identi
 
 	// The frozen roster keeps its missing exit fact: recovery is a new request
 	// from the normal entry, never a rewrite of the failed one. The saved
-	// submission draft would keep the form locked on the previous run, so the
-	// journey starts a fresh draft the way a new user submission would.
+	// submission draft locks the form on the previous run; the form's own
+	// reset control starts another run through real UI actions.
 	await page.goto(`${webOrigin}/research/strategies/delisting_exit_fact_fixture`);
-	await page.evaluate(() => sessionStorage.removeItem("ditto:backtest-draft:delisting_exit_fact_fixture"));
 	await page.getByRole("button", { name: "提交回测", exact: true }).click();
 	const form = page.getByRole("dialog", { name: "提交回测" });
+	await form.getByRole("button", { name: "开始另一回测" }).click();
 	await form.getByLabel("历史请求用途").selectOption("reconstruction");
 	await form.getByLabel("策略版本").selectOption("1");
 	await form.getByLabel("开始日期").fill("2016-05-09");
