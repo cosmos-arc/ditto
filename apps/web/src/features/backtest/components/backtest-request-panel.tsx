@@ -111,7 +111,9 @@ export function BacktestRequestPanel({ run }: { readonly run: BacktestRun }) {
 										))}
 									</select>
 								</label>
-								<p>可参与表示当日选股资格，不代表已买入；预热单位为交易日。退出证券池后仍保留持仓估值与卖出行情；终止上市后持仓按退出前最后已证报价估值，无卖出行情，不虚构清算。</p>
+								<p>
+									可参与表示当日选股资格，不代表已买入；预热单位为交易日。退出证券池后仍保留持仓估值与卖出行情；终止上市后持仓按退出前最后已证报价估值，无卖出行情，不虚构清算。
+								</p>
 								<table className="w-full text-left">
 									<caption className="text-left font-medium">逐日参与与排除</caption>
 									<thead>
