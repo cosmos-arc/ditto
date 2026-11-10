@@ -92,17 +92,74 @@ def test_exit_note_without_any_retained_quote_omits_the_anchor():
         assert "已退出上市 2017-07-07" in row["_exit_note"]
 
 
-def test_missing_exit_fact_or_non_stock_rows_produce_no_notes():
+def test_missing_exit_fact_rows_produce_no_notes():
     assert exit_held_valuation_notes(
         _participation(), _roster(None), _bars()
     ).is_empty()
-    etf_roster = [
-        {**row, "asset_class": "etf", "delist_date": "2017-07-07"}
-        if row["instrument_id"] == 1005603
-        else row
-        for row in _roster(None)
+
+
+def _etf_roster(delist_date: str | None) -> list[dict[str, object]]:
+    return [
+        {
+            "instrument_id": 2009171,
+            "list_date": "2012-04-06",
+            "delist_date": delist_date,
+            "ticker": "159917",
+            "exchange": "SZSE",
+            "asset_class": "etf",
+            "source_ticker": "159917.SZ",
+            "effective_from": "2015-08-01",
+            "effective_to": None,
+        }
     ]
-    assert exit_held_valuation_notes(_participation(), etf_roster, _bars()).is_empty()
+
+
+def _etf_frames() -> tuple[pl.DataFrame, pl.DataFrame]:
+    participation = pl.DataFrame(
+        {
+            "instrument_id": [2009171, 2009171, 2009171],
+            "trade_date": ["2015-08-26", "2015-08-27", "2015-08-28"],
+            "status": ["eligible", "delisted", "delisted"],
+        }
+    )
+    # ETF execution bars carry no suspension-valuation columns: the anchor is
+    # the last retained quote day itself (159917.SZ's real final session).
+    bars = pl.DataFrame(
+        {
+            "instrument_id": [2009171, 2009171, 2009171],
+            "trade_date": [
+                date(2015, 8, 24),
+                date(2015, 8, 25),
+                date(2015, 8, 26),
+            ],
+            "close": [1.746, 1.615, 1.77],
+        }
+    )
+    return participation, bars
+
+
+def test_etf_terminated_days_carry_dated_non_liquidating_note():
+    participation, bars = _etf_frames()
+    notes = exit_held_valuation_notes(participation, _etf_roster("2015-08-27"), bars)
+    rows = {row["trade_date"]: row["_exit_note"] for row in notes.to_dicts()}
+    assert set(rows) == {"2015-08-27", "2015-08-28"}
+    for note in rows.values():
+        assert "已终止上市 2015-08-27" in note
+        assert "持仓保留" in note
+        assert "估值锚定 2015-08-26 收盘 1.77 元" in note
+        assert "无终止上市清算会计证据" in note
+        assert "清算款" not in note
+
+
+def test_etf_exit_note_without_any_retained_quote_omits_the_anchor():
+    participation, bars = _etf_frames()
+    notes = exit_held_valuation_notes(
+        participation, _etf_roster("2015-08-27"), bars.clear()
+    )
+    assert notes.height == 2
+    for row in notes.to_dicts():
+        assert "估值锚定" not in row["_exit_note"]
+        assert "已终止上市 2015-08-27" in row["_exit_note"]
 
 
 def test_valuation_only_anchor_reports_the_real_quote_date():

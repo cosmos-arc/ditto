@@ -68,6 +68,40 @@ def test_etf_distribution_preserves_cash_right_without_stock_withholding(year):
     assert not any(e.kind in {"tax_reserved", "tax_payment"} for e in entries)
 
 
+def test_exit_registered_dividend_pays_after_termination_without_quotes():
+    """A right recorded before termination pays on schedule (#763/#764).
+
+    The frozen exit fact stops quotes and orders on/after the exit day; it
+    never stops a cash right whose record and ex days precede the exit. The
+    pay date falls after termination and the cash still lands — no quote, no
+    sale and no liquidation is invented to deliver it.
+    """
+    event = Distribution(
+        InstrumentId(1),
+        date(2015, 8, 25),  # record: before the frozen exit fact
+        date(2015, 8, 26),  # ex: the last verified quote day
+        date(2015, 9, 7),  # pay: after termination 2015-08-27
+        0.05,
+        date(2015, 8, 20),
+        "snapshot:fund-dividend-exit",
+        source_ticker="159917.SZ",
+        asset_class="etf",
+    )
+    account = Account(cash=CashBook(1000, 1000, 0), dividends=(event,))
+    trade(account, "2015-08-20", OrderSide.BUY, 100, 1.77)
+    account.close_dividend_day("2015-08-25")
+    account.settle_dividends("2015-08-26")
+    view = account.get_view()
+    assert view.dividends.receivable == pytest.approx(5.0)
+    assert view.nav == pytest.approx(1000.0)  # the ex drop is a right, not a loss
+    # Termination 2015-08-27: no further marks, closes or quotes happen.
+    account.settle_dividends("2015-09-07")
+    view = account.get_view()
+    assert view.cash.available == pytest.approx(828.0)
+    assert view.dividends.receivable == 0
+    assert view.positions[InstrumentId(1)].quantity == 100
+
+
 @pytest.mark.pit
 def test_future_event_cannot_leak_acquisition_lots_or_book_clocks():
     event = Distribution(

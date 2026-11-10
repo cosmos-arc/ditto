@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import replace
 from datetime import date, datetime, timedelta
 
@@ -92,6 +93,22 @@ class FrozenHistoryProvider:
         )
         try:
             selected = implemented_cash_dividends(frame, start=start, end=end)
+        except ValueError as exc:
+            raise AppBuilderError(str(exc)) from exc
+        # A dividend or share distribution whose ex event lands on/after the
+        # roster's frozen exit fact is a contradiction between retained
+        # sources, not a payable right; one whose record date precedes the
+        # exit with a later pay date stays a real right and pays on schedule.
+        self._reject_post_exit_events(
+            (
+                int(row["instrument_id"]),
+                str(row["source_ticker"]),
+                row["ex_dividend_date"],
+                "dividend ex",
+            )
+            for row in selected.to_dicts()
+        )
+        try:
             etf = self._asset_class == "etf"
             self.cash_dividends = tuple(
                 Distribution(
@@ -216,6 +233,15 @@ class FrozenHistoryProvider:
                     )
                 except ValueError as exc:
                     raise AppBuilderError(str(exc)) from exc
+        self._reject_post_exit_events(
+            (
+                int(conversion.instrument_id),
+                conversion.source_ticker,
+                conversion.effective_date,
+                "share conversion",
+            )
+            for conversion in conversions
+        )
         try:
             self.share_conversions = tuple(
                 sorted(conversions, key=lambda c: c.identity)
@@ -649,7 +675,12 @@ class FrozenHistoryProvider:
         if dataset == "index_daily":
             return bars
         if dataset == "stock_daily":
-            self._reject_post_exit_quotes(bars)
+            self._reject_post_exit_quotes(bars, asset_class="stock")
+        if dataset == "etf_daily":
+            # ETF termination facts get the same conflict guard as stock
+            # delistings: a retained quote on/after the frozen exit day is a
+            # contradiction, not an executable price (#764).
+            self._reject_post_exit_quotes(bars, asset_class="etf")
         factors = self._range(
             "fund_adj" if self._asset_class == "etf" else "adj_factor", query
         )
@@ -693,7 +724,7 @@ class FrozenHistoryProvider:
                     pl.col("source_ticker").is_in(query.instruments)
                     & (pl.col("trade_date") < date.fromisoformat(query.start))
                 )
-                self._reject_post_exit_quotes(valuation_history)
+                self._reject_post_exit_quotes(valuation_history, asset_class="stock")
                 bars = stock_execution_bars(
                     bars,
                     self._range("stock_status", query),
@@ -729,14 +760,15 @@ class FrozenHistoryProvider:
             raise AppBuilderError("missing frozen execution adjustment factors")
         return bars
 
-    def _reject_post_exit_quotes(self, bars: pl.DataFrame) -> None:
+    def _reject_post_exit_quotes(self, bars: pl.DataFrame, *, asset_class: str) -> None:
         """
         Fail closed when retained quotes contradict a frozen exit fact.
 
         The roster's delist_date is the request's frozen exit fact. A quote on
         or after that day is a conflict between two retained sources, not an
         executable price; it must not silently enter the execution or signal
-        channels under the exit-day participation gate.
+        channels under the exit-day participation gate. ``asset_class`` binds
+        the guard to the channel's roster rows (stock_daily vs etf_daily).
         """
         exits = pl.DataFrame(
             [
@@ -746,7 +778,7 @@ class FrozenHistoryProvider:
                 }
                 for row in self.roster
                 if row.get("delist_date")
-                and str(row.get("asset_class", self._asset_class)) == "stock"
+                and str(row.get("asset_class", self._asset_class)) == asset_class
             ],
             schema={"source_ticker": pl.String, "delist_date": pl.String},
         )
@@ -760,6 +792,37 @@ class FrozenHistoryProvider:
             raise AppBuilderError(
                 "delisted instrument quoted after exit: "
                 + ", ".join(f"{ticker} {day}" for ticker, day in sample)
+            )
+
+    def _reject_post_exit_events(
+        self, events: Iterable[tuple[int, str, date, str]]
+    ) -> None:
+        """
+        Fail closed when a retained corporate-action event lands after an exit.
+
+        The events twin of ``_reject_post_exit_quotes``: for a roster member
+        with a frozen ``delist_date``, a dividend whose ex event — cash or
+        share distribution, stock or ETF — falls on/after that day, or a share
+        conversion effective on/after it, is a conflict between two retained
+        sources, not a payable right; it must not mint cash or shares under
+        the exit-day participation gate. ``events`` yields
+        ``(instrument_id, source_ticker, event day, kind)``; only the market
+        event day is checked, so a right registered before the exit keeps its
+        later pay date.
+        """
+        exits = {
+            int(str(row["instrument_id"])): str(row["delist_date"])
+            for row in self.roster
+            if row.get("delist_date")
+        }
+        offenders = [
+            f"{kind} {ticker} {day.isoformat()}"
+            for iid, ticker, day, kind in events
+            if (delist := exits.get(iid)) is not None and day.isoformat() >= delist
+        ]
+        if offenders:
+            raise AppBuilderError(
+                "delisted instrument event after exit: " + ", ".join(offenders[:5])
             )
 
     def _range(self, dataset: str, query: BarQuery) -> pl.DataFrame:

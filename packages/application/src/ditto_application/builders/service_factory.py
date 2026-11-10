@@ -150,6 +150,86 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
+def _attach_participation_notes(
+    participation: pl.DataFrame,
+    roster: list[dict[str, object]],
+    execution_facts: pl.DataFrame,
+    *,
+    asset_class: str,
+) -> pl.DataFrame:
+    """
+    Explain participation days from the frozen exit fact per asset class.
+
+    Stocks append their ST/suspension market notes plus the exit note; the ETF
+    channel has no ST/suspension columns, so delisted days get only the
+    termination sentence from the same authoritative exit-note builder (#764).
+    """
+    exit_notes = exit_held_valuation_notes(participation, roster, execution_facts)
+    if asset_class == "etf":
+        if exit_notes.is_empty():
+            return participation
+        return (
+            participation.join(
+                exit_notes,
+                on=["instrument_id", "trade_date"],
+                how="left",
+                validate="1:1",
+            )
+            .with_columns(
+                pl.concat_str(
+                    "execution_rule",
+                    pl.col("_exit_note").fill_null(""),
+                ).alias("execution_rule")
+            )
+            .drop("_exit_note")
+            .sort("trade_date", "instrument_id")
+        )
+    if asset_class != "stock":
+        return participation
+    notes = execution_facts.select(
+        "instrument_id",
+        pl.col("trade_date").cast(pl.String),
+        pl.concat_str(
+            pl.when(pl.col("is_st"))
+            .then(pl.lit(" · ST 风险警示"))
+            .otherwise(pl.lit("")),
+            pl.when(pl.col("is_valuation_only"))
+            .then(
+                pl.concat_str(
+                    pl.lit(" · 停牌估值 "),
+                    pl.col("close"),
+                    pl.lit(" 元; 报价日期 "),
+                    pl.col("valuation_date").cast(pl.String),
+                )
+            )
+            .otherwise(pl.lit("")),
+        ).alias("_market_note"),
+    )
+    return (
+        participation.join(
+            notes,
+            on=["instrument_id", "trade_date"],
+            how="left",
+            validate="1:1",
+        )
+        .join(
+            exit_notes,
+            on=["instrument_id", "trade_date"],
+            how="left",
+            validate="1:1",
+        )
+        .with_columns(
+            pl.concat_str(
+                "execution_rule",
+                pl.col("_market_note").fill_null(""),
+                pl.col("_exit_note").fill_null(""),
+            ).alias("execution_rule")
+        )
+        .drop("_market_note", "_exit_note")
+        .sort("trade_date", "instrument_id")
+    )
+
+
 def build_frozen_baseline_pipeline(
     binding: BaselineExecutorBinding,
     *,
@@ -714,7 +794,9 @@ class BacktestRuntimeBuilder:
                 + "未认证历史可得性。股票终止上市后持仓保留,"
                 + "估值锚定退出前最后已证报价,不虚构清算或回款;"
                 + "无报价停牌沿用停牌估值语义。"
-                + "ETF 状态以实际正成交量核验,缺报价/零成交量拒绝。"
+                + "ETF 状态以实际正成交量核验,缺报价/零成交量拒绝;"
+                + "ETF 终止上市后持仓保留,估值锚定终止前最后已证报价,"
+                + "不虚构终止上市清算。"
                 + "最低佣金 5 元为保守研究假设;拆并份或退市清算仍缺会计证据。"
                 + (
                     "股票分红、送转份额、可卖日期与税务假设见保存的分派账本;"
@@ -1017,53 +1099,12 @@ class BacktestRuntimeBuilder:
                     dtype=pl.String,
                 )
             )
-            if execution_facts is not None and runtime.spec.asset_class == "stock":
-                notes = execution_facts.select(
-                    "instrument_id",
-                    pl.col("trade_date").cast(pl.String),
-                    pl.concat_str(
-                        pl.when(pl.col("is_st"))
-                        .then(pl.lit(" · ST 风险警示"))
-                        .otherwise(pl.lit("")),
-                        pl.when(pl.col("is_valuation_only"))
-                        .then(
-                            pl.concat_str(
-                                pl.lit(" · 停牌估值 "),
-                                pl.col("close"),
-                                pl.lit(" 元; 报价日期 "),
-                                pl.col("valuation_date").cast(pl.String),
-                            )
-                        )
-                        .otherwise(pl.lit("")),
-                    ).alias("_market_note"),
-                )
-                exit_notes = exit_held_valuation_notes(
+            if execution_facts is not None:
+                participation = _attach_participation_notes(
                     participation,
                     historical_provider.roster,
                     execution_facts,
-                )
-                participation = (
-                    participation.join(
-                        notes,
-                        on=["instrument_id", "trade_date"],
-                        how="left",
-                        validate="1:1",
-                    )
-                    .join(
-                        exit_notes,
-                        on=["instrument_id", "trade_date"],
-                        how="left",
-                        validate="1:1",
-                    )
-                    .with_columns(
-                        pl.concat_str(
-                            "execution_rule",
-                            pl.col("_market_note").fill_null(""),
-                            pl.col("_exit_note").fill_null(""),
-                        ).alias("execution_rule")
-                    )
-                    .drop("_market_note", "_exit_note")
-                    .sort("trade_date", "instrument_id")
+                    asset_class=runtime.spec.asset_class,
                 )
             descriptions = participation.filter(
                 pl.col("trade_date") >= config.start_date
