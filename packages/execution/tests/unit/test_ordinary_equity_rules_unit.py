@@ -191,6 +191,27 @@ def test_historical_etfs_require_retained_declarations_even_for_legacy_whitelist
             )
 
 
+def test_historical_exit_fact_inside_window_keeps_rules() -> None:
+    """A frozen exit fact inside the window keeps rules (live still refuses)."""
+    delisted = CashEquityListing(
+        InstrumentId(1_005_603),
+        "000033",
+        "stock",
+        "SZSE",
+        "1994-01-03",
+        "2017-07-07",
+    )
+    definition, rule, _ = ordinary_equity_rules(
+        delisted,
+        commission_rate=0.001,
+        start="2017-07-03",
+        end="2017-07-10",
+        historical_reconstruction=True,
+    )
+    assert definition.delisting_date == "2017-07-07"
+    assert rule.settlement_cycle == 1
+
+
 @pytest.mark.pit
 def test_mainboard_ipo_rules_change_on_sixth_session_not_calendar_age() -> None:
     listing = CashEquityListing(
