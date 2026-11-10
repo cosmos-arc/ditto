@@ -720,6 +720,25 @@ def main() -> int:
                 ),
             )
 
+            # A declared 1:4 ETF split with a zero-volume session and the
+            # resumed quote (#762).
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.share_conversions_backtest_app:app",
+                        api_port,
+                    ),
+                    prefix="ditto-system-share-conversions-",
+                    spec="backtest-share-conversions.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             # The same two completed engine runs drive the catalog multi-run
             # NAV overlay with legend toggles and the metrics diff table
             # (#215 ②).
