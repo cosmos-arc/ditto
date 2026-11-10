@@ -739,6 +739,25 @@ def main() -> int:
                 ),
             )
 
+            # A delisted holding keeps its position and exit facts; missing
+            # final-status evidence and a missing exit fact both recover (#763).
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.delisting_backtest_app:app",
+                        api_port,
+                    ),
+                    prefix="ditto-system-delisting-",
+                    spec="backtest-delisting.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             # The same two completed engine runs drive the catalog multi-run
             # NAV overlay with legend toggles and the metrics diff table
             # (#215 ②).
