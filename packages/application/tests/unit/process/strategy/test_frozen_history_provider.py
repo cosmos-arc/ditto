@@ -649,6 +649,169 @@ def test_exit_conflict_in_the_pre_window_valuation_slice_is_rejected():
         )
 
 
+def _exit_roster(stock: bool, delist_date: str) -> dict[str, object]:
+    return {
+        "instrument_id": int(_IID),
+        "list_date": "2014-01-01",
+        "delist_date": delist_date,
+        "ticker": "000001" if stock else "510300",
+        "exchange": "SZSE" if stock else "SSE",
+        "asset_class": "stock" if stock else "etf",
+        "source_ticker": "000001.SZ" if stock else "510300.SH",
+        "effective_from": "2014-10-13",
+        "effective_to": None,
+    }
+
+
+def _retained_dividend(
+    snapshots: list,
+    contents: dict,
+    *,
+    stock: bool,
+    ex: date,
+    record: date,
+    pay: date | None,
+    knowledge: date,
+    share_ratio: float = 0.0,
+    gross: float = 0.1,
+) -> None:
+    """Retain one implemented dividend row the way ingestion would."""
+    row: dict[str, object] = {
+        "source_ticker": "000001.SZ" if stock else "510300.SH",
+        "knowledge_date": knowledge,
+        "implementation_date": knowledge,
+        "div_proc": "实施",
+        "record_date": record,
+        "ex_dividend_date": ex,
+        "pay_date": pay,
+        "gross_dividend_per_share": gross,
+        "stock_dividend_ratio": share_ratio,
+    }
+    if share_ratio:
+        row.update(
+            {
+                "bonus_ratio": 0.1,
+                "capitalization_ratio": share_ratio - 0.1,
+                "share_listing_date": ex + timedelta(days=2),
+                "taxable_share_income": 0.0,
+                "share_tax_basis": "issuer statement",
+                "share_tax_knowledge_date": knowledge - timedelta(days=1),
+            }
+        )
+    frame = pl.DataFrame([row])
+    snapshot = ProviderSnapshot.create(
+        ProviderSnapshotDraft(
+            dataset_id="dividend" if stock else "etf_dividend",
+            source="tushare",
+            request_start="2014-01-01",
+            request_end="2014-10-17",
+            schema_version="fundamental.dividend.v4",
+            checksum="b" * 32,
+            canonical_asset=DataAssetRef(
+                "dividend" if stock else "etf_dividend", "fundamental"
+            ),
+            request_parameters_hash="a" * 32,
+            response_metadata=(),
+            row_count=frame.height,
+            payload_uri="dividend.parquet",
+            payload_retained=True,
+            created_at=_RECEIPT,
+        )
+    )
+    snapshots.append(snapshot)
+    contents[snapshot.snapshot_id] = SnapshotContents(snapshot, None, _RECEIPT, frame)
+
+
+@pytest.mark.parametrize("stock", [True, False])
+def test_frozen_exit_fact_rejects_dividends_landing_on_or_after_it(stock):
+    """An ex event on/after the exit contradicts the fact; it mints nothing."""
+    provider, snapshots, contents = _provider(stock=stock)
+    provider.roster.append(_exit_roster(stock, "2014-10-16"))
+    _retained_dividend(
+        snapshots,
+        contents,
+        stock=stock,
+        record=date(2014, 10, 15),
+        ex=date(2014, 10, 16),
+        pay=date(2014, 10, 20),
+        knowledge=date(2014, 10, 10),
+    )
+    with pytest.raises(
+        AppBuilderError,
+        match=r"delisted instrument event after exit.*dividend ex"
+        + (r".*000001.SZ" if stock else r".*510300.SH")
+        + r".*2014-10-16",
+    ):
+        provider.freeze_cash_dividends(start="2014-10-13", end="2014-10-17")
+
+
+def test_frozen_exit_fact_rejects_stock_share_distribution_on_or_after_it():
+    """The送转 component rides the same row: its ex event is refused too."""
+    provider, snapshots, contents = _provider(stock=True)
+    provider.roster.append(_exit_roster(True, "2014-10-16"))
+    _retained_dividend(
+        snapshots,
+        contents,
+        stock=True,
+        record=date(2014, 10, 15),
+        ex=date(2014, 10, 16),
+        pay=None,
+        knowledge=date(2014, 10, 10),
+        share_ratio=0.2,
+        gross=0.0,
+    )
+    with pytest.raises(
+        AppBuilderError, match=r"delisted instrument event after exit.*2014-10-16"
+    ):
+        provider.freeze_cash_dividends(start="2014-10-13", end="2014-10-17")
+
+
+@pytest.mark.parametrize("stock", [True, False])
+def test_dividend_registered_before_the_exit_stays_a_real_right(stock):
+    """record < delist < pay keeps paying: only the ex event is checked."""
+    provider, snapshots, contents = _provider(stock=stock)
+    provider.roster.append(_exit_roster(stock, "2014-10-16"))
+    _retained_dividend(
+        snapshots,
+        contents,
+        stock=stock,
+        record=date(2014, 10, 13),
+        ex=date(2014, 10, 14),
+        pay=date(2014, 10, 20),
+        knowledge=date(2014, 10, 10),
+    )
+    provider.freeze_cash_dividends(start="2014-10-13", end="2014-10-17")
+    (distribution,) = provider.cash_dividends
+    assert distribution.ex_date == date(2014, 10, 14)
+    assert distribution.pay_date == date(2014, 10, 20)
+
+
+def test_frozen_exit_fact_rejects_share_conversion_effective_after_it():
+    provider, _, _ = _provider(
+        etf_share_conversions=_conversion_frame(
+            announcement_date="2014-10-01", effective_date="2014-10-17", ratio=4.0
+        )
+    )
+    provider.roster.append(_exit_roster(False, "2014-10-16"))
+    with pytest.raises(
+        AppBuilderError,
+        match=r"delisted instrument event after exit.*share conversion"
+        r".*510300.SH.*2014-10-17",
+    ):
+        provider.freeze_share_conversions(start="2014-10-13", end="2014-10-17")
+
+
+def test_share_conversion_effective_before_the_exit_still_freezes():
+    provider, _, _ = _provider(
+        etf_share_conversions=_conversion_frame(
+            announcement_date="2014-10-01", effective_date="2014-10-15", ratio=4.0
+        )
+    )
+    provider.roster.append(_exit_roster(False, "2014-10-16"))
+    provider.freeze_share_conversions(start="2014-10-13", end="2014-10-17")
+    assert len(provider.share_conversions) == 1
+
+
 def test_etf_rule_versions_freeze_from_current_receipt_without_backdating():
     facts = pl.DataFrame(
         {
