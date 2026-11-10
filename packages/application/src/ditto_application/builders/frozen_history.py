@@ -308,6 +308,14 @@ class FrozenHistoryProvider:
                 end=(calendar_end or end) if dataset == "calendar" else end,
                 date_column="knowledge_date" if financial else "trade_date",
             )
+            # #765：股票多因子普通运行实际消费财务输入；运行范围内一份披露
+            # 都冻不到属于缺证，必须显式阻断并走补证恢复（#751 机制），
+            # 不得静默空帧变成全现金运行（缩池关闭目标）。
+            if financial and self._frames[dataset].is_empty():
+                raise AppBuilderError(
+                    f"missing retained {dataset}: no disclosures frozen for "
+                    f"{sorted(scope)} ..{end}"
+                )
         if asset_class == "stock":
             self._freeze_suspension_anchors(start)
 

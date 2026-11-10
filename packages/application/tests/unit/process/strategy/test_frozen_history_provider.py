@@ -737,3 +737,258 @@ def test_future_share_conversion_declaration_receipt_is_invisible():
     provider.frozen_at = _RECEIPT - timedelta(days=1)
     provider.freeze_share_conversions(start="2024-07-01", end="2024-07-05")
     assert provider.share_conversions == ()
+
+
+# ---------------------------------------------------------------------------
+# #765 历史财务因子按公开时间参与选股：同一冻结（代表运行）内的
+# 公告门控、报告期对照、晚修订切换与未来哨兵矩阵。
+# ---------------------------------------------------------------------------
+
+_FIN_IID = InstrumentId(3_000_001)
+_FIN_TICKER = "600001.SH"
+# 代表运行窗口：2026-10-08..2026-11-13（交易日），knowledge_lag=1。
+_RUN_START, _RUN_END = "2026-10-08", "2026-11-13"
+
+
+def _financial_matrix_provider(
+    income_rows: list[dict[str, object]],
+    *,
+    balance_rows: list[dict[str, object]] | None = None,
+    end: str = _RUN_END,
+    omit_financial_snapshots: bool = False,
+) -> FrozenHistoryProvider:
+    """Build one frozen stock provider around a disclosure-row matrix."""
+    days = [
+        day
+        for day in pl.date_range(
+            date(2026, 9, 1), date.fromisoformat(end), eager=True
+        ).to_list()
+        if day.weekday() < 5
+    ]
+    bars = pl.DataFrame(
+        {
+            "source_ticker": [_FIN_TICKER] * len(days),
+            "trade_date": days,
+            "knowledge_date": [day + timedelta(days=1) for day in days],
+            "open": [10.0] * len(days),
+            "high": [10.0] * len(days),
+            "low": [10.0] * len(days),
+            "close": [10.0] * len(days),
+            "pre_close": [10.0] * len(days),
+            "volume": [1000000.0] * len(days),
+            "amount": [100000.0] * len(days),
+        }
+    )
+    if balance_rows is None:
+        balance_rows = [
+            {
+                "source_ticker": _FIN_TICKER,
+                "report_date": date(2026, 6, 30),
+                "knowledge_date": date(2026, 9, 1),
+                "net_assets": 100.0,
+            }
+        ]
+    frames = {
+        "stock_daily": bars,
+        "adj_factor": bars.select(
+            "source_ticker", "trade_date", "knowledge_date"
+        ).with_columns(pl.lit(1.0).alias("adj_factor")),
+        "stock_status": bars.select("source_ticker", "trade_date").with_columns(
+            pl.lit(False).alias("is_suspended"),
+            pl.lit("").alias("suspend_timing"),
+            pl.lit(False).alias("is_st"),
+            pl.lit("L").alias("list_status"),
+        ),
+        "stock_limit": bars.select("source_ticker", "trade_date").with_columns(
+            pl.lit(11.0).alias("up_limit"), pl.lit(9.0).alias("down_limit")
+        ),
+        "calendar": pl.DataFrame(
+            {
+                "trade_date": pl.date_range(
+                    date(2026, 9, 1), date(2026, 12, 31), eager=True
+                )
+            }
+        ).with_columns(pl.col("trade_date").dt.weekday().le(5).alias("is_open")),
+        "income_statement": pl.DataFrame(
+            income_rows,
+            schema={
+                "source_ticker": pl.String,
+                "report_date": pl.Date,
+                "knowledge_date": pl.Date,
+                "net_profit": pl.Float64,
+                "revenue": pl.Float64,
+                "eps": pl.Float64,
+            },
+        ),
+        "balance_sheet": pl.DataFrame(
+            balance_rows,
+            schema={
+                "source_ticker": pl.String,
+                "report_date": pl.Date,
+                "knowledge_date": pl.Date,
+                "net_assets": pl.Float64,
+            },
+        ),
+    }
+    snapshots: list[ProviderSnapshot] = []
+    contents: dict[str, SnapshotContents] = {}
+    if omit_financial_snapshots:
+        frames.pop("income_statement")
+        frames.pop("balance_sheet")
+    for index, (dataset, frame) in enumerate(frames.items()):
+        snapshot = ProviderSnapshot.create(
+            ProviderSnapshotDraft(
+                dataset_id=dataset,
+                source="tushare",
+                request_start="2026-09-01",
+                request_end=end,
+                schema_version=f"{dataset}.v1",
+                checksum=f"{index + 16:032x}",
+                canonical_asset=DataAssetRef(dataset, "market"),
+                request_parameters_hash=f"{index + 16:032x}",
+                response_metadata=(),
+                row_count=frame.height,
+                payload_uri=f"{dataset}-financial.parquet",
+                payload_retained=True,
+                created_at=_RECEIPT,
+            )
+        )
+        snapshots.append(snapshot)
+        contents[snapshot.snapshot_id] = SnapshotContents(
+            snapshot, None, _RECEIPT, frame
+        )
+    reader = MagicMock(spec=SnapshotReadService)
+    reader.list_snapshots.side_effect = lambda **kw: tuple(
+        s for s in snapshots if s.dataset_id == kw.get("dataset_id", s.dataset_id)
+    )
+    reader.read.side_effect = lambda identity, **_: contents[identity]
+    provider = FrozenHistoryProvider(reader, frozen_at=_RECEIPT)
+    provider.freeze(
+        ticker_ids={_FIN_TICKER: _FIN_IID},
+        asset_class="stock",
+        start=_RUN_START,
+        end=end,
+        include_fundamentals=True,
+    )
+    return provider
+
+
+def test_report_period_is_not_a_knowledge_date_within_one_run():
+    """公告前不可用、公告后可用；报告期早于运行起点不能替代披露锚。"""
+    provider = _financial_matrix_provider(
+        [
+            {
+                "source_ticker": _FIN_TICKER,
+                "report_date": date(2026, 6, 30),
+                "knowledge_date": date(2026, 10, 13),
+                "net_profit": 20.0,
+                "revenue": 100.0,
+                "eps": 1.0,
+            }
+        ]
+    )
+    # 报告期 2026-06-30 早已过去，但公告（披露锚）2026-10-13 尚未到达：
+    # 运行内 10-13 之前的会话不可消费该报告（报告期不是可知日期）。
+    before = provider.get_income_statement(int(_FIN_IID), date(2026, 10, 12))
+    assert before is not None
+    assert before.is_empty()
+    # 公告日当天即成为当时可见版本。
+    on_announcement = provider.get_income_statement(int(_FIN_IID), date(2026, 10, 13))
+    assert on_announcement is not None
+    assert on_announcement.height == 1
+    assert on_announcement["net_profit"].to_list() == [20.0]
+
+
+def test_late_revision_switches_visible_version_inside_one_run():
+    """同一报告期多次披露：修订公告前后，同一运行取到不同披露版本。"""
+    provider = _financial_matrix_provider(
+        [
+            {
+                "source_ticker": _FIN_TICKER,
+                "report_date": date(2026, 6, 30),
+                "knowledge_date": date(2026, 10, 13),
+                "net_profit": 20.0,
+                "revenue": 100.0,
+                "eps": 1.0,
+            },
+            {
+                "source_ticker": _FIN_TICKER,
+                "report_date": date(2026, 6, 30),
+                "knowledge_date": date(2026, 10, 20),
+                "net_profit": 5.0,
+                "revenue": 100.0,
+                "eps": 1.0,
+            },
+        ]
+    )
+    # 修订公告（10-20）前的最后一个会话仍取首披版本。
+    pre_revision = provider.get_income_statement(int(_FIN_IID), date(2026, 10, 19))
+    assert pre_revision is not None
+    assert pre_revision["net_profit"].to_list() == [20.0]
+    # 修订公告当天的会话起收敛到新披露版本。
+    post_revision = provider.get_income_statement(int(_FIN_IID), date(2026, 10, 20))
+    assert post_revision is not None
+    assert post_revision["net_profit"].to_list() == [5.0]
+
+
+def test_future_disclosure_sentinel_never_enters_any_run_session():
+    """披露锚晚于运行终点的哨兵行在任何会话都不可见；内侧阳性对照可见。"""
+    provider = _financial_matrix_provider(
+        [
+            {
+                "source_ticker": _FIN_TICKER,
+                "report_date": date(2026, 6, 30),
+                "knowledge_date": date(2026, 10, 13),
+                "net_profit": 20.0,
+                "revenue": 100.0,
+                "eps": 1.0,
+            },
+            # 未来哨兵：同一报告期的更晚披露，披露锚在运行终点之后。
+            {
+                "source_ticker": _FIN_TICKER,
+                "report_date": date(2026, 6, 30),
+                "knowledge_date": date(2026, 12, 31),
+                "net_profit": 999.0,
+                "revenue": 100.0,
+                "eps": 1.0,
+            },
+        ]
+    )
+    for asof in (date(2026, 10, 13), date(2026, 11, 12), date(2026, 11, 13)):
+        visible = provider.get_income_statement(int(_FIN_IID), asof)
+        assert visible is not None
+        assert visible.height == 1
+        assert visible["net_profit"].to_list() == [20.0]
+    # 哨兵行从未进入冻结帧：冻结网格止于运行终点。
+    frozen = provider._frames["income_statement"]
+    assert frozen.filter(pl.col("knowledge_date") == date(2026, 12, 31)).is_empty()
+
+
+def _freeze_without_financial_evidence(evidence: str) -> None:
+    if evidence == "empty-payload":
+        # 目录有快照，但运行范围内一份披露都冻不到。
+        _financial_matrix_provider([])
+    else:
+        # 目录里根本没有财务快照。
+        _financial_matrix_provider(
+            [
+                {
+                    "source_ticker": _FIN_TICKER,
+                    "report_date": date(2026, 6, 30),
+                    "knowledge_date": date(2026, 10, 13),
+                    "net_profit": 20.0,
+                    "revenue": 100.0,
+                    "eps": 1.0,
+                }
+            ],
+            omit_financial_snapshots=True,
+        )
+
+
+@pytest.mark.parametrize("evidence", ["no-snapshot", "empty-payload"])
+def test_stock_history_without_financial_evidence_fails_closed(evidence):
+    """股票历史冻结缺财务证据必须显式阻断，不得静默全现金运行（#765）。"""
+    with pytest.raises(
+        AppBuilderError, match=r"missing retained (income_statement|balance_sheet)"
+    ):
+        _freeze_without_financial_evidence(evidence)
