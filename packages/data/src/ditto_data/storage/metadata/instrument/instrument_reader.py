@@ -24,6 +24,7 @@ class SecurityQuery:
         is_active: 按活跃状态过滤.
         asof: Point-in-Time 日期.
         min_list_days: 最低上市天数（需配合 asof 使用）.
+        search: 名称/裸代码/源代码子串（LIKE 通配符按字面匹配）.
 
     """
 
@@ -35,6 +36,75 @@ class SecurityQuery:
     is_active: bool | None = True
     asof: str | None = None
     min_list_days: int | None = None
+    search: str | None = None
+
+
+def _like_pattern(term: str) -> str:
+    """把用户输入转成字面子串匹配模式（LIKE 通配符按字面处理）."""
+    escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
+# 名称/裸代码/源代码子串检索谓词；三个占位符共用同一个转义后的模式。
+SEARCH_PREDICATE_SQL = (
+    " AND (s.name LIKE ? ESCAPE '\\'"
+    " OR s.ticker LIKE ? ESCAPE '\\'"
+    " OR m.source_ticker LIKE ? ESCAPE '\\')"
+)
+
+
+def _security_filter_conditions(query: SecurityQuery) -> tuple[str, list[Any]]:
+    """按 SecurityQuery 生成 WHERE 附加条件与参数（含子串检索）."""
+    sql = ""
+    params: list[Any] = []
+
+    if query.instrument_ids:
+        in_clause, sids_list = build_in_clause("s.instrument_id", query.instrument_ids)
+        sql += f" AND {in_clause}"
+        params.extend(sids_list)
+
+    if query.source_tickers:
+        in_clause, source_tickers_list = build_in_clause(
+            "m.source_ticker", query.source_tickers
+        )
+        sql += f" AND {in_clause} AND m.source = ?"
+        params.extend(source_tickers_list)
+        params.append(query.source)
+
+        if query.asof:
+            sql += (
+                " AND m.effective_from <= ? AND "
+                "(m.effective_to IS NULL OR m.effective_to > ?)"
+            )
+            params.extend([query.asof, query.asof])
+        else:
+            sql += " AND m.effective_to IS NULL"
+
+    if query.asset_class:
+        sql += " AND s.asset_class = ?"
+        params.append(query.asset_class)
+
+    if query.search:
+        sql += SEARCH_PREDICATE_SQL
+        params.extend([_like_pattern(query.search)] * 3)
+
+    if query.exchange:
+        sql += " AND s.exchange = ?"
+        params.append(query.exchange)
+
+    if query.is_active is not None:
+        sql += " AND s.is_active = ?"
+        params.append(query.is_active)
+
+    if query.min_list_days is not None and query.asof is not None:
+        sql += (
+            " AND (s.list_date IS NULL"
+            " OR julianday(?, 'start of day')"
+            " - julianday(s.list_date, 'start of day') >= ?)"
+        )
+        params.extend([query.asof, query.min_list_days])
+
+    return sql, params
 
 
 def build_in_clause(
@@ -500,51 +570,8 @@ class InstrumentReader:
             {mapping_join}
             WHERE 1=1
         """  # noqa: S608 - mapping_join 为上方受控字面量，不含外部输入
-        params: list[Any] = []
-
-        if query.instrument_ids:
-            in_clause, sids_list = build_in_clause(
-                "s.instrument_id", query.instrument_ids
-            )
-            sql += f" AND {in_clause}"
-            params.extend(sids_list)
-
-        if query.source_tickers:
-            in_clause, source_tickers_list = build_in_clause(
-                "m.source_ticker", query.source_tickers
-            )
-            sql += f" AND {in_clause} AND m.source = ?"
-            params.extend(source_tickers_list)
-            params.append(query.source)
-
-            if query.asof:
-                sql += (
-                    " AND m.effective_from <= ? AND "
-                    "(m.effective_to IS NULL OR m.effective_to > ?)"
-                )
-                params.extend([query.asof, query.asof])
-            else:
-                sql += " AND m.effective_to IS NULL"
-
-        if query.asset_class:
-            sql += " AND s.asset_class = ?"
-            params.append(query.asset_class)
-
-        if query.exchange:
-            sql += " AND s.exchange = ?"
-            params.append(query.exchange)
-
-        if query.is_active is not None:
-            sql += " AND s.is_active = ?"
-            params.append(query.is_active)
-
-        if query.min_list_days is not None and query.asof is not None:
-            sql += (
-                " AND (s.list_date IS NULL"
-                " OR julianday(?, 'start of day')"
-                " - julianday(s.list_date, 'start of day') >= ?)"
-            )
-            params.extend([query.asof, query.min_list_days])
+        conditions, params = _security_filter_conditions(query)
+        sql += conditions
 
         rows = self._client.fetchall(sql, params)
 

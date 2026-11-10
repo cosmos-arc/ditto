@@ -297,6 +297,36 @@ class TestListInstruments:
         assert "data" in data
         assert len(data["data"]) == 0
 
+    def test_list_instruments_with_search_filter(
+        self,
+        client: TestClient,
+        mock_facade: MagicMock,
+    ) -> None:
+        """测试按名称或代码子串检索."""
+        # Arrange
+        mock_facade.find_securities.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1],
+                "ticker": ["600000"],
+                "name": ["浦发银行"],
+                "asset_class": ["stock"],
+                "exchange": ["SSE"],
+                "list_date": ["1999-11-10"],
+                "is_active": [1],
+            }
+        )
+
+        # Act
+        response = client.get("/api/v1/metadata/instruments?search=%E6%B5%A6%E5%8F%91")
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["data"]) == 1
+        assert data["data"][0]["name"] == "浦发银行"
+        call_kwargs = mock_facade.find_securities.call_args.kwargs
+        assert call_kwargs["search"] == "浦发"
+
     def test_list_instruments_with_invalid_asset_class(
         self,
         client: TestClient,

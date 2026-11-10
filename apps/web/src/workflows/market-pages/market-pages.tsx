@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchInstrumentCatalog, type InstrumentCatalogFilter } from "@/features/instruments";
+import { fetchInstrumentCatalog, fetchInstrumentIdentity, type InstrumentCatalogFilter } from "@/features/instruments";
 import {
 	ASharesPage as ASharesView,
 	CalendarPage as CalendarView,
 	fetchCalendarStatus,
+	type MarketCatalog,
+	type MarketCatalogInstrument,
 	MarketsPage as MarketsView,
 	WatchlistPage as WatchlistView,
 } from "@/features/markets";
@@ -46,8 +48,34 @@ export function ASharesPage() {
 
 /** Cross-feature composition for the browser-local watchlist. */
 export function WatchlistPage() {
-	const catalog = useMarketCatalog({ limit: 100 });
-	return <WatchlistView catalog={catalog} />;
+	// 名称/代码检索走 metadata 目录；每个已保存对象按精确身份经现有单对象解析重开。
+	const searchCatalog = async (term: string): Promise<MarketCatalog> => {
+		const catalog = await fetchInstrumentCatalog({ search: term, limit: 20 });
+		return { items: catalog.items.map(toMarketInstrument), total: catalog.total };
+	};
+	const resolveEntry = async (instrumentId: number): Promise<MarketCatalogInstrument> => {
+		const instrument = await fetchInstrumentIdentity(String(instrumentId));
+		return toMarketInstrument(instrument);
+	};
+	return <WatchlistView resolveEntry={resolveEntry} searchCatalog={searchCatalog} />;
+}
+
+function toMarketInstrument(instrument: {
+	readonly asset_class: string;
+	readonly exchange: string;
+	readonly instrument_id: number;
+	readonly is_active: boolean;
+	readonly name: string;
+	readonly ticker: string;
+}): MarketCatalogInstrument {
+	return {
+		asset_class: instrument.asset_class,
+		exchange: instrument.exchange,
+		instrument_id: instrument.instrument_id,
+		is_active: instrument.is_active,
+		name: instrument.name,
+		ticker: instrument.ticker,
+	};
 }
 
 /** Cross-feature composition for ingestion-status-backed calendar data status. */

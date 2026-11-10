@@ -43829,7 +43829,7 @@
     },
     "/api/v1/metadata/instruments": {
       "get": {
-        "description": "查询标的列表.\n\nArgs:\n    asset_class: 资产类别过滤 (可选)\n    exchange: 交易所过滤 (可选)\n    is_active: 活跃状态过滤 (可选)\n    pagination: 分页参数\n    facade: MetadataQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含 Instrument 列表 + 分页信息\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "description": "查询标的列表.\n\nArgs:\n    asset_class: 资产类别过滤 (可选)\n    exchange: 交易所过滤 (可选)\n    is_active: 活跃状态过滤 (可选)\n    search: 名称/代码子串检索 (可选，默认不过滤)\n    pagination: 分页参数\n    facade: MetadataQueryFacade 依赖注入\n\nReturns:\n    APIResponse 包含 Instrument 列表 + 分页信息\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
         "operationId": "metadata_list_instruments",
         "parameters": [
           {
@@ -43878,6 +43878,22 @@
                 }
               ],
               "title": "Is Active"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
             }
           },
           {

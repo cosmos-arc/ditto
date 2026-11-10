@@ -677,6 +677,57 @@ class TestInstrumentReader:
         assert result.height == 101
         assert result.filter(pl.col("list_date").is_not_null()).height == 1
 
+    def test_find_securities_with_search(self) -> None:
+        """Search matches name, bare ticker, or source ticker substring."""
+        rows = [
+            (100000001, "600000", "600000.SH", "浦发银行"),
+            (100000002, "000001", "000001.SZ", "平安银行"),
+            (200000001, "510300", "510300.SH", "沪深300ETF"),
+        ]
+        for instrument_id, ticker, source_ticker, name in rows:
+            self.client.execute(
+                """INSERT INTO instrument (
+                    instrument_id, ticker, name, exchange, asset_class, list_date
+                )
+                VALUES (?, ?, ?, 'SSE', 'stock', '1999-11-10')""",
+                [instrument_id, ticker, name],
+            )
+            self.client.execute(
+                """INSERT INTO instrument_mapping
+                (instrument_id, source, source_ticker, effective_from)
+                VALUES (?, 'tushare', ?, '1999-11-10')""",
+                [instrument_id, source_ticker],
+            )
+        self.client.commit()
+
+        # 名称子串
+        assert self.reader.find_securities(SecurityQuery(search="银行"))[
+            "instrument_id"
+        ].to_list() == [100000001, 100000002]
+        # 裸代码前缀
+        assert self.reader.find_securities(SecurityQuery(search="6000"))[
+            "instrument_id"
+        ].to_list() == [100000001]
+        # 源代码完整形式
+        assert self.reader.find_securities(SecurityQuery(search="510300.SH"))[
+            "instrument_id"
+        ].to_list() == [200000001]
+        # 无命中
+        assert self.reader.find_securities(SecurityQuery(search="不存在")).is_empty()
+
+    def test_find_securities_search_treats_like_wildcards_literally(self) -> None:
+        """Search escapes LIKE wildcards so `%`/`_` match literally."""
+        self.client.execute(
+            """INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100000001, '600000', '浦发银行', 'SSE', 'stock', '1999-11-10')"""
+        )
+        self.client.commit()
+
+        assert self.reader.find_securities(SecurityQuery(search="%")).is_empty()
+        assert self.reader.find_securities(SecurityQuery(search="_")).is_empty()
+
     def test_find_securities_with_pit_and_min_list_days(self) -> None:
         """Security query applies source PIT and minimum listing age together."""
         for instrument_id, ticker, source_ticker, list_date in [

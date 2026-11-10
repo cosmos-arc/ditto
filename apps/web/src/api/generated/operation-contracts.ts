@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: acf557fb00c50ddbe97ff2968c8e33656aa8b8ba9f9385bce9187b92cf38de90
+ * Schema SHA-256: 937ffb89cccc15081a336bcc34f01b8e4c9b23e905bdec4dcde38a98574a35e2
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -2348,7 +2348,7 @@ export const operationRequestContracts = {
   "get /api/v1/metadata/instruments": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
-      "query": ["asset_class", "exchange", "is_active", "limit", "offset"],
+      "query": ["asset_class", "exchange", "is_active", "limit", "offset", "search"],
     },
   },
   "get /api/v1/metadata/instruments/{instrument_id}": {

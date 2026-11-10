@@ -47,7 +47,7 @@ describe("MarketsPage public evidence boundary", () => {
 
 		expect((await screen.findAllByText("SSE")).length).toBeGreaterThan(0);
 		expect((await screen.findAllByText("SZSE")).length).toBeGreaterThan(0);
-		await expect(screen.findByText("4 个标的")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("5 个标的")).resolves.toBeInTheDocument();
 		expect(screen.queryByText(/北向资金/)).not.toBeInTheDocument();
 	});
 

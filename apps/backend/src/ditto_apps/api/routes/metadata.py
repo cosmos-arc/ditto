@@ -124,6 +124,7 @@ async def list_instruments(
     asset_class: AssetClass | None = None,
     exchange: str | None = None,
     is_active: bool | None = None,
+    search: str | None = None,
     pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[Instrument]]:
     """
@@ -133,6 +134,7 @@ async def list_instruments(
         asset_class: 资产类别过滤 (可选)
         exchange: 交易所过滤 (可选)
         is_active: 活跃状态过滤 (可选)
+        search: 名称/代码子串检索 (可选，默认不过滤)
         pagination: 分页参数
         facade: MetadataQueryFacade 依赖注入
 
@@ -149,6 +151,7 @@ async def list_instruments(
         asset_class=asset_class_str,
         exchange=exchange,
         is_active=is_active,
+        search=search,
     )
 
     # 转换为模型列表

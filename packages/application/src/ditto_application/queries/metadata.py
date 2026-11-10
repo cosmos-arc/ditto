@@ -144,6 +144,7 @@ class MetadataQueryFacade:
         exchange: str | None = None,
         is_active: bool | None = True,
         source_tickers: list[str] | None = None,
+        search: str | None = None,
     ) -> pl.DataFrame:
         """
         多维查询证券数据.
@@ -153,6 +154,7 @@ class MetadataQueryFacade:
             exchange: 交易所过滤
             is_active: 活跃状态过滤
             source_tickers: 源代码列表
+            search: 名称/裸代码/源代码子串检索
 
         Returns:
             证券数据 DataFrame
@@ -163,6 +165,7 @@ class MetadataQueryFacade:
             asset_class=asset_class,
             exchange=exchange,
             is_active=is_active,
+            search=search,
         )
 
     def resolve_instrument_identifier(

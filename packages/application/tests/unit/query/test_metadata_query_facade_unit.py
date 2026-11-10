@@ -55,6 +55,7 @@ class TestMetadataQueryFacadeFindSecurities:
             asset_class="stock",
             exchange="SSE",
             is_active=True,
+            search=None,
         )
 
     def test_default_is_active_true(self) -> None:
@@ -69,6 +70,7 @@ class TestMetadataQueryFacadeFindSecurities:
             asset_class=None,
             exchange=None,
             is_active=True,
+            search=None,
         )
 
 

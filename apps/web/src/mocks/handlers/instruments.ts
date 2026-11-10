@@ -37,6 +37,15 @@ const INSTRUMENTS = [
 		name: "沪深300ETF",
 		ticker: "510300",
 	},
+	{
+		asset_class: "stock",
+		exchange: "SSE",
+		instrument_id: 1000005,
+		is_active: false,
+		list_date: "1999-11-10",
+		name: "退市示例",
+		ticker: "600006",
+	},
 ] as const;
 
 export const instrumentsHandlers: RequestHandler[] = [
@@ -47,13 +56,15 @@ export const instrumentsHandlers: RequestHandler[] = [
 		const assetClass = query.get("asset_class");
 		const exchange = query.get("exchange");
 		const isActive = query.get("is_active");
+		const search = query.get("search");
 		const offset = Number(query.get("offset") ?? 0);
 		const limit = Number(query.get("limit") ?? 100);
 		const filtered = INSTRUMENTS.filter(
 			(item) =>
 				(assetClass == null || item.asset_class === assetClass) &&
 				(exchange == null || item.exchange === exchange) &&
-				(isActive == null || item.is_active === (isActive === "true")),
+				(isActive == null || item.is_active === (isActive === "true")) &&
+				(search == null || `${item.ticker} ${item.name}`.toLowerCase().includes(search.toLowerCase())),
 		);
 		return HttpResponse.json({
 			data: filtered.slice(offset, offset + limit),
