@@ -7,22 +7,18 @@ import { LOCAL_WATCHLIST_STORAGE_KEY, readLocalWatchlist } from "@/lib/local-wat
 import { WatchlistOverlay, type WatchlistOverlayId } from "./market-page-overlays";
 import type {
 	MarketCalendarStatusQuery,
-	MarketCatalog,
-	MarketCatalogInstrument,
 	MarketQuoteSnapshot,
+	WatchlistEntryFn,
 	WatchlistQuoteFn,
+	WatchlistSearchFn,
 } from "./market-view-contracts";
 import { observationAnchorLabel } from "./market-view-contracts";
+import { NextDayPlanPanel } from "./next-day-plan-panel";
 
 const watchlistActions = [
 	{ id: "add-instrument", label: "添加标的" },
 	{ id: "bulk-delete", label: "批量删除" },
 ] as const;
-
-/** 名称/代码检索由 workflow 注入（按 offset 分页），markets 能力不依赖 instruments 能力。 */
-export type WatchlistSearchFn = (term: string, offset: number) => Promise<MarketCatalog>;
-/** 自选对象按精确身份解析（现有单对象解析），由 workflow 注入。 */
-export type WatchlistEntryFn = (instrumentId: number) => Promise<MarketCatalogInstrument>;
 
 /** 与图表主读数同口径的有符号数字（负号用 U+2212），保证表图数字对齐。 */
 function formatSigned(value: number, digits = 2): string {
@@ -137,6 +133,12 @@ export function WatchlistPage({
 											))}
 										</div>
 									)}
+								</PanelBody>
+							</Panel>
+							<Panel className="m-4 mt-0" data-info-unit="watchlist-next-day-plan">
+								<PanelHeader title="候选理由与次日计划" subtitle="盘后判断留档" />
+								<PanelBody>
+									<NextDayPlanPanel ids={ids} resolveEntry={resolveEntry} defaultObservationDate={quote.anchorDate} />
 								</PanelBody>
 							</Panel>
 						</main>

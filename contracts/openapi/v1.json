@@ -2707,6 +2707,47 @@
         "title": "APIResponse[ModelHistoryResponse]",
         "type": "object"
       },
+      "APIResponse_NextDayPlanResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/NextDayPlanResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[NextDayPlanResponse]",
+        "type": "object"
+      },
       "APIResponse_PaperAccountCatalogResponse_": {
         "properties": {
           "data": {
@@ -6035,6 +6076,51 @@
           "data"
         ],
         "title": "APIResponse[list[str]]",
+        "type": "object"
+      },
+      "APIResponse_tuple_NextDayPlanSummaryResponse__________": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/NextDayPlanSummaryResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[tuple[NextDayPlanSummaryResponse, ...]]",
         "type": "object"
       },
       "APIResponse_tuple_ResearchCaseSummaryResponse__________": {
@@ -11567,6 +11653,37 @@
           "opened_at"
         ],
         "title": "CreateManualAccountBody",
+        "type": "object"
+      },
+      "CreateNextDayPlanBody": {
+        "additionalProperties": false,
+        "description": "User record for one post-market observation date.",
+        "properties": {
+          "candidate_notes": {
+            "items": {
+              "$ref": "#/components/schemas/NextDayPlanCandidateNoteResponse"
+            },
+            "minItems": 1,
+            "title": "Candidate Notes",
+            "type": "array"
+          },
+          "next_day_plan": {
+            "minLength": 1,
+            "title": "Next Day Plan",
+            "type": "string"
+          },
+          "observation_date": {
+            "format": "date",
+            "title": "Observation Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "observation_date",
+          "candidate_notes",
+          "next_day_plan"
+        ],
+        "title": "CreateNextDayPlanBody",
         "type": "object"
       },
       "CreatePaperAccountBody": {
@@ -22241,6 +22358,116 @@
           "nav"
         ],
         "title": "NavPointResponse",
+        "type": "object"
+      },
+      "NextDayPlanCandidateNoteResponse": {
+        "additionalProperties": false,
+        "description": "One candidate identity with the reason it stayed on tomorrow's list.",
+        "properties": {
+          "instrument_id": {
+            "minimum": 1.0,
+            "title": "Instrument Id",
+            "type": "integer"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "reason"
+        ],
+        "title": "NextDayPlanCandidateNoteResponse",
+        "type": "object"
+      },
+      "NextDayPlanResponse": {
+        "additionalProperties": false,
+        "description": "One immutable post-market record: reasons and the next-session plan.",
+        "properties": {
+          "candidate_notes": {
+            "items": {
+              "$ref": "#/components/schemas/NextDayPlanCandidateNoteResponse"
+            },
+            "minItems": 1,
+            "title": "Candidate Notes",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "next_day_plan": {
+            "minLength": 1,
+            "title": "Next Day Plan",
+            "type": "string"
+          },
+          "observation_date": {
+            "format": "date",
+            "title": "Observation Date",
+            "type": "string"
+          },
+          "plan_id": {
+            "minLength": 1,
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan_id",
+          "observation_date",
+          "candidate_notes",
+          "next_day_plan",
+          "created_at",
+          "schema_version"
+        ],
+        "title": "NextDayPlanResponse",
+        "type": "object"
+      },
+      "NextDayPlanSummaryResponse": {
+        "additionalProperties": false,
+        "description": "Compact plan summary for the reopen list.",
+        "properties": {
+          "candidate_count": {
+            "minimum": 1.0,
+            "title": "Candidate Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "next_day_plan": {
+            "minLength": 1,
+            "title": "Next Day Plan",
+            "type": "string"
+          },
+          "observation_date": {
+            "format": "date",
+            "title": "Observation Date",
+            "type": "string"
+          },
+          "plan_id": {
+            "minLength": 1,
+            "title": "Plan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "observation_date",
+          "created_at",
+          "candidate_count",
+          "next_day_plan"
+        ],
+        "title": "NextDayPlanSummaryResponse",
         "type": "object"
       },
       "NodeDescriptorResponse": {
@@ -43478,6 +43705,375 @@
           }
         },
         "summary": "Post Indicator Series",
+        "tags": [
+          "market"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/market/next-day-plans": {
+      "get": {
+        "description": "Reopen saved post-market plans by their original observation date.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "market_list_next_day_plans",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "observation_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 10,
+                  "minLength": 10,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Observation Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_tuple_NextDayPlanSummaryResponse__________"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "List Next Day Plans",
+        "tags": [
+          "market"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      },
+      "post": {
+        "description": "Append one immutable post-market record of candidate reasons and plan.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "market_record_next_day_plan",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNextDayPlanBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_NextDayPlanResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Record Next Day Plan",
+        "tags": [
+          "market"
+        ],
+        "x-ditto-maturity": "initial-focus"
+      }
+    },
+    "/api/v1/market/next-day-plans/{plan_id}": {
+      "get": {
+        "description": "Reopen one exact plan; a fixed record never moves under a later date.\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "market_get_next_day_plan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Plan Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_NextDayPlanResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Next Day Plan",
         "tags": [
           "market"
         ],

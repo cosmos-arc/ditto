@@ -24,6 +24,7 @@ from ditto_analysis.storage.sqlite.experiments import (
     SQLiteExperimentWriter,
 )
 from ditto_analysis.storage.sqlite.research import (
+    SQLiteNextDayPlanStore,
     SQLiteResearchCaseStore,
     SQLiteResearchCatalogReader,
     SQLiteResearchCatalogWriter,
@@ -138,6 +139,16 @@ class AnalysisStorageProvider(Provider):
     ) -> SQLiteResearchCaseStore:
         """Provide append-only Research Case handoff persistence."""
         store = SQLiteResearchCaseStore(sqlite_client)
+        store.init_schema()
+        return store
+
+    @provide
+    def next_day_plan_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteNextDayPlanStore:
+        """Provide append-only Next Day Plan persistence."""
+        store = SQLiteNextDayPlanStore(sqlite_client)
         store.init_schema()
         return store
 

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: e9317e781ca3d5b2dafcc05ceedf901974867a495cb5f9c6ace2e06d4dacbb90
+ * Schema SHA-256: 69a2441cc7066bab85fe34aeead5b55e24c99520e2485c5c5ca167c9ad3ae0c3
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -698,6 +698,26 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/market/context": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/market/next-day-plans": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/market/next-day-plans/{plan_id}": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -1568,6 +1588,16 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "post /api/v1/market/next-day-plans": {
+    "201": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "post /api/v1/paper/accounts": {
     "201": ["application/json"],
     "400": ["application/json"],
@@ -2371,6 +2401,18 @@ export const operationRequestContracts = {
       "query": ["as_of", "knowledge_cutoff", "publication_cutoff", "source_snapshot_id"],
     },
   },
+  "get /api/v1/market/next-day-plans": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["limit", "observation_date"],
+    },
+  },
+  "get /api/v1/market/next-day-plans/{plan_id}": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["plan_id"],
+    },
+  },
   "get /api/v1/market/regime": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
@@ -2868,6 +2910,11 @@ export const operationRequestContracts = {
     },
   },
   "post /api/v1/market/indicator-series": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+    },
+  },
+  "post /api/v1/market/next-day-plans": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
     },

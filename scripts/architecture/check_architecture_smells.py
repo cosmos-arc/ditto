@@ -267,6 +267,23 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
+        path="apps/backend/src/ditto_apps/registry/next_day_plan.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.research.plans",
+                "ditto_analysis.storage.sqlite.research",
+            }
+        ),
+        owner="apps NextDayPlan composition adapter",
+        reason=(
+            "The composition root converts an Application-owned post-market "
+            "record contract into the isolated Analysis NextDayPlan domain "
+            "and binds the Analysis-owned append-only plan store to the "
+            "Application persistence ports; ordinary application processes "
+            "never import Analysis.",
+        ),
+    ),
+    CompositionImportAllowance(
         path="apps/backend/src/ditto_apps/registry/fresh_runtime.py",
         allowed_modules=frozenset(
             {

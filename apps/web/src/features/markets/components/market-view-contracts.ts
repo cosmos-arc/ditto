@@ -59,6 +59,11 @@ export interface MarketQuoteSnapshot {
 }
 
 /** 自选行情解析由 workflow 注入（markets 能力不依赖 instruments 能力）。 */
+/** 名称/代码检索由 workflow 注入（按 offset 分页），markets 能力不依赖 instruments 能力。 */
+export type WatchlistSearchFn = (term: string, offset: number) => Promise<MarketCatalog>;
+/** 自选对象按精确身份解析（现有单对象解析），由 workflow 注入。 */
+export type WatchlistEntryFn = (instrumentId: number) => Promise<MarketCatalogInstrument>;
+
 export type WatchlistQuoteFn = (instrumentId: number, anchorDate: string) => Promise<MarketQuoteSnapshot | null>;
 
 export type MarketCatalogQuery = MarketQueryResult<MarketCatalog>;
