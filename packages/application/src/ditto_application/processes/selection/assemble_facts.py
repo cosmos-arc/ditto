@@ -57,7 +57,7 @@ Boundaries kept honest on purpose:
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Literal, Protocol
@@ -66,14 +66,16 @@ from zoneinfo import ZoneInfo
 import polars as pl
 from ditto_data.provider import BarQuery, DataProvider
 from ditto_features.expression.compiler import ExpressionCompiler
-from ditto_features.expression.contracts import CompiledDerivedExpression
-from ditto_features.expression.diagnostics import ExpressionCompileError
 from ditto_features.factors.spec import FactorSpec
 from ditto_kernel.identity import InstrumentId
 
 from ditto_application.exceptions import AppProcessError, AppQueryError
-from ditto_application.processes.execution._factor_signal_spec import (
-    build_signal_spec,
+from ditto_application.factor_assembly import (
+    MARKET_BAR_COLUMNS,
+    resolve_factor_nodes,
+)
+from ditto_application.factor_assembly import (
+    FactorAssemblyNode as _FactorNode,
 )
 from ditto_application.processes.selection.facade import (
     CreateSelectionRunRequest,
@@ -96,20 +98,9 @@ __all__ = [
     "AssembleSelectionFactsRequest",
     "SnapshotCoverageIndex",
     "SnapshotWindow",
-    "resolve_factor_nodes",
     "validate_assembly_policy",
 ]
 
-# Public alias: the eligible-factor catalog reuses the exact same
-# market-leaf vocabulary instead of re-declaring the read-model columns.
-MARKET_BAR_COLUMNS: Mapping[str, str] = {
-    "market.open": "open",
-    "market.high": "high",
-    "market.low": "low",
-    "market.close": "close",
-    "market.volume": "volume",
-    "market.amount": "amount",
-}
 _REQUIRED_BAR_COLUMNS = frozenset(
     {"instrument_id", "trade_date", "close", "pre_close", "amount", "knowledge_date"}
 )
@@ -320,159 +311,6 @@ class AssembleSelectionFactsRequest:
     publication_cutoff: datetime | None = None
     seed: int = 0
     lookback_days: int = _DEFAULT_LOOKBACK_DAYS
-
-
-@dataclass(frozen=True, slots=True)
-class _FactorNode:
-    """One governed factor materialized in dependency order."""
-
-    factor_id: str
-    compiled: CompiledDerivedExpression
-    requested: bool
-    leaves: frozenset[str]
-    lookback: int
-
-
-def _resolve_factor_spec(
-    get_spec: Callable[[str], FactorSpec | None], factor_id: str
-) -> FactorSpec:
-    spec = get_spec(factor_id)
-    if spec is None:
-        raise AppProcessError(
-            f"unknown registered factor: {factor_id}",
-            details={"reason": "ASSEMBLY_FACTOR_UNKNOWN", "factor_id": factor_id},
-        )
-    if spec.computation_type != "expression":
-        raise AppProcessError(
-            f"research factor executor is unavailable: {factor_id}",
-            details={
-                "reason": "ASSEMBLY_FACTOR_EXECUTOR_UNAVAILABLE",
-                "factor_id": factor_id,
-            },
-        )
-    return spec
-
-
-def _compiled_factor(
-    compiler: ExpressionCompiler, factor_id: str, spec: FactorSpec
-) -> CompiledDerivedExpression:
-    """Compile one node; reject cross-sectional-nested-time-series recipes."""
-    try:
-        compiled = compiler.compile(
-            build_signal_spec(spec.expression, 0, derived_id=factor_id, version=1)
-        )
-    except ExpressionCompileError as error:
-        raise AppProcessError(
-            f"registered factor failed to compile: {factor_id}",
-            details={"reason": "ASSEMBLY_FACTOR_COMPILE", "factor_id": factor_id},
-        ) from error
-    operators = compiled.analysis.operator_names
-    if any(op.startswith("cs_") for op in operators) and any(
-        op.startswith("ts_") for op in operators
-    ):
-        raise AppProcessError(
-            "factor nests a time-series operator under a "
-            + "cross-sectional operator; the production recipe with "
-            + "materialized intermediates is required",
-            details={
-                "reason": "ASSEMBLY_FACTOR_EXPRESSION_UNSUPPORTED",
-                "factor_id": factor_id,
-            },
-        )
-    return compiled
-
-
-def _dependency_leaves(
-    get_spec: Callable[[str], FactorSpec | None],
-    dependency: str,
-    factor_id: str,
-    path: tuple[str, ...],
-    visit: Callable[[str, tuple[str, ...]], frozenset[str]],
-) -> frozenset[str]:
-    """Classify one declared dependency as market leaf or nested factor."""
-    if get_spec(dependency) is not None:
-        return visit(dependency, (*path, factor_id))
-    if dependency in MARKET_BAR_COLUMNS:
-        return frozenset({dependency})
-    raise AppProcessError(
-        "factor dependency is not available for assembly: "
-        + f"{factor_id} -> {dependency}",
-        details={
-            "reason": "ASSEMBLY_FACTOR_DEPENDENCY_UNSUPPORTED",
-            "factor_id": factor_id,
-            "dependency": dependency,
-        },
-    )
-
-
-def resolve_factor_nodes(
-    get_spec: Callable[[str], FactorSpec | None],
-    compiler: ExpressionCompiler,
-    requested: Iterable[str],
-) -> tuple[_FactorNode, ...]:
-    """
-    Single authority for which governed factors assembly can serve.
-
-    Resolves the transitive closure of ``requested`` factor ids in
-    dependency order, rejecting (fail-closed, via :class:`AppProcessError`)
-    unknown ids, python executors, unresolvable dependencies, cycles,
-    compile failures, and cross-sectional-nested-time-series recipes. The
-    eligible-factor catalog reuses this exact resolver, so it can never
-    advertise a factor the engine would refuse.
-    """
-    order: list[str] = []
-    leaves: dict[str, frozenset[str]] = {}
-    compiled: dict[str, CompiledDerivedExpression] = {}
-    lookbacks: dict[str, int] = {}
-
-    def visit(factor_id: str, path: tuple[str, ...]) -> frozenset[str]:
-        if factor_id in leaves:
-            return leaves[factor_id]
-        if factor_id in path:
-            cycle = (*path, factor_id)
-            raise AppProcessError(
-                f"registered factor dependency cycle: {' -> '.join(cycle)}",
-                details={
-                    "reason": "ASSEMBLY_FACTOR_CYCLE",
-                    "factor_id": factor_id,
-                    "dependency_path": cycle,
-                },
-            )
-        spec = _resolve_factor_spec(get_spec, factor_id)
-        node_leaves: set[str] = set()
-        for dependency in spec.dependencies:
-            node_leaves |= _dependency_leaves(
-                get_spec, dependency, factor_id, path, visit
-            )
-        leaves[factor_id] = frozenset(node_leaves)
-        compiled[factor_id] = _compiled_factor(compiler, factor_id, spec)
-        # Time-series windows compose across registered dependencies, so
-        # the required history is this node's window plus the deepest
-        # dependency chain below it.
-        lookbacks[factor_id] = compiled[factor_id].analysis.lookback + max(
-            (
-                lookbacks[dependency]
-                for dependency in spec.dependencies
-                if dependency in lookbacks
-            ),
-            default=0,
-        )
-        order.append(factor_id)
-        return leaves[factor_id]
-
-    requested_ids = set(requested)
-    for factor_id in sorted(requested_ids):
-        visit(factor_id, ())
-    return tuple(
-        _FactorNode(
-            factor_id=factor_id,
-            compiled=compiled[factor_id],
-            requested=factor_id in requested_ids,
-            leaves=leaves[factor_id],
-            lookback=lookbacks[factor_id],
-        )
-        for factor_id in order
-    )
 
 
 def validate_assembly_policy(request: AssembleSelectionFactsRequest) -> None:

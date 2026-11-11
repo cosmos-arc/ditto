@@ -38,6 +38,11 @@ from ditto_strategy.alpha.selection_evidence import (
 )
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.factor_signal_spec import (
+    build_signal_spec,
+    factor_normalized_column,
+    factor_value_column,
+)
 from ditto_application.processes.execution._factor_bundle import (
     build_exposure_aware_bundle_builder as _build_exposure_aware_bundle_builder,
 )
@@ -49,11 +54,6 @@ from ditto_application.processes.execution._factor_bundle import (
 )
 from ditto_application.processes.execution._factor_bundle import (
     build_prediction_aware_bundle_builder as _build_prediction_aware_bundle_builder,
-)
-from ditto_application.processes.execution._factor_signal_spec import (
-    build_signal_spec,
-    factor_normalized_column,
-    factor_value_column,
 )
 
 __all__ = [

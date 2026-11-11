@@ -20,9 +20,7 @@ from ditto_features.factors.factor_registry import FACTOR_GROUP_LABELS, FACTOR_G
 from ditto_features.factors.spec import FactorSpec
 
 from ditto_application.exceptions import AppProcessError, AppQueryError
-from ditto_application.processes.selection.assemble_facts import (
-    resolve_factor_nodes,
-)
+from ditto_application.factor_assembly import resolve_factor_nodes
 
 __all__ = [
     "SelectionFactorCatalogEntry",

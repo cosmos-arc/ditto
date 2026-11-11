@@ -470,8 +470,8 @@ export function SelectionRunInput({
 						<p className="text-(--color-foreground-tertiary)">尚未添加条件；仅用硬过滤与因子权重排名。</p>
 					)}
 					{form.groups.map((group, groupIndex) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: 行随编辑整体受控，索引即行身份
 						<div
+							// biome-ignore lint/suspicious/noArrayIndexKey: 行随编辑整体受控，索引即行身份
 							key={groupIndex}
 							className="grid gap-2 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-3"
 						>

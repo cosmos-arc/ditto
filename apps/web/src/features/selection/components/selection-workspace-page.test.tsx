@@ -74,9 +74,7 @@ describe("SelectionWorkspacePage", () => {
 
 		// 证据面板的运行身份与状态行/RUN HISTORY 同长（12 位摘要）：
 		// 同一 run 身份跨面板必须一致（#740 V3）。
-		const identity = within(screen.getByLabelText("运行身份")).getAllByText(
-			/selection-run · /,
-		)[0] as HTMLElement;
+		const identity = within(screen.getByLabelText("运行身份")).getAllByText(/selection-run · /)[0] as HTMLElement;
 		expect(identity).toHaveTextContent(`selection-run · ${"1".repeat(12)}`);
 
 		const memo = screen.getByRole("link", { name: "生成 SelectionMemo" });
