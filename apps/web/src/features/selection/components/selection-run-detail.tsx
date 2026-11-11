@@ -145,15 +145,24 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 				</p>
 			)}
 			{view && (
-				<p
-					role="status"
-					className="break-all rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) p-2"
-				>
-					<span className="font-mono">{view.caseId}</span>
-					<span className="ml-2 text-(--color-foreground-tertiary)">
-						{view.degraded ? `降级 · 缺输入：${view.missingInputs || "未声明"}` : "就绪"}
-					</span>
-				</p>
+				<div className="space-y-2">
+					<p
+						role="status"
+						className="break-all rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) p-2"
+					>
+						<span className="font-mono">{view.caseId}</span>
+						<span className="ml-2 text-(--color-foreground-tertiary)">
+							{view.degraded ? `降级 · 缺输入：${view.missingInputs || "未声明"}` : "就绪"}
+						</span>
+					</p>
+					{/* 交接已持久化：研究入口可重开该用例，不需要 Agent 或复制 ID。 */}
+					<a
+						className="inline-block rounded-(--radius-sm) border border-(--color-border-subtle) px-2 py-1.5 hover:bg-(--color-interaction-hover-subtle-bg)"
+						href={`/research/cases/${encodeURIComponent(view.caseId)}`}
+					>
+						在研究中打开
+					</a>
+				</div>
 			)}
 		</div>
 	);
@@ -283,6 +292,26 @@ export function SelectionRunDetail({
 							<p>{truthLabel(diff.data_changed, "数据快照已变化", "数据快照未变化")}</p>
 							<p>{truthLabel(diff.industry_rotation_changed, "行业轮动已变化", "行业轮动未变化")}</p>
 							<p>{truthLabel(diff.spec_changed, "SelectionSpec 已变化", "SelectionSpec 未变化")}</p>
+							<p>
+								{diff.added_candidate_ids.length > 0 && (
+									<span className="block">
+										新增入选 <span className="font-mono">{diff.added_candidate_ids.join("、")}</span>
+									</span>
+								)}
+								{diff.removed_candidate_ids.length > 0 && (
+									<span className="block">
+										退出候选 <span className="font-mono">{diff.removed_candidate_ids.join("、")}</span>
+									</span>
+								)}
+								{diff.added_candidate_ids.length === 0 && diff.removed_candidate_ids.length === 0 && (
+									<span className="text-(--color-foreground-tertiary)">名单未变化</span>
+								)}
+							</p>
+							{diff.exclusion_changes.map((change) => (
+								<p key={change.instrument_id} className="font-mono">
+									{change.instrument_id} · {change.before_reason ?? "入选"} → {change.after_reason ?? "入选"}
+								</p>
+							))}
 							{diff.rank_changes.map((change) => (
 								<p key={change.instrument_id} className="font-mono">
 									{change.instrument_id} · {change.before_rank} → {change.after_rank}

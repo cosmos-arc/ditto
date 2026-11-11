@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { researchCaseFixture, selectionReceiptFixture } from "@/mocks/fixtures/selection";
+import { researchCaseFixture, selectionReceiptFixture, selectionRunFixtures } from "@/mocks/fixtures/selection";
 import {
 	ASSEMBLED_UNIVERSE_SNAPSHOT_ID,
 	assembledSelectionRunResponse,
@@ -63,13 +63,13 @@ describe("SelectionWorkspacePage", () => {
 		expect(screen.getByText("0.5400")).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "贵州茅台" })).toHaveAttribute(
 			"href",
-			"/instruments/600519?tab=technical&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111",
+			"/instruments/600519?tab=chart&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111&observeDate=2026-08-31",
 		);
 		await user.click(screen.getByRole("tab", { name: "排除 1" }));
 		expect(screen.getByText("insufficient_liquidity")).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "邯郸钢铁" })).toHaveAttribute(
 			"href",
-			"/instruments/600001?tab=technical&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111",
+			"/instruments/600001?tab=chart&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111&observeDate=2026-08-31",
 		);
 
 		// 证据面板的运行身份与状态行/RUN HISTORY 同长（12 位摘要）：
@@ -346,5 +346,115 @@ describe("SelectionWorkspacePage spec identity follows host navigation", () => {
 		first.rerender(<SelectionWorkspacePage initialSpecId={undefined} />);
 		await user.clear(screen.getByRole("textbox", { name: "SelectionSpec ID" }));
 		expect(screen.getByRole("textbox", { name: "SelectionSpec ID" })).toHaveValue("");
+	});
+});
+
+describe("reopen and return context (#741)", () => {
+	it("links candidates and exclusions to the instrument chart with the run's observe date", async () => {
+		const user = userEvent.setup();
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		// 候选主链接进图表并锚定观察日（run 决策日 2026-08-31，上海会话日）。
+		await expect(screen.findByRole("link", { name: "贵州茅台" })).resolves.toHaveAttribute(
+			"href",
+			"/instruments/600519?tab=chart&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111&observeDate=2026-08-31",
+		);
+		// 技术证据（Selection Inspector）仍可下钻。
+		expect(screen.getByRole("link", { name: "技术证据 600519" })).toHaveAttribute(
+			"href",
+			"/instruments/600519?tab=technical&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111",
+		);
+		await user.click(screen.getByRole("tab", { name: "排除 1" }));
+		expect(screen.getByRole("link", { name: "邯郸钢铁" })).toHaveAttribute(
+			"href",
+			"/instruments/600001?tab=chart&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111&observeDate=2026-08-31",
+		);
+	});
+
+	it("restores the pinned run and tab from the host search and reports changes back", async () => {
+		const user = userEvent.setup();
+		const runIds = selectionRunFixtures.map((run) => run.run_id) as string[];
+		const onRunIdChange = vi.fn<(runId: string | undefined) => void>();
+		const onTabChange = vi.fn<(tab: string) => void>();
+		render(
+			<SelectionWorkspacePage
+				initialRunId={runIds[1]}
+				initialTab="exclusions"
+				onRunIdChange={onRunIdChange}
+				onTabChange={onTabChange}
+			/>,
+			{ wrapper: wrapper() },
+		);
+
+		// 固定重开：选中历史里较旧的那条运行（非最新），证据面板显示其身份。
+		const identity = await screen.findByText("selection-run · run-previous");
+		expect(identity).toBeInTheDocument();
+
+		// tab 从 URL 恢复为排除视图。
+		expect(screen.getByRole("tab", { name: /排除 0/ })).toHaveAttribute("aria-selected", "true");
+
+		// 点击最新那条历史运行与切换 tab 都回报宿主（URL 跟随）。
+		const latestCard = screen.getByRole("button", { name: new RegExp(`${"1".repeat(12)}`) });
+		await user.click(latestCard);
+		expect(onRunIdChange).toHaveBeenLastCalledWith(runIds[0]);
+		await user.click(screen.getByRole("tab", { name: /入选 2/ }));
+		expect(onTabChange).toHaveBeenLastCalledWith("candidates");
+	});
+
+	it("keeps an honest not-found state when the pinned run is missing instead of swapping in the latest", async () => {
+		const user = userEvent.setup();
+		const onRunIdChange = vi.fn<(runId: string | undefined) => void>();
+		const missingId = `selection-run:sha256:${"9".repeat(64)}`;
+		server.use(
+			http.get("/api/v1/selections/runs/:runId", () =>
+				HttpResponse.json({ detail: "selection run not found" }, { status: 404 }),
+			),
+		);
+		render(<SelectionWorkspacePage initialRunId={missingId} onRunIdChange={onRunIdChange} />, {
+			wrapper: wrapper(),
+		});
+
+		const alertHeading = await screen.findByText("未找到该固定运行");
+		const alert = alertHeading.closest("div[role='alert']");
+		expect(alert).not.toBeNull();
+		expect(alert).toHaveTextContent(missingId);
+		// 不偷换：证据面板保持未选中，而不是静默换成最新运行。
+		expect(screen.getByText("exact run required")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "回到该 spec 最新运行" }));
+		expect(onRunIdChange).toHaveBeenLastCalledWith(undefined);
+	});
+
+	it("shows the membership drift between two compared runs", async () => {
+		const user = userEvent.setup();
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		const selectors = await screen.findAllByRole("checkbox", { name: /加入运行对比/ });
+		await user.click(selectors[0] as HTMLElement);
+		await user.click(selectors[1] as HTMLElement);
+		await user.click(screen.getByRole("button", { name: "比较 2 个运行" }));
+
+		await expect(screen.findByText("数据快照已变化")).resolves.toBeInTheDocument();
+		// 名单变化：新增候选与 why-in/out 迁移要可见。
+		expect(screen.getByText(/新增入选/)).toHaveTextContent("600519");
+		expect(screen.queryByText(/名单未变化/)).not.toBeInTheDocument();
+		expect(screen.getByText(/600519 · below_top_k → 入选/)).toBeInTheDocument();
+	});
+
+	it("links the created research case into the research entry for later reopening", async () => {
+		const user = userEvent.setup();
+		server.use(
+			http.post("/api/v1/selections/runs/:runId/research-cases", async ({ request }) => {
+				const body = (await request.json()) as { objective: string };
+				return HttpResponse.json({ data: { ...researchCaseFixture, objective: body.objective } }, { status: 201 });
+			}),
+		);
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		await user.type(await screen.findByRole("textbox", { name: "研究假设 objective" }), "验证动量假设");
+		await user.click(screen.getByRole("button", { name: "创建研究用例" }));
+
+		const openLink = await screen.findByRole("link", { name: "在研究中打开" });
+		expect(openLink).toHaveAttribute("href", `/research/cases/${encodeURIComponent(researchCaseFixture.case_id)}`);
 	});
 });

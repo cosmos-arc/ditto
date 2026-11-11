@@ -10,6 +10,11 @@ function sameIdSequence(left: readonly number[], right: readonly number[]): bool
 	return left.length === right.length && [...left].sort().join(",") === [...right].sort().join(",");
 }
 
+/**
+ * 校验与后端 ResearchCase 合同一致：因果序只要求 publication ≤ knowledge。
+ * live 日频车道（issue 583）的决策定在最近完整交易日收盘、以当下知识做
+ * 出——knowledge 晚于 as_of 合法，不能再按旧重放车道拒绝。
+ */
 export function toResearchCaseView(value: ResearchCase, run: SelectionRun, submitted: CreateResearchCaseBody) {
 	const asOfInstant = Date.parse(value.as_of);
 	const knowledgeInstant = Date.parse(value.knowledge_cutoff);
@@ -35,7 +40,6 @@ export function toResearchCaseView(value: ResearchCase, run: SelectionRun, submi
 		Number.isNaN(knowledgeInstant) ||
 		Number.isNaN(publicationInstant) ||
 		publicationInstant > knowledgeInstant ||
-		knowledgeInstant > asOfInstant ||
 		value.objective !== submitted.objective ||
 		!sameIdSequence(value.candidate_instrument_ids, submitted.candidate_instrument_ids ?? []) ||
 		(value.selection_status === "ready" && value.missing_inputs.length > 0) ||
