@@ -304,16 +304,14 @@ describe("ResearchCaseStrategyHandoff", () => {
 		it("shows the existing-strategy exit for a duplicate name regardless of status code", async () => {
 			// 回归：后端曾以 400 + 无 conflict 关键词消息呈现同名冲突，出口
 			// 只靠 409/关键词会得到死胡同；判定必须用结构化错误码。
-			const createStrategy = vi.fn(
-				async (_target: StrategyHandoffCreateTarget, _key: string) => {
-					throw new ApiError({
-						status: 400,
-						message: "Strategy already exists: existing-id",
-						payload: null,
-						errorCode: "STRATEGY_ALREADY_EXISTS",
-					});
-				},
-			);
+			const createStrategy = vi.fn(async (_target: StrategyHandoffCreateTarget, _key: string) => {
+				throw new ApiError({
+					status: 400,
+					message: "Strategy already exists: existing-id",
+					payload: null,
+					errorCode: "STRATEGY_ALREADY_EXISTS",
+				});
+			});
 			renderPanel(createStrategy);
 			const user = userEvent.setup();
 
