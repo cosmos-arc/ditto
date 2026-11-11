@@ -31,6 +31,25 @@ class _FactorWeight(Protocol):
     def weight(self) -> float: ...
 
 
+class _ConditionOperator(Protocol):
+    @property
+    def value(self) -> str: ...
+
+
+class _FactorCondition(Protocol):
+    @property
+    def factor_name(self) -> str: ...
+
+    @property
+    def operator(self) -> _ConditionOperator: ...
+
+    @property
+    def value(self) -> float: ...
+
+
+type _FilterGroup = tuple[_FactorCondition, ...]
+
+
 class _SelectionSpec(Protocol):
     @property
     def asset_kind(self) -> _StringValue: ...
@@ -40,6 +59,9 @@ class _SelectionSpec(Protocol):
 
     @property
     def factor_weights(self) -> tuple[_FactorWeight, ...]: ...
+
+    @property
+    def filter_groups(self) -> tuple[_FilterGroup, ...]: ...
 
     @property
     def min_average_turnover(self) -> float: ...
@@ -260,6 +282,21 @@ def _spec_payload(value: _SelectionSpec) -> dict[str, object]:
         payload["max_tracking_error"] = cast(
             "_EtfSelectionSpec", value
         ).max_tracking_error
+    # Embedded only when present so pre-condition specs keep their exact
+    # historical hash: a default empty key would rewrite every saved
+    # spec's content-addressed identity.
+    if value.filter_groups:
+        payload["filter_groups"] = [
+            [
+                {
+                    "factor_name": condition.factor_name,
+                    "operator": condition.operator.value,
+                    "value": condition.value,
+                }
+                for condition in group
+            ]
+            for group in value.filter_groups
+        ]
     return payload
 
 

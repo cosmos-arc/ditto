@@ -159,3 +159,34 @@ def test_selection_keeps_delisted_instrument_as_explicit_exclusion():
         with pytest.raises(AppProcessError):
             facade.create(replace(request, instruments=()))
     assert len(writer.saved) == 1
+
+
+def test_condition_factors_join_readiness_consumption() -> None:
+    """条件引用的因子必须与权重因子同样进入 readiness 消费绑定（#740）。"""
+    from ditto_application.processes.selection.facade import (
+        SelectionFactorConditionDraft,
+        StockSelectionSpecDraft,
+        _consumed_fields,
+    )
+
+    request = replace(
+        _request(),
+        market_context_feature_set_id=None,
+        membership_version="test",
+        industries=(),
+        selection_spec=StockSelectionSpecDraft(
+            spec_id="conditioned",
+            spec_version="1",
+            top_k=1,
+            min_average_turnover=0.0,
+            min_listing_days=1,
+            factor_weights=(SelectionFactorWeightDraft("momentum", 1.0),),
+            filter_groups=(
+                (SelectionFactorConditionDraft("reversal_1w", "gte", 0.8),),
+            ),
+        ),
+        instruments=(),
+    )
+    consumed = _consumed_fields(request)
+    assert "instruments.factor_values.momentum" in consumed
+    assert "instruments.factor_values.reversal_1w" in consumed

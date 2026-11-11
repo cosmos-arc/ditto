@@ -10,16 +10,21 @@ from dishka.integrations.fastapi import setup_dishka
 from ditto_application.processes.selection.assemble_facts import (
     AssembleSelectionFacts,
     AssembleSelectionFactsRequest,
+    validate_assembly_policy,
 )
 from ditto_application.processes.selection.facade import SelectionWorkspaceFacade
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
 )
 from ditto_application.queries.historical_universe import HistoricalUniverseQuery
+from ditto_application.queries.selection_factor_catalog import (
+    SelectionFactorCatalogQuery,
+)
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.selection import router
 from ditto_apps.api.routes.universe import router as universe_router
 from ditto_apps.middleware import api_error_handler
+from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 from ditto_platform.foundation import SQLitePool
 from ditto_strategy.industry_rotation.service import IndustryRotationService
 from ditto_strategy.selection.pipeline import SelectionPipeline
@@ -73,6 +78,9 @@ async def test_policy_only_create_replays_and_refuses_client_facts(tmp_path):
                 self.requests: list[AssembleSelectionFactsRequest] = []
 
             def assemble(self, request: AssembleSelectionFactsRequest):
+                # 保真替换：策略门（权重/条件/阈值域）在录制前照常执行，
+                # 否则测试会接受真实引擎必拒的请求体。
+                validate_assembly_policy(request)
                 self.requests.append(request)
                 return bound
 
@@ -93,6 +101,10 @@ async def test_policy_only_create_replays_and_refuses_client_facts(tmp_path):
             def historical_query(self) -> HistoricalUniverseQuery:
                 return history
 
+            @provide
+            def factor_catalog(self) -> SelectionFactorCatalogQuery:
+                return SelectionFactorCatalogQuery(ALL_FACTOR_SPECS)
+
         container = make_async_container(TestProvider())
         app = FastAPI()
         setup_dishka(container=container, app=app)
@@ -103,6 +115,7 @@ async def test_policy_only_create_replays_and_refuses_client_facts(tmp_path):
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         ) as client:
             await _assert_historical_scope(client, bound)
+            await _assert_factor_catalog(client)
             first = await client.post("/api/v1/selections/runs", json=_POLICY_BODY)
             assert first.status_code == 201, first.text
             assert (
@@ -118,8 +131,94 @@ async def test_policy_only_create_replays_and_refuses_client_facts(tmp_path):
             assert len(runs.list_by_spec("admission-test")) == 1
             assert len(process.requests) == 2
             await _assert_client_facts_refused(client)
+            # 条件 policy 精确透传到组装请求（字段/算子/值原样到达）。
+            conditioned = await client.post(
+                "/api/v1/selections/runs",
+                json={
+                    **_POLICY_BODY,
+                    "factor_filter_groups": [
+                        {
+                            "conditions": [
+                                {
+                                    "factor_name": "reversal_1w",
+                                    "operator": "gte",
+                                    "value": 0.8,
+                                }
+                            ]
+                        }
+                    ],
+                },
+            )
+            assert conditioned.status_code == 201, conditioned.text
+            lifted = process.requests[-1].factor_filter_groups
+            assert lifted[0][0].factor_name == "reversal_1w"
+            assert lifted[0][0].operator == "gte"
+            assert lifted[0][0].value == 0.8
+            # 非法算子在 transport 层直接拒绝（422），不进入装配。
+            invalid = await client.post(
+                "/api/v1/selections/runs",
+                json={
+                    **_POLICY_BODY,
+                    "factor_filter_groups": [
+                        {
+                            "conditions": [
+                                {
+                                    "factor_name": "reversal_1w",
+                                    "operator": "eq",
+                                    "value": 0.8,
+                                }
+                            ]
+                        }
+                    ],
+                },
+            )
+            assert invalid.status_code == 422, invalid.text
+            # 空条件组同样拒绝。
+            empty_group = await client.post(
+                "/api/v1/selections/runs",
+                json={
+                    **_POLICY_BODY,
+                    "factor_filter_groups": [{"conditions": []}],
+                },
+            )
+            assert empty_group.status_code == 422, empty_group.text
+            # 出域阈值（截面分数秩 [0,1]）服务端拒绝（#740 F2），不再
+            # 静默生成零候选运行。
+            out_of_domain = await client.post(
+                "/api/v1/selections/runs",
+                json={
+                    **_POLICY_BODY,
+                    "factor_filter_groups": [
+                        {
+                            "conditions": [
+                                {
+                                    "factor_name": "liquidity",
+                                    "operator": "gte",
+                                    "value": 1.5,
+                                }
+                            ]
+                        }
+                    ],
+                },
+            )
+            assert out_of_domain.status_code == 422, out_of_domain.text
         await container.close()
         pool.close_all()
+
+
+async def _assert_factor_catalog(client):
+    """The catalog lists assembly-eligible factors with readable metadata."""
+    response = await client.get("/api/v1/selections/factor-catalog")
+    assert response.status_code == 200, response.text
+    entries = response.json()["data"]
+    ids = [item["factor_id"] for item in entries]
+    assert "momentum_1m" in ids
+    assert "ep_ttm" not in ids
+    assert "relative_strength_60d" not in ids
+    momentum = next(item for item in entries if item["factor_id"] == "momentum_1m")
+    assert momentum["lookback_trading_days"] >= 20
+    assert momentum["value_unit"]
+    assert momentum["group_label"]
 
 
 async def _assert_client_facts_refused(client):

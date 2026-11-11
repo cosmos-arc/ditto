@@ -16,8 +16,11 @@ from ditto_strategy.industry_rotation.contracts import (
 )
 from ditto_strategy.selection.contracts import (
     EtfSelectionSpec,
+    SelectionConditionOperator,
+    SelectionFactorCondition,
     SelectionFactorValue,
     SelectionFactorWeight,
+    SelectionFilterGroup,
     SelectionInputBundle,
     SelectionInstrumentInput,
     SelectionLimitState,
@@ -54,6 +57,8 @@ __all__ = [
     "CreateSelectionRunRequest",
     "EtfSelectionSpecDraft",
     "IndustryRotationObservationDraft",
+    "SelectionConditionOperatorDraft",
+    "SelectionFactorConditionDraft",
     "SelectionFactorValueDraft",
     "SelectionFactorWeightDraft",
     "SelectionInstrumentDraft",
@@ -62,6 +67,7 @@ __all__ = [
 ]
 
 type LimitStateDraft = Literal["normal", "limit_up", "limit_down"]
+type SelectionConditionOperatorDraft = Literal["gte", "lte"]
 
 
 def derive_limit_state(
@@ -130,6 +136,18 @@ class SelectionFactorWeightDraft:
 
 
 @dataclass(frozen=True, slots=True)
+class SelectionFactorConditionDraft:
+    """Application-facing factor threshold condition (#740)."""
+
+    factor_name: str
+    operator: SelectionConditionOperatorDraft
+    value: float
+
+
+type SelectionFilterGroupDraft = tuple[SelectionFactorConditionDraft, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class SelectionFactorValueDraft:
     """Application-facing normalized instrument factor value."""
 
@@ -148,6 +166,7 @@ class StockSelectionSpecDraft:
     min_listing_days: int
     factor_weights: tuple[SelectionFactorWeightDraft, ...]
     excluded_limit_states: tuple[LimitStateDraft, ...] = ("limit_up", "limit_down")
+    filter_groups: tuple[SelectionFilterGroupDraft, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +181,7 @@ class EtfSelectionSpecDraft:
     factor_weights: tuple[SelectionFactorWeightDraft, ...]
     max_tracking_error: float | None = None
     excluded_limit_states: tuple[LimitStateDraft, ...] = ("limit_up", "limit_down")
+    filter_groups: tuple[SelectionFilterGroupDraft, ...] = ()
 
 
 type SelectionSpecDraft = StockSelectionSpecDraft | EtfSelectionSpecDraft
@@ -214,11 +234,28 @@ def _factor_weights(
     return tuple(SelectionFactorWeight(item.name, item.weight) for item in values)
 
 
+def _filter_groups(
+    values: tuple[SelectionFilterGroupDraft, ...],
+) -> tuple[SelectionFilterGroup, ...]:
+    return tuple(
+        tuple(
+            SelectionFactorCondition(
+                factor_name=item.factor_name,
+                operator=SelectionConditionOperator(item.operator),
+                value=item.value,
+            )
+            for item in group
+        )
+        for group in values
+    )
+
+
 def _selection_spec(value: SelectionSpecDraft) -> StockSelectionSpec | EtfSelectionSpec:
     weights = _factor_weights(value.factor_weights)
     excluded_states = tuple(
         SelectionLimitState(item) for item in value.excluded_limit_states
     )
+    groups = _filter_groups(value.filter_groups)
     if isinstance(value, StockSelectionSpecDraft):
         return StockSelectionSpec(
             spec_id=value.spec_id,
@@ -228,6 +265,7 @@ def _selection_spec(value: SelectionSpecDraft) -> StockSelectionSpec | EtfSelect
             min_listing_days=value.min_listing_days,
             factor_weights=weights,
             excluded_limit_states=excluded_states,
+            filter_groups=groups,
         )
     return EtfSelectionSpec(
         spec_id=value.spec_id,
@@ -238,6 +276,7 @@ def _selection_spec(value: SelectionSpecDraft) -> StockSelectionSpec | EtfSelect
         factor_weights=weights,
         excluded_limit_states=excluded_states,
         max_tracking_error=value.max_tracking_error,
+        filter_groups=groups,
     )
 
 
@@ -510,6 +549,14 @@ def _consumed_fields(request: CreateSelectionRunRequest) -> frozenset[str]:
     ):
         excluded.add("tracking_error")
     weighted = {item.name for item in request.selection_spec.factor_weights}
+    # Condition factors gate eligibility like weighted factors; readiness
+    # must bind their snapshots too or a condition-only factor would pass
+    # with unattested inputs (#740).
+    weighted.update(
+        condition.factor_name
+        for group in request.selection_spec.filter_groups
+        for condition in group
+    )
     names.update(f"instruments.factor_values.{name}" for name in weighted)
     for instrument in request.instruments:
         names.update(

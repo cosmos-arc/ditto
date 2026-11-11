@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
@@ -43,6 +43,17 @@ describe("SelectionWorkspacePage", () => {
 		expect(screen.getByRole("textbox", { name: "SelectionSpec ID" })).toHaveValue("a-share-stock-discovery");
 	});
 
+	it("shows an explained empty state for candidates/exclusions before any run exists (#740 V2)", async () => {
+		server.use(http.get("/api/v1/selections/runs", () => HttpResponse.json({ data: [] })));
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		await expect(screen.findByText("该 spec 尚无已保存运行。")).resolves.toBeInTheDocument();
+		// 候选/排除区给出同等解释与下一步，而不是留白。
+		await expect(
+			screen.findByText(/该 spec 尚无已选中的运行。在上方配置筛选条件与因子权重并点击「创建运行」/),
+		).resolves.toBeInTheDocument();
+	});
+
 	it("renders saved SelectionRuns with exact candidates, factors, exclusions, and Agent context", async () => {
 		const user = userEvent.setup();
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
@@ -60,6 +71,11 @@ describe("SelectionWorkspacePage", () => {
 			"href",
 			"/instruments/600001?tab=technical&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111",
 		);
+
+		// 证据面板的运行身份与状态行/RUN HISTORY 同长（12 位摘要）：
+		// 同一 run 身份跨面板必须一致（#740 V3）。
+		const identity = within(screen.getByLabelText("运行身份")).getAllByText(/selection-run · /)[0] as HTMLElement;
+		expect(identity).toHaveTextContent(`selection-run · ${"1".repeat(12)}`);
 
 		const memo = screen.getByRole("link", { name: "生成 SelectionMemo" });
 		expect(memo).toHaveAttribute("data-context-type", "selection");
@@ -95,7 +111,9 @@ describe("SelectionWorkspacePage", () => {
 		await waitFor(() => expect(createButton).toBeEnabled());
 		await user.click(createButton);
 
-		await expect(screen.findByText("已保存 SelectionRun 111111111111")).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText("已保存固定 SelectionRun 111111111111 · 可重跑条件 a-share-stock-discovery:1"),
+		).resolves.toBeInTheDocument();
 		const created = createdBody as AssembleSelectionRunBody;
 		expect(created.spec_id).toBe("stock-momentum-manual");
 		expect(created.factor_weights).toEqual([{ name: "momentum_1m", weight: 1 }]);
@@ -148,7 +166,9 @@ describe("SelectionWorkspacePage", () => {
 		);
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		await user.click(screen.getByRole("button", { name: "组装并预览" }));
+		const assembleButton = await screen.findByRole("button", { name: "组装并预览" });
+		await waitFor(() => expect(assembleButton).toBeEnabled());
+		await user.click(assembleButton);
 
 		const summary = await screen.findByRole("region", { name: "组装摘要" });
 		expect(summary).toHaveTextContent(ASSEMBLED_UNIVERSE_SNAPSHOT_ID);
@@ -157,7 +177,9 @@ describe("SelectionWorkspacePage", () => {
 
 		await user.click(screen.getByRole("button", { name: "创建运行" }));
 
-		await expect(screen.findByText("已保存 SelectionRun 111111111111")).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText("已保存固定 SelectionRun 111111111111 · 可重跑条件 a-share-stock-discovery:1"),
+		).resolves.toBeInTheDocument();
 		const created = createdBody as AssembleSelectionRunBody;
 		expect(created).toEqual(assembledBody);
 		expect(created).toMatchObject({
@@ -195,7 +217,9 @@ describe("SelectionWorkspacePage", () => {
 		);
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		await user.click(screen.getByRole("button", { name: "组装并预览" }));
+		const assembleButton = await screen.findByRole("button", { name: "组装并预览" });
+		await waitFor(() => expect(assembleButton).toBeEnabled());
+		await user.click(assembleButton);
 
 		const summary = await screen.findByRole("region", { name: "组装摘要" });
 		expect(summary).toHaveTextContent("行业轮动缺失输入：industry_inputs");
@@ -211,13 +235,12 @@ describe("SelectionWorkspacePage", () => {
 		server.use(http.post("/api/v1/selections/runs:assembled", () => assembleError()));
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		await user.click(screen.getByRole("button", { name: "添加因子" }));
-		await user.type(screen.getByLabelText("因子 2 名称"), "momentum_1m");
+		await user.click(await screen.findByRole("button", { name: "添加因子" }));
+		await user.selectOptions(screen.getByLabelText("因子 2"), "momentum_1m");
 		expect(screen.getByRole("button", { name: "组装并预览" })).toBeDisabled();
 		expect(screen.getByText("因子名称重复：momentum_1m")).toBeInTheDocument();
 
-		await user.clear(screen.getByLabelText("因子 2 名称"));
-		await user.type(screen.getByLabelText("因子 2 名称"), "reversal_1w");
+		await user.selectOptions(screen.getByLabelText("因子 2"), "reversal_1w");
 		await user.clear(screen.getByLabelText("因子 1 权重"));
 		await user.type(screen.getByLabelText("因子 1 权重"), "0.4");
 		await user.clear(screen.getByLabelText("因子 2 权重"));
@@ -245,7 +268,9 @@ describe("SelectionWorkspacePage", () => {
 		);
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		await user.click(screen.getByRole("button", { name: "组装并预览" }));
+		const assembleButton = await screen.findByRole("button", { name: "组装并预览" });
+		await waitFor(() => expect(assembleButton).toBeEnabled());
+		await user.click(assembleButton);
 
 		await expect(screen.findByText("因子权重不得重复且权重之和必须为 1")).resolves.toBeInTheDocument();
 		// policy-only：预览失败不阻塞创建，数据完整性由服务端在创建时把关。
@@ -293,10 +318,33 @@ it("rejects an assembled response whose policy echo drifts from the submitted wi
 	render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 	await waitFor(() => expect((screen.getByLabelText("universe 证券池") as HTMLSelectElement).value).not.toBe(""));
 
-	await user.click(screen.getByRole("button", { name: "组装并预览" }));
+	const assembleButton = await screen.findByRole("button", { name: "组装并预览" });
+	await waitFor(() => expect(assembleButton).toBeEnabled());
+	await user.click(assembleButton);
 
 	await waitFor(() =>
 		expect(screen.getByRole("alert")).toHaveTextContent(/组装响应的策略回显或服务端事实与提交不一致/),
 	);
 	expect(screen.queryByRole("region", { name: "组装摘要" })).not.toBeInTheDocument();
+});
+
+describe("SelectionWorkspacePage spec identity follows host navigation", () => {
+	it("follows a changed ?spec= on same-route navigation instead of keeping stale state (#740 F4)", async () => {
+		const user = userEvent.setup();
+		const first = render(<SelectionWorkspacePage initialSpecId="spec-alpha" />, { wrapper: wrapper() });
+
+		const input = screen.getByRole("textbox", { name: "SelectionSpec ID" });
+		expect(input).toHaveValue("spec-alpha");
+		await user.type(input, "-typed");
+		expect(input).toHaveValue("spec-alpha-typed");
+
+		// 同路由 search 变化（不重挂载）：宿主身份更新被受控跟随。
+		first.rerender(<SelectionWorkspacePage initialSpecId="spec-beta" />);
+		expect(screen.getByRole("textbox", { name: "SelectionSpec ID" })).toHaveValue("spec-beta");
+
+		// 用户清空输入 → 宿主回 undefined：保留清空状态（不重置默认）。
+		first.rerender(<SelectionWorkspacePage initialSpecId={undefined} />);
+		await user.clear(screen.getByRole("textbox", { name: "SelectionSpec ID" }));
+		expect(screen.getByRole("textbox", { name: "SelectionSpec ID" })).toHaveValue("");
+	});
 });

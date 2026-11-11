@@ -15,6 +15,7 @@ const policyBody: AssembleSelectionRunBody = {
 	as_of: "2026-08-31T07:00:00Z",
 	asset_kind: "stock",
 	excluded_limit_states: ["limit_up", "limit_down"],
+	factor_filter_groups: [{ conditions: [{ factor_name: "momentum_1m", operator: "gte", value: 0.6 }] }],
 	factor_weights: [{ name: "momentum_1m", weight: 1 }],
 	lookback_days: 400,
 	min_average_turnover: 20_000_000,

@@ -17,10 +17,23 @@ function shortRunId(value: string): string {
 	return value.split(":sha256:").at(-1)?.slice(0, 12) ?? value;
 }
 
-export function SelectionWorkspacePage() {
+export function SelectionWorkspacePage({
+	initialSpecId = DEFAULT_SELECTION_SPEC_ID,
+	onSpecIdChange,
+}: {
+	/** 从 URL/导航携带的 spec 身份：刷新或返回后恢复运行历史范围。 */
+	readonly initialSpecId?: string | undefined;
+	readonly onSpecIdChange?: (specId: string) => void;
+}) {
 	const queryClient = useQueryClient();
-	const [specId, setSpecId] = useState(DEFAULT_SELECTION_SPEC_ID);
+	const [specId, setSpecId] = useState(initialSpecId);
 	const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+	// 同路由 search 变化（浏览器返回/前进、站内链接切换 ?spec=）不重挂载
+	// 组件：受控跟随宿主传入的身份；用户清空输入框时宿主回 undefined，
+	// 保留清空状态而不是重置回默认（issue 740 F4）。
+	useEffect(() => {
+		if (initialSpecId !== undefined) setSpecId(initialSpecId);
+	}, [initialSpecId]);
 	const [compareIds, setCompareIds] = useState<readonly string[]>([]);
 	const [tab, setTab] = useState<ResultsTab>("candidates");
 	const [feedback, setFeedback] = useState<string | null>(null);
@@ -50,13 +63,23 @@ export function SelectionWorkspacePage() {
 	const createRun = useMutation({
 		mutationFn: createSelectionRun,
 		onSuccess: async (receipt) => {
-			setSpecId(receipt.selection_run.spec_id);
+			commitSpecId(receipt.selection_run.spec_id);
 			setSelectedRunId(receipt.selection_run.run_id);
-			setFeedback(`已保存 SelectionRun ${shortRunId(receipt.selection_run.run_id)}`);
+			// 保存的条件（SelectionSpec，用户命名的可重跑身份）与固定结果
+			// （SelectionRun，内容寻址身份）分别展示；live 车道的知识截止
+			// 按发起时刻签发，重复提交各得一个固定身份。
+			setFeedback(
+				`已保存固定 SelectionRun ${shortRunId(receipt.selection_run.run_id)} · 可重跑条件 ${receipt.selection_run.spec_id}:${receipt.selection_run.spec_version}`,
+			);
 			queryClient.setQueryData(selectionKeys.run(receipt.selection_run.run_id), receipt.selection_run);
 			await queryClient.invalidateQueries({ queryKey: selectionKeys.runs(receipt.selection_run.spec_id) });
 		},
 	});
+
+	function commitSpecId(next: string): void {
+		setSpecId(next);
+		onSpecIdChange?.(next);
+	}
 
 	function toggleCompare(runId: string): void {
 		setCompareIds((current) => {
@@ -87,7 +110,7 @@ export function SelectionWorkspacePage() {
 							aria-label="SelectionSpec ID"
 							className="w-52 rounded-(--radius-sm) border border-(--color-border-primary) bg-(--color-surface-1) px-2 py-1.5 font-mono text-xs text-(--color-foreground)"
 							value={specId}
-							onChange={(event) => setSpecId(event.currentTarget.value)}
+							onChange={(event) => commitSpecId(event.currentTarget.value)}
 						/>
 					</label>
 					<Button
@@ -214,6 +237,12 @@ export function SelectionWorkspacePage() {
 						</div>
 						{exactRun.isLoading && <LoadingSkeleton variant="table" rows={5} />}
 						{exactRun.isError && <ErrorState onRetry={() => void exactRun.refetch()} />}
+						{!run && !exactRun.isLoading && !exactRun.isError && (
+							<p className="py-8 text-center text-sm text-(--color-foreground-tertiary)">
+								该 spec
+								尚无已选中的运行。在上方配置筛选条件与因子权重并点击「创建运行」；创建后会在此展示候选、排除与贡献证据。
+							</p>
+						)}
 						{run && currentItems?.length === 0 && (
 							<p className="py-8 text-center text-sm text-(--color-foreground-tertiary)">
 								此运行没有{tab === "candidates" ? "入选候选" : "排除记录"}。

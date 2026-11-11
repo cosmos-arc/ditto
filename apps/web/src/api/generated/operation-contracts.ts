@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 937ffb89cccc15081a336bcc34f01b8e4c9b23e905bdec4dcde38a98574a35e2
+ * Schema SHA-256: 6521149171741ff699791bd8c315db696c7c3e946687d7f66302c481dfd4cb4b
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -1018,6 +1018,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/research/reviews": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/selections/factor-catalog": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -2512,6 +2522,11 @@ export const operationRequestContracts = {
     },
   },
   "get /api/v1/research/reviews": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+    },
+  },
+  "get /api/v1/selections/factor-catalog": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
     },

@@ -20,6 +20,7 @@ from ditto_application.processes.selection.assemble_facts import (
     data_fields,
 )
 from ditto_application.processes.selection.facade import (
+    SelectionFactorConditionDraft,
     SelectionFactorWeightDraft,
 )
 from ditto_application.queries.historical_universe import (
@@ -1329,3 +1330,108 @@ def test_future_client_clock_cannot_unlock_publication_boundary() -> None:
     # publication, same-day-knowledge rows stay hidden.
     assert request.knowledge_cutoff == server
     assert request.data_to == date(2026, 9, 28)
+
+
+def test_condition_only_factor_is_assembled_and_consumed() -> None:
+    # 条件引用了权重之外的因子：该因子必须同样进入服务端装配与
+    # 消费绑定，否则运行会按缺证据 fail closed（#740）。
+    process, _, _ = _happy_process()
+    request = process.assemble(
+        _request(
+            factor_filter_groups=(
+                (SelectionFactorConditionDraft("volatility_factor", "lte", 0.8),),
+            )
+        )
+    )
+
+    assert request.selection_spec.filter_groups[0][0].factor_name == (
+        "volatility_factor"
+    )
+    values = {
+        factor.name
+        for instrument in request.instruments
+        for factor in instrument.factor_values
+    }
+    assert {"reversal_1w", "volatility_factor"} <= values
+    consumed = {item.consumer_field for item in request.data_fields}
+    assert "instruments.factor_values.volatility_factor" in consumed
+
+
+def test_condition_factor_without_any_weight_is_ranked() -> None:
+    # 仅出现在条件中的因子同样参与截面秩归一（值非空可判定条件）。
+    process, _, _ = _happy_process()
+    request = process.assemble(
+        _request(
+            factor_weights=(SelectionFactorWeightDraft("reversal_1w", 1.0),),
+            factor_filter_groups=(
+                (SelectionFactorConditionDraft("volatility_factor", "gte", 0.0),),
+            ),
+        )
+    )
+    ranked = {
+        draft.instrument_id: {
+            factor.name: factor.value for factor in draft.factor_values
+        }
+        for draft in request.instruments
+    }
+    assert all(
+        0.0 < values["volatility_factor"] <= 1.0
+        for values in ranked.values()
+        if "volatility_factor" in values
+    )
+
+
+def test_rejects_condition_on_unknown_factor() -> None:
+    process, _, _ = _happy_process()
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(
+            _request(
+                factor_filter_groups=(
+                    (SelectionFactorConditionDraft("no_such_factor", "gte", 0.5),),
+                )
+            )
+        )
+    assert error.value.details["reason"] == "ASSEMBLY_FACTOR_UNKNOWN"
+    assert error.value.details["factor_id"] == "no_such_factor"
+
+
+def test_rejects_empty_condition_group() -> None:
+    process, _, _ = _happy_process()
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(_request(factor_filter_groups=((),)))
+    assert error.value.details["reason"] == "ASSEMBLY_FILTER_GROUP_EMPTY"
+
+
+def test_rejects_condition_value_outside_unit_rank_domain() -> None:
+    # 出域阈值（1.5）在装配前被拒绝（#740 F2）：不再静默生成零候选
+    # ready 运行，而是 422 带理由。
+    process, _, _ = _happy_process()
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(
+            _request(
+                factor_filter_groups=(
+                    (SelectionFactorConditionDraft("reversal_1w", "gte", 1.5),),
+                )
+            )
+        )
+    assert error.value.details["reason"] == "ASSEMBLY_CONDITION_VALUE_INVALID"
+    assert error.value.details["value"] == 1.5
+
+
+def test_rejects_invalid_condition_operator() -> None:
+    process, _, _ = _happy_process()
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(
+            _request(
+                factor_filter_groups=(
+                    (
+                        SelectionFactorConditionDraft(
+                            "reversal_1w",
+                            "eq",  # type: ignore[arg-type]
+                            0.5,
+                        ),
+                    ),
+                )
+            )
+        )
+    assert error.value.details["reason"] == "ASSEMBLY_CONDITION_OPERATOR_INVALID"

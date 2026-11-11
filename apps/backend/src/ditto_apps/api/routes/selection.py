@@ -19,11 +19,15 @@ from ditto_application.processes.selection.create_research_case import (
 )
 from ditto_application.processes.selection.facade import (
     CreateSelectionRunRequest,
+    SelectionFactorConditionDraft,
     SelectionFactorWeightDraft,
     SelectionWorkspaceFacade,
     StockSelectionSpecDraft,
 )
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
+from ditto_application.queries.selection_factor_catalog import (
+    SelectionFactorCatalogQuery,
+)
 from ditto_application.queries.selection_runs import SelectionRunQueryService
 from fastapi import APIRouter, Path, Query, status
 
@@ -36,6 +40,7 @@ from ditto_apps.models.selection import (
     CreateSelectionRunBody,
     IndustryRotationResponse,
     ResearchCaseResponse,
+    SelectionFactorCatalogEntryResponse,
     SelectionRunDiffResponse,
     SelectionRunResponse,
     SelectionWorkspaceReceiptResponse,
@@ -78,6 +83,15 @@ def _assembly_request(
             for item in body.factor_weights
         ),
         excluded_limit_states=body.excluded_limit_states,
+        factor_filter_groups=tuple(
+            tuple(
+                SelectionFactorConditionDraft(
+                    item.factor_name, item.operator, item.value
+                )
+                for item in group.conditions
+            )
+            for group in body.factor_filter_groups
+        ),
         knowledge_cutoff=body.knowledge_cutoff,
         publication_cutoff=body.publication_cutoff,
         seed=body.seed,
@@ -93,7 +107,40 @@ def _assembled_body(assembled: CreateSelectionRunRequest) -> CreateSelectionRunB
         if isinstance(assembled.selection_spec, StockSelectionSpecDraft)
         else "etf"
     )
+    # Draft groups are bare tuples; the transport nests each group under
+    # ``conditions`` so the echo body matches the authoring surface exactly.
+    payload["selection_spec"]["filter_groups"] = [
+        {
+            "conditions": [
+                {
+                    "factor_name": item["factor_name"],
+                    "operator": item["operator"],
+                    "value": item["value"],
+                }
+                for item in group
+            ]
+        }
+        for group in payload["selection_spec"].get("filter_groups", ())
+    ]
     return CreateSelectionRunBody.model_validate(payload)
+
+
+@router.get(
+    "/factor-catalog",
+    response_model=APIResponse[tuple[SelectionFactorCatalogEntryResponse, ...]],
+    operation_id="selections_list_factor_catalog",
+)
+@inject
+async def list_factor_catalog(
+    query: Annotated[SelectionFactorCatalogQuery, FromComponent()],
+) -> APIResponse[tuple[SelectionFactorCatalogEntryResponse, ...]]:
+    """List factors eligible for visual conditions and weights (#740)."""
+    values = await asyncio.to_thread(query.list_entries)
+    return APIResponse(
+        data=tuple(
+            SelectionFactorCatalogEntryResponse.model_validate(item) for item in values
+        )
+    )
 
 
 @router.post(

@@ -66,17 +66,20 @@ from zoneinfo import ZoneInfo
 import polars as pl
 from ditto_data.provider import BarQuery, DataProvider
 from ditto_features.expression.compiler import ExpressionCompiler
-from ditto_features.expression.contracts import CompiledDerivedExpression
-from ditto_features.expression.diagnostics import ExpressionCompileError
 from ditto_features.factors.spec import FactorSpec
 from ditto_kernel.identity import InstrumentId
 
 from ditto_application.exceptions import AppProcessError, AppQueryError
-from ditto_application.processes.execution._factor_signal_spec import (
-    build_signal_spec,
+from ditto_application.factor_assembly import (
+    MARKET_BAR_COLUMNS,
+    resolve_factor_nodes,
+)
+from ditto_application.factor_assembly import (
+    FactorAssemblyNode as _FactorNode,
 )
 from ditto_application.processes.selection.facade import (
     CreateSelectionRunRequest,
+    SelectionFactorConditionDraft,
     SelectionFactorValueDraft,
     SelectionFactorWeightDraft,
     SelectionInstrumentDraft,
@@ -95,16 +98,9 @@ __all__ = [
     "AssembleSelectionFactsRequest",
     "SnapshotCoverageIndex",
     "SnapshotWindow",
+    "validate_assembly_policy",
 ]
 
-_MARKET_BAR_COLUMNS: Mapping[str, str] = {
-    "market.open": "open",
-    "market.high": "high",
-    "market.low": "low",
-    "market.close": "close",
-    "market.volume": "volume",
-    "market.amount": "amount",
-}
 _REQUIRED_BAR_COLUMNS = frozenset(
     {"instrument_id", "trade_date", "close", "pre_close", "amount", "knowledge_date"}
 )
@@ -129,8 +125,8 @@ _STRUCTURAL_CONSUMERS = (
 _BAR_LINEAGE_COLUMN = "source_snapshot_id"
 _RESERVED_FACTOR_COLUMNS = frozenset(
     {
-        *_MARKET_BAR_COLUMNS,
-        *_MARKET_BAR_COLUMNS.values(),
+        *MARKET_BAR_COLUMNS,
+        *MARKET_BAR_COLUMNS.values(),
         "instrument_id",
         "trade_date",
         "source",
@@ -310,21 +306,85 @@ class AssembleSelectionFactsRequest:
         "limit_up",
         "limit_down",
     )
+    factor_filter_groups: tuple[tuple[SelectionFactorConditionDraft, ...], ...] = ()
     knowledge_cutoff: datetime | None = None
     publication_cutoff: datetime | None = None
     seed: int = 0
     lookback_days: int = _DEFAULT_LOOKBACK_DAYS
 
 
-@dataclass(frozen=True, slots=True)
-class _FactorNode:
-    """One governed factor materialized in dependency order."""
+def validate_assembly_policy(request: AssembleSelectionFactsRequest) -> None:
+    """
+    Mirror the strategy spec invariants before assembling facts.
 
-    factor_id: str
-    compiled: CompiledDerivedExpression
-    requested: bool
-    leaves: frozenset[str]
-    lookback: int
+    Module-level so transport-level test doubles replay the same gate
+    instead of silently accepting bodies the real engine would refuse.
+    """
+    """Mirror the strategy spec invariants before assembling facts."""
+    names = [weight.name for weight in request.factor_weights]
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+    if duplicates:
+        raise AppProcessError(
+            "assembly factor weights contain duplicate names",
+            details={
+                "reason": "ASSEMBLY_FACTOR_DUPLICATE",
+                "factor_ids": tuple(duplicates),
+            },
+        )
+    total = sum(weight.weight for weight in request.factor_weights)
+    if not math.isclose(total, 1.0, abs_tol=1e-12):
+        raise AppProcessError(
+            "assembly factor weights must sum to one",
+            details={
+                "reason": "ASSEMBLY_FACTOR_WEIGHT_TOTAL",
+                "total": total,
+            },
+        )
+    states = request.excluded_limit_states
+    if "normal" in states or len(set(states)) != len(states):
+        raise AppProcessError(
+            "excluded limit states must be unique non-normal states",
+            details={
+                "reason": "ASSEMBLY_LIMIT_POLICY_INVALID",
+                "excluded_limit_states": tuple(states),
+            },
+        )
+    for position, group in enumerate(request.factor_filter_groups, start=1):
+        if not group:
+            raise AppProcessError(
+                "assembly filter group must hold at least one condition",
+                details={
+                    "reason": "ASSEMBLY_FILTER_GROUP_EMPTY",
+                    "group_position": position,
+                },
+            )
+        for condition in group:
+            if condition.operator not in ("gte", "lte"):
+                raise AppProcessError(
+                    "assembly condition operator must be gte or lte",
+                    details={
+                        "reason": "ASSEMBLY_CONDITION_OPERATOR_INVALID",
+                        "factor_name": condition.factor_name,
+                        "operator": condition.operator,
+                    },
+                )
+            # 镜像策略合同的条件值域（截面分数秩 [0,1]，#740 F2）：
+            # transport 层的 draft 不做 dataclass 校验，出域值在进入
+            # 装配前被拒绝，而不是静默生成零候选运行。
+            if (
+                not math.isfinite(condition.value)
+                or condition.value < 0
+                or condition.value > 1
+            ):
+                raise AppProcessError(
+                    "assembly condition value must be a unit-rank "
+                    + "threshold in [0, 1]",
+                    details={
+                        "reason": "ASSEMBLY_CONDITION_VALUE_INVALID",
+                        "factor_name": condition.factor_name,
+                        "value": condition.value,
+                    },
+                )
 
 
 class AssembleSelectionFacts:
@@ -460,6 +520,7 @@ class AssembleSelectionFacts:
                 min_listing_days=request.min_listing_days,
                 factor_weights=request.factor_weights,
                 excluded_limit_states=request.excluded_limit_states,
+                filter_groups=request.factor_filter_groups,
             ),
             seed=request.seed,
             instruments=instruments,
@@ -622,158 +683,20 @@ class AssembleSelectionFacts:
             raise AppProcessError(str(error), details=error.details) from error
 
     def _validate_policy(self, request: AssembleSelectionFactsRequest) -> None:
-        """Mirror the strategy spec invariants before assembling facts."""
-        names = [weight.name for weight in request.factor_weights]
-        duplicates = sorted({name for name in names if names.count(name) > 1})
-        if duplicates:
-            raise AppProcessError(
-                "assembly factor weights contain duplicate names",
-                details={
-                    "reason": "ASSEMBLY_FACTOR_DUPLICATE",
-                    "factor_ids": tuple(duplicates),
-                },
-            )
-        total = sum(weight.weight for weight in request.factor_weights)
-        if not math.isclose(total, 1.0, abs_tol=1e-12):
-            raise AppProcessError(
-                "assembly factor weights must sum to one",
-                details={
-                    "reason": "ASSEMBLY_FACTOR_WEIGHT_TOTAL",
-                    "total": total,
-                },
-            )
-        states = request.excluded_limit_states
-        if "normal" in states or len(set(states)) != len(states):
-            raise AppProcessError(
-                "excluded limit states must be unique non-normal states",
-                details={
-                    "reason": "ASSEMBLY_LIMIT_POLICY_INVALID",
-                    "excluded_limit_states": tuple(states),
-                },
-            )
+        """Delegate to the shared policy gate."""
+        validate_assembly_policy(request)
 
     def _plan_factors(
         self, request: AssembleSelectionFactsRequest
     ) -> tuple[_FactorNode, ...]:
         """Resolve the transitive factor closure in dependency order."""
-        order: list[str] = []
-        leaves: dict[str, frozenset[str]] = {}
-        compiled: dict[str, CompiledDerivedExpression] = {}
-        lookbacks: dict[str, int] = {}
-
-        def visit(factor_id: str, path: tuple[str, ...]) -> frozenset[str]:
-            if factor_id in leaves:
-                return leaves[factor_id]
-            if factor_id in path:
-                cycle = (*path, factor_id)
-                raise AppProcessError(
-                    f"registered factor dependency cycle: {' -> '.join(cycle)}",
-                    details={
-                        "reason": "ASSEMBLY_FACTOR_CYCLE",
-                        "factor_id": factor_id,
-                        "dependency_path": cycle,
-                    },
-                )
-            spec = self._factor_spec(factor_id)
-            node_leaves: set[str] = set()
-            for dependency in spec.dependencies:
-                node_leaves |= self._dependency_leaves(
-                    dependency, factor_id, path, visit
-                )
-            leaves[factor_id] = frozenset(node_leaves)
-            compiled[factor_id] = self._compile_factor(factor_id, spec)
-            operators = compiled[factor_id].analysis.operator_names
-            if any(op.startswith("cs_") for op in operators) and any(
-                op.startswith("ts_") for op in operators
-            ):
-                raise AppProcessError(
-                    "factor nests a time-series operator under a "
-                    + "cross-sectional operator; the production recipe with "
-                    + "materialized intermediates is required",
-                    details={
-                        "reason": "ASSEMBLY_FACTOR_EXPRESSION_UNSUPPORTED",
-                        "factor_id": factor_id,
-                    },
-                )
-            # Time-series windows compose across registered dependencies, so
-            # the required history is this node's window plus the deepest
-            # dependency chain below it.
-            lookbacks[factor_id] = compiled[factor_id].analysis.lookback + max(
-                (
-                    lookbacks[dependency]
-                    for dependency in spec.dependencies
-                    if dependency in lookbacks
-                ),
-                default=0,
-            )
-            order.append(factor_id)
-            return leaves[factor_id]
-
         requested = {weight.name for weight in request.factor_weights}
-        for weight in request.factor_weights:
-            visit(weight.name, ())
-        return tuple(
-            _FactorNode(
-                factor_id=factor_id,
-                compiled=compiled[factor_id],
-                requested=factor_id in requested,
-                leaves=leaves[factor_id],
-                lookback=lookbacks[factor_id],
-            )
-            for factor_id in order
-        )
-
-    def _factor_spec(self, factor_id: str) -> FactorSpec:
-        spec = self._factors.get(factor_id)
-        if spec is None:
-            raise AppProcessError(
-                f"unknown registered factor: {factor_id}",
-                details={"reason": "ASSEMBLY_FACTOR_UNKNOWN", "factor_id": factor_id},
-            )
-        if spec.computation_type != "expression":
-            raise AppProcessError(
-                f"research factor executor is unavailable: {factor_id}",
-                details={
-                    "reason": "ASSEMBLY_FACTOR_EXECUTOR_UNAVAILABLE",
-                    "factor_id": factor_id,
-                },
-            )
-        return spec
-
-    def _dependency_leaves(
-        self,
-        dependency: str,
-        factor_id: str,
-        path: tuple[str, ...],
-        visit: Callable[[str, tuple[str, ...]], frozenset[str]],
-    ) -> frozenset[str]:
-        """Classify one declared dependency as market leaf or nested factor."""
-        if self._factors.get(dependency) is not None:
-            return visit(dependency, (*path, factor_id))
-        if dependency in _MARKET_BAR_COLUMNS:
-            return frozenset({dependency})
-        raise AppProcessError(
-            "factor dependency is not available for assembly: "
-            + f"{factor_id} -> {dependency}",
-            details={
-                "reason": "ASSEMBLY_FACTOR_DEPENDENCY_UNSUPPORTED",
-                "factor_id": factor_id,
-                "dependency": dependency,
-            },
-        )
-
-    def _compile_factor(
-        self, factor_id: str, spec: FactorSpec
-    ) -> CompiledDerivedExpression:
-        try:
-            return self._compiler.compile(
-                build_signal_spec(spec.expression, 0, derived_id=factor_id, version=1)
-            )
-        except ExpressionCompileError as error:
-            raise AppProcessError(
-                f"registered factor failed to compile: {factor_id}",
-                details={"reason": "ASSEMBLY_FACTOR_COMPILE", "factor_id": factor_id},
-            ) from error
+        # Condition factors gate eligibility even when unweighted, so they
+        # join the requested closure and the cross-sectional projection.
+        for group in request.factor_filter_groups:
+            for condition in group:
+                requested.add(condition.factor_name)
+        return resolve_factor_nodes(self._factors.get, self._compiler, requested)
 
     def _load_bars(
         self,
@@ -847,7 +770,7 @@ class AssembleSelectionFacts:
             )
         evaluation = frame.sort(["instrument_id", "trade_date"])
         for leaf in sorted(needed_leaves):
-            column = _MARKET_BAR_COLUMNS[leaf]
+            column = MARKET_BAR_COLUMNS[leaf]
             evaluation = evaluation.with_columns(
                 pl.col(column).cast(pl.Float64).alias(leaf)
             )
@@ -884,7 +807,7 @@ class AssembleSelectionFacts:
         missing_leaves = sorted(
             leaf
             for leaf in needed_leaves
-            if _MARKET_BAR_COLUMNS[leaf] not in frame.columns
+            if MARKET_BAR_COLUMNS[leaf] not in frame.columns
         )
         if missing_leaves:
             raise AppProcessError(
@@ -1594,7 +1517,7 @@ def data_fields(
         for leaf in sorted(node.leaves):
             bind(
                 "stock_daily",
-                _MARKET_BAR_COLUMNS[leaf],
+                MARKET_BAR_COLUMNS[leaf],
                 f"instruments.factor_values.{node.factor_id}",
             )
         if node.leaves & _PRICE_LEAVES:

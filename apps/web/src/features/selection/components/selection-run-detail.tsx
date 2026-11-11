@@ -13,8 +13,9 @@ import {
 import { toResearchCaseView } from "../research-case";
 
 function compactIdentity(value: string): string {
+	// 与工作面 shortRunId 同长（12 位）：同一 run 身份跨面板必须一致。
 	const [, digest] = value.split(":sha256:");
-	return digest ? `${value.slice(0, value.indexOf(":sha256:"))} · ${digest.slice(0, 10)}` : value;
+	return digest ? `${value.slice(0, value.indexOf(":sha256:"))} · ${digest.slice(0, 12)}` : value;
 }
 
 function truthLabel(value: boolean, yes: string, no: string): string {

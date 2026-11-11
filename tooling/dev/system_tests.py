@@ -230,6 +230,36 @@ def _incompatible_cohort_api_command(port: int) -> list[str]:
     )
 
 
+def _market_workspace_acceptance(
+    api_port: int, web_root: Path | None, web_port: int | None
+) -> _FixtureAcceptance:
+    """Isolated post-market workspace journey fixture (#739)."""
+    return _FixtureAcceptance(
+        command=_fixture_api_command(
+            "tests.system.fixtures.market_workspace_app:app", api_port
+        ),
+        prefix="ditto-system-market-workspace-",
+        spec="market-workspace.spec.ts",
+        web_root=web_root,
+        web_port=web_port,
+    )
+
+
+def _selection_screener_acceptance(
+    api_port: int, web_root: Path | None, web_port: int | None
+) -> _FixtureAcceptance:
+    """Isolated visual screening journey fixture (#740)."""
+    return _FixtureAcceptance(
+        command=_fixture_api_command(
+            "tests.system.fixtures.selection_screener_app:app", api_port
+        ),
+        prefix="ditto-system-selection-screener-",
+        spec="selection-screener.spec.ts",
+        web_root=web_root,
+        web_port=web_port,
+    )
+
+
 def _run_playwright(
     root: Path,
     node: str,
@@ -577,26 +607,17 @@ def main() -> int:
                 ),
             )
 
-            # The post-market workspace journey (#739) drives the observation
-            # anchor (calendar ingestion), watchlist quotes over retained
-            # bars/NAV, the anchored instrument chart with matching numbers,
-            # keyboard chart interaction, and context restore through the
-            # production UI and API.
-            _run_fixture_acceptance(
-                root,
-                node,
-                api_port,
-                environment,
-                acceptance=_FixtureAcceptance(
-                    command=_fixture_api_command(
-                        "tests.system.fixtures.market_workspace_app:app", api_port
-                    ),
-                    prefix="ditto-system-market-workspace-",
-                    spec="market-workspace.spec.ts",
-                    web_root=web_root,
-                    web_port=web_port,
-                ),
-            )
+            # The post-market workspace journey (#739) and the visual
+            # screener journey (#740) run back to back over their own
+            # isolated fixtures: observation anchor/watchlist/chart and the
+            # factor catalog/condition groups/fixed-run evidence chain.
+            for acceptance in (
+                _market_workspace_acceptance(api_port, web_root, web_port),
+                _selection_screener_acceptance(api_port, web_root, web_port),
+            ):
+                _run_fixture_acceptance(
+                    root, node, api_port, environment, acceptance=acceptance
+                )
 
             _run_fixture_acceptance(
                 root,
