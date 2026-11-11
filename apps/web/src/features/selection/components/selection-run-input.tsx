@@ -1,7 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { type AssembleSelectionRunBody, assembleSelectionRun, listUniverseOptions } from "../api";
+import {
+	type AssembleSelectionRunBody,
+	assembleSelectionRun,
+	listFactorCatalog,
+	listUniverseOptions,
+	type SelectionFactorCatalogEntry,
+	selectionKeys,
+} from "../api";
 import { toAssembledRunView } from "../assembled-run";
 
 // 镜像服务端 math.isclose(total, 1.0, abs_tol=1e-12)：默认 rel_tol=1e-9 主导有效容差。
@@ -35,6 +42,16 @@ type FactorRow = {
 	readonly weight: string;
 };
 
+type ConditionRow = {
+	readonly factorName: string;
+	readonly operator: "gte" | "lte";
+	readonly value: string;
+};
+
+type ConditionGroup = {
+	readonly rows: readonly ConditionRow[];
+};
+
 type StrategyForm = {
 	readonly universeId: string;
 	readonly asOf: string;
@@ -44,6 +61,7 @@ type StrategyForm = {
 	readonly minAverageTurnover: string;
 	readonly minListingDays: string;
 	readonly factors: readonly FactorRow[];
+	readonly groups: readonly ConditionGroup[];
 	readonly excludeLimitUp: boolean;
 	readonly excludeLimitDown: boolean;
 	readonly seed: string;
@@ -65,6 +83,7 @@ function initialForm(): StrategyForm {
 		minAverageTurnover: "20000000",
 		minListingDays: "60",
 		factors: INITIAL_FACTORS,
+		groups: [],
 		excludeLimitUp: true,
 		excludeLimitDown: true,
 		seed: "0",
@@ -97,16 +116,21 @@ function strategyErrors(form: StrategyForm): readonly string[] {
 		else weightSum += weight;
 	}
 	if (Math.abs(weightSum - 1) > WEIGHT_SUM_TOLERANCE) errors.push("因子权重之和需为 1");
+	for (const [groupIndex, group] of form.groups.entries()) {
+		for (const [rowIndex, row] of group.rows.entries()) {
+			const position = `条件组 ${groupIndex + 1} 行 ${rowIndex + 1}`;
+			if (!row.factorName) errors.push(`${position} 需选择因子`);
+			const value = parseDecimal(row.value);
+			if (value === null || value < 0 || value > 1) errors.push(`${position} 阈值需在 0 到 1 之间（截面分数秩）`);
+		}
+	}
 	const seed = parseInteger(form.seed);
 	if (seed === null || seed < 0) errors.push("seed 需为 ≥0 的整数");
 	const lookbackDays = parseInteger(form.lookbackDays);
 	if (lookbackDays === null || lookbackDays < 60 || lookbackDays > 1500) errors.push("回看天数需为 60–1500 的整数");
-	if (form.asOf.trim() && form.knowledgeCutoff.trim()) {
-		const asOf = Date.parse(shanghaiIso(form.asOf.trim()));
-		const knowledge = Date.parse(shanghaiIso(form.knowledgeCutoff.trim()));
-		if (Number.isFinite(asOf) && Number.isFinite(knowledge) && knowledge > asOf)
-			errors.push("知识截止不能晚于决策时点");
-	}
+	// 知识截止可以晚于决策时点（#583 live lane：决策定在最近完整交易日收盘，
+	// 截止从发起时刻签发），早于决策时点同样交由服务端裁定；此处只校验
+	// 披露截止与知识截止的相对关系。
 	if (form.knowledgeCutoff.trim() && form.publicationCutoff.trim()) {
 		const knowledge = Date.parse(shanghaiIso(form.knowledgeCutoff.trim()));
 		const publication = Date.parse(shanghaiIso(form.publicationCutoff.trim()));
@@ -123,6 +147,13 @@ function strategyBody(form: StrategyForm): AssembleSelectionRunBody {
 			...(form.excludeLimitUp ? (["limit_up"] as const) : []),
 			...(form.excludeLimitDown ? (["limit_down"] as const) : []),
 		],
+		factor_filter_groups: form.groups.map((group) => ({
+			conditions: group.rows.map((row) => ({
+				factor_name: row.factorName,
+				operator: row.operator,
+				value: parseDecimal(row.value) ?? 0,
+			})),
+		})),
 		factor_weights: form.factors.map((factor) => ({
 			name: factor.name.trim(),
 			weight: parseDecimal(factor.weight) ?? 0,
@@ -146,6 +177,63 @@ function strategyBody(form: StrategyForm): AssembleSelectionRunBody {
 const INPUT_CLASS =
 	"rounded-(--radius-sm) border border-(--color-border-primary) bg-(--color-surface-1) px-2 py-1.5 text-xs text-(--color-foreground)";
 
+function groupOptions(entries: readonly SelectionFactorCatalogEntry[]) {
+	const groups = new Map<string, SelectionFactorCatalogEntry[]>();
+	for (const entry of entries) {
+		const bucket = groups.get(entry.group_label) ?? [];
+		bucket.push(entry);
+		groups.set(entry.group_label, bucket);
+	}
+	return [...groups.entries()].map(([label, items]) => ({ label, items }));
+}
+
+function factorMeta(
+	entries: readonly SelectionFactorCatalogEntry[],
+	factorName: string,
+): SelectionFactorCatalogEntry | undefined {
+	return entries.find((entry) => entry.factor_id === factorName);
+}
+
+function FactorMetaLine({ entry }: { readonly entry: SelectionFactorCatalogEntry | undefined }) {
+	if (!entry) return null;
+	return (
+		<p className="text-[11px] leading-4 text-(--color-foreground-tertiary)">
+			{entry.description} · 回看 {entry.lookback_trading_days} 个交易日 · 依赖 {entry.dependencies.join("、")}
+		</p>
+	);
+}
+
+function FactorSelect({
+	ariaLabel,
+	entries,
+	value,
+	onChange,
+}: {
+	readonly ariaLabel: string;
+	readonly entries: readonly SelectionFactorCatalogEntry[];
+	readonly value: string;
+	readonly onChange: (factorName: string) => void;
+}) {
+	return (
+		<select
+			aria-label={ariaLabel}
+			className={INPUT_CLASS}
+			value={value}
+			onChange={(event) => onChange(event.currentTarget.value)}
+		>
+			{groupOptions(entries).map((group) => (
+				<optgroup key={group.label} label={group.label}>
+					{group.items.map((item) => (
+						<option key={item.factor_id} value={item.factor_id}>
+							{item.factor_id}
+						</option>
+					))}
+				</optgroup>
+			))}
+		</select>
+	);
+}
+
 export function SelectionRunInput({
 	busy,
 	onRun,
@@ -155,6 +243,8 @@ export function SelectionRunInput({
 }) {
 	const [form, setForm] = useState<StrategyForm>(initialForm);
 	const universes = useQuery({ queryKey: ["selection", "universe-options"], queryFn: listUniverseOptions });
+	const catalog = useQuery({ queryKey: selectionKeys.factorCatalog, queryFn: listFactorCatalog, staleTime: 300_000 });
+	const entries = useMemo(() => catalog.data ?? [], [catalog.data]);
 	useEffect(() => {
 		const options = universes.data;
 		if (!options) return;
@@ -168,6 +258,7 @@ export function SelectionRunInput({
 	}, [universes.data, form.universeId]);
 
 	const errors = strategyErrors(form);
+	const catalogReady = catalog.isSuccess && entries.length > 0;
 
 	const assemble = useMutation({
 		mutationFn: async (payload: AssembleSelectionRunBody) =>
@@ -194,6 +285,20 @@ export function SelectionRunInput({
 		}));
 	}
 
+	function updateGroupRow(groupIndex: number, rowIndex: number, patch: Partial<ConditionRow>): void {
+		setForm((current) => ({
+			...current,
+			groups: current.groups.map((group, position) =>
+				position === groupIndex
+					? {
+							...group,
+							rows: group.rows.map((row, spot) => (spot === rowIndex ? { ...row, ...patch } : row)),
+						}
+					: group,
+			),
+		}));
+	}
+
 	function submitForm(): StrategyForm {
 		// 留空的 as_of 由服务端滚动到最近完整交易日（issue 583），提交时刻无需刷新。
 		return form;
@@ -203,8 +308,12 @@ export function SelectionRunInput({
 		<section className="border-b border-(--color-border-subtle) bg-(--color-surface-strip)">
 			<div className="grid gap-3 px-4 py-3">
 				<p className="max-w-3xl text-xs leading-5 text-(--color-foreground-tertiary)">
-					按策略字段新建运行：服务端负责组装历史证券池与数据区间等全部 PIT
+					以字段、算子、值构建筛选条件并组合合格因子权重：服务端负责组装历史证券池与数据区间等全部 PIT
 					事实，可先组装预览；数据不完整时服务端会拒绝创建。
+				</p>
+				<p className="max-w-3xl text-[11px] leading-4 text-(--color-foreground-tertiary)">
+					因子值口径：截面分数秩 (0,1]，秩越高截面排名越靠前（{entries[0]?.value_unit ?? "截面分数秩"}）
+					；因子值缺失的标的按缺证据排除（missing_data），不会静默参与排名。
 				</p>
 				<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
 					<div className="grid gap-1 text-xs">
@@ -245,7 +354,7 @@ export function SelectionRunInput({
 						/>
 					</label>
 					<label className="grid gap-1 text-xs">
-						spec_id
+						筛选条件命名 spec_id（保存为可重跑 SelectionSpec 的身份）
 						<input
 							aria-label="spec_id"
 							className={INPUT_CLASS}
@@ -254,7 +363,7 @@ export function SelectionRunInput({
 						/>
 					</label>
 					<label className="grid gap-1 text-xs">
-						spec_version
+						spec_version（同一命名下调整条件请递增版本）
 						<input
 							aria-label="spec_version"
 							className={INPUT_CLASS}
@@ -265,7 +374,7 @@ export function SelectionRunInput({
 					<label className="grid gap-1 text-xs">
 						top_k（入选数量）
 						<input
-							aria-label="top_k"
+							aria-label="top_k（入选数量）"
 							className={INPUT_CLASS}
 							type="number"
 							min={1}
@@ -343,54 +452,206 @@ export function SelectionRunInput({
 						/>
 					</label>
 				</div>
-				<fieldset className="space-y-1 text-xs">
-					<legend className="text-(--color-foreground-tertiary)">因子权重（权重之和需为 1）</legend>
-					{form.factors.map((factor, index) => (
+				<fieldset className="space-y-2 text-xs">
+					<legend className="text-(--color-foreground-secondary)">筛选条件（组间需全部满足 · 组内任一满足）</legend>
+					{catalog.isError && (
+						<p role="alert" className="flex items-center gap-2 text-(--color-risk-critical-fg)">
+							因子目录加载失败
+							<Button type="button" variant="outline" size="sm" onClick={() => void catalog.refetch()}>
+								重试
+							</Button>
+						</p>
+					)}
+					{catalog.isLoading && <p role="status">加载因子目录…</p>}
+					{catalogReady && form.groups.length === 0 && (
+						<p className="text-(--color-foreground-tertiary)">尚未添加条件；仅用硬过滤与因子权重排名。</p>
+					)}
+					{form.groups.map((group, groupIndex) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: 行随编辑整体受控，索引即行身份
-						<div key={index} className="flex items-center gap-2">
-							<input
-								aria-label={`因子 ${index + 1} 名称`}
-								className={`${INPUT_CLASS} w-40`}
-								placeholder="因子名称，如 momentum_1m"
-								value={factor.name}
-								onChange={(event) => updateFactor(index, { name: event.currentTarget.value })}
-							/>
-							<input
-								aria-label={`因子 ${index + 1} 权重`}
-								className={`${INPUT_CLASS} w-24`}
-								type="number"
-								min={0}
-								max={1}
-								step={0.1}
-								value={factor.weight}
-								onChange={(event) => updateFactor(index, { weight: event.currentTarget.value })}
-							/>
+						<div
+							key={groupIndex}
+							className="grid gap-2 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-3"
+						>
+							<div className="flex items-center justify-between">
+								<span className="font-medium text-(--color-foreground-secondary)">条件组 {groupIndex + 1}</span>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onClick={() =>
+										setForm((current) => ({
+											...current,
+											groups: current.groups.filter((_, position) => position !== groupIndex),
+										}))
+									}
+								>
+									删除条件组 {groupIndex + 1}
+								</Button>
+							</div>
+							{group.rows.map((row, rowIndex) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: 行随编辑整体受控，索引即行身份
+								<div key={rowIndex} className="grid gap-1">
+									<div className="flex flex-wrap items-center gap-2">
+										{rowIndex > 0 && (
+											<span className="text-[11px] font-medium text-(--color-foreground-tertiary)">或</span>
+										)}
+										<FactorSelect
+											ariaLabel={`条件组 ${groupIndex + 1} 因子 ${rowIndex + 1}`}
+											entries={entries}
+											value={row.factorName}
+											onChange={(factorName) => updateGroupRow(groupIndex, rowIndex, { factorName })}
+										/>
+										<select
+											aria-label={`条件组 ${groupIndex + 1} 算子 ${rowIndex + 1}`}
+											className={INPUT_CLASS}
+											value={row.operator}
+											onChange={(event) =>
+												updateGroupRow(groupIndex, rowIndex, {
+													operator: event.currentTarget.value as "gte" | "lte",
+												})
+											}
+										>
+											<option value="gte">≥ 秩</option>
+											<option value="lte">≤ 秩</option>
+										</select>
+										<input
+											aria-label={`条件组 ${groupIndex + 1} 阈值 ${rowIndex + 1}`}
+											className={`${INPUT_CLASS} w-24`}
+											type="number"
+											min={0}
+											max={1}
+											step={0.05}
+											value={row.value}
+											onChange={(event) => updateGroupRow(groupIndex, rowIndex, { value: event.currentTarget.value })}
+										/>
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											disabled={group.rows.length === 1}
+											onClick={() =>
+												setForm((current) => ({
+													...current,
+													groups: current.groups.map((g, position) =>
+														position === groupIndex ? { ...g, rows: g.rows.filter((_, spot) => spot !== rowIndex) } : g,
+													),
+												}))
+											}
+										>
+											删除条件
+										</Button>
+									</div>
+									<FactorMetaLine entry={factorMeta(entries, row.factorName)} />
+								</div>
+							))}
 							<Button
 								type="button"
 								variant="outline"
 								size="sm"
-								disabled={form.factors.length === 1}
 								onClick={() =>
 									setForm((current) => ({
 										...current,
-										factors: current.factors.filter((_, position) => position !== index),
+										groups: current.groups.map((g, position) =>
+											position === groupIndex
+												? {
+														...g,
+														rows: [
+															...g.rows,
+															{
+																factorName: entries[0]?.factor_id ?? "",
+																operator: "gte" as const,
+																value: "0.8",
+															},
+														],
+													}
+												: g,
+										),
 									}))
 								}
 							>
-								删除因子
+								添加条件
 							</Button>
 						</div>
 					))}
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						onClick={() =>
-							setForm((current) => ({ ...current, factors: [...current.factors, { name: "", weight: "" }] }))
-						}
-					>
-						添加因子
-					</Button>
+					{catalogReady && (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={() =>
+								setForm((current) => ({
+									...current,
+									groups: [
+										...current.groups,
+										{
+											rows: [{ factorName: entries[0]?.factor_id ?? "", operator: "gte" as const, value: "0.8" }],
+										},
+									],
+								}))
+							}
+						>
+							添加条件组
+						</Button>
+					)}
+				</fieldset>
+				<fieldset className="space-y-1 text-xs">
+					<legend className="text-(--color-foreground-secondary)">因子权重（合格因子，权重之和需为 1）</legend>
+					{catalogReady
+						? form.factors.map((factor, index) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: 行随编辑整体受控，索引即行身份
+								<div key={index} className="grid gap-1">
+									<div className="flex items-center gap-2">
+										<FactorSelect
+											ariaLabel={`因子 ${index + 1}`}
+											entries={entries}
+											value={factor.name}
+											onChange={(name) => updateFactor(index, { name })}
+										/>
+										<input
+											aria-label={`因子 ${index + 1} 权重`}
+											className={`${INPUT_CLASS} w-24`}
+											type="number"
+											min={0}
+											max={1}
+											step={0.1}
+											value={factor.weight}
+											onChange={(event) => updateFactor(index, { weight: event.currentTarget.value })}
+										/>
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											disabled={form.factors.length === 1}
+											onClick={() =>
+												setForm((current) => ({
+													...current,
+													factors: current.factors.filter((_, position) => position !== index),
+												}))
+											}
+										>
+											删除因子
+										</Button>
+									</div>
+									<FactorMetaLine entry={factorMeta(entries, factor.name)} />
+								</div>
+							))
+						: null}
+					{catalogReady && (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={() =>
+								setForm((current) => ({
+									...current,
+									factors: [...current.factors, { name: entries[0]?.factor_id ?? "", weight: "" }],
+								}))
+							}
+						>
+							添加因子
+						</Button>
+					)}
+					{catalog.isError && <p className="text-(--color-foreground-tertiary)">因子权重编辑需先恢复因子目录。</p>}
 				</fieldset>
 				<fieldset className="space-y-1 text-xs">
 					<legend className="text-(--color-foreground-tertiary)">排除涨跌停状态</legend>
@@ -423,12 +684,16 @@ export function SelectionRunInput({
 				<div className="flex flex-wrap items-center gap-2">
 					<Button
 						type="button"
-						disabled={assemble.isPending || errors.length > 0}
+						disabled={assemble.isPending || errors.length > 0 || !catalogReady}
 						onClick={() => assemble.mutate(strategyBody(submitForm()))}
 					>
 						{assemble.isPending ? "组装中…" : "组装并预览"}
 					</Button>
-					<Button type="button" disabled={busy || errors.length > 0} onClick={() => onRun(strategyBody(submitForm()))}>
+					<Button
+						type="button"
+						disabled={busy || errors.length > 0 || !catalogReady}
+						onClick={() => onRun(strategyBody(submitForm()))}
+					>
 						{busy ? "运行中…" : "创建运行"}
 					</Button>
 					{!assembled && sameAttempt && assemble.isPending && (

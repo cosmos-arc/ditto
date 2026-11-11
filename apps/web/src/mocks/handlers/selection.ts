@@ -153,8 +153,15 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 			industries: [],
 			instruments: [600519, 300750].map((instrument_id, index) => ({
 				declared_missing_inputs: [],
-				factor_values: body.factor_weights.map((factor) => ({
-					name: factor.name,
+				factor_values: [
+					...new Set([
+						...body.factor_weights.map((factor) => factor.name),
+						...(body.factor_filter_groups ?? []).flatMap((group) =>
+							group.conditions.map((condition) => condition.factor_name),
+						),
+					]),
+				].map((name) => ({
+					name,
 					// 确定性单位分：两只标的在因子方向上对称（0.75/0.25 交替）。
 					value: index === 0 ? 0.75 : 0.25,
 				})),
@@ -181,6 +188,7 @@ export function assembledSelectionRunResponse(body: AssembleSelectionRunBody): A
 				asset_kind: "stock",
 				excluded_limit_states: body.excluded_limit_states,
 				factor_weights: body.factor_weights,
+				filter_groups: body.factor_filter_groups ?? [],
 				min_average_turnover: body.min_average_turnover,
 				min_listing_days: body.min_listing_days,
 				spec_id: body.spec_id,
@@ -208,6 +216,18 @@ function validateAssemblyPolicy(body: AssembleSelectionRunBody): ReturnType<type
 		return HttpResponse.json({ detail: "因子权重不得重复且权重之和必须为 1" }, { status: 422 });
 	if (body.factor_weights.some((factor) => !ASSEMBLY_KNOWN_FACTORS.has(factor.name)))
 		return HttpResponse.json({ detail: "未注册因子或该因子表达式暂不被组装支持" }, { status: 422 });
+	for (const group of body.factor_filter_groups ?? []) {
+		if (group.conditions.length === 0)
+			return HttpResponse.json({ detail: "筛选条件组至少需要一条条件" }, { status: 422 });
+		for (const condition of group.conditions) {
+			if (!ASSEMBLY_KNOWN_FACTORS.has(condition.factor_name))
+				return HttpResponse.json({ detail: `条件因子不可用：${condition.factor_name}` }, { status: 422 });
+			if (condition.operator !== "gte" && condition.operator !== "lte")
+				return HttpResponse.json({ detail: "条件算子只支持 gte 或 lte" }, { status: 422 });
+			if (!Number.isFinite(condition.value) || condition.value < 0 || condition.value > 1)
+				return HttpResponse.json({ detail: "条件阈值需在 0 到 1 之间（截面分数秩口径）" }, { status: 422 });
+		}
+	}
 	if (body.universe_id !== ASSEMBLY_STOCK_UNIVERSE_ID)
 		return HttpResponse.json(
 			{ detail: "组装 v1 仅支持全市场股票池；窄池/非股票池需 membership 快照链" },
@@ -216,7 +236,60 @@ function validateAssemblyPolicy(body: AssembleSelectionRunBody): ReturnType<type
 	return null;
 }
 
+/**
+ * 因子目录快照——代表真实 /selections/factor-catalog 的合格集合形状
+ * （行情叶闭包 + expression 因子），含单位/回看/分组元数据。
+ */
+const FACTOR_CATALOG_FIXTURE = [
+	{
+		factor_id: "momentum_1m",
+		group: "alpha",
+		group_label: "Alpha",
+		description: "1-month price momentum (20-day return)",
+		lookback_trading_days: 20,
+		dependencies: ["market.close"],
+		value_unit: "截面分数秩 (0,1]，秩越高截面排名越靠前",
+	},
+	{
+		factor_id: "momentum_3m",
+		group: "momentum",
+		group_label: "动量与反转",
+		description: "3-month price momentum (60-day return)",
+		lookback_trading_days: 60,
+		dependencies: ["market.close"],
+		value_unit: "截面分数秩 (0,1]，秩越高截面排名越靠前",
+	},
+	{
+		factor_id: "reversal_1w",
+		group: "alpha",
+		group_label: "Alpha",
+		description: "1-week price reversal (negative 5-day return)",
+		lookback_trading_days: 5,
+		dependencies: ["market.close"],
+		value_unit: "截面分数秩 (0,1]，秩越高截面排名越靠前",
+	},
+	{
+		factor_id: "volatility_factor",
+		group: "volatility",
+		group_label: "波动",
+		description: "20-day rolling volatility factor",
+		lookback_trading_days: 20,
+		dependencies: ["market.close"],
+		value_unit: "截面分数秩 (0,1]，秩越高截面排名越靠前",
+	},
+	{
+		factor_id: "volatility_60",
+		group: "volatility",
+		group_label: "波动",
+		description: "60-day rolling volatility",
+		lookback_trading_days: 60,
+		dependencies: ["market.close"],
+		value_unit: "截面分数秩 (0,1]，秩越高截面排名越靠前",
+	},
+] as const;
+
 export const selectionHandlers = [
+	http.get("/api/v1/selections/factor-catalog", () => HttpResponse.json({ data: FACTOR_CATALOG_FIXTURE })),
 	http.get("/api/v1/selections/runs", ({ request }) => {
 		const specId = new URL(request.url).searchParams.get("spec_id");
 		return HttpResponse.json({ data: selectionRunFixtures.filter((run) => run.spec_id === specId) });

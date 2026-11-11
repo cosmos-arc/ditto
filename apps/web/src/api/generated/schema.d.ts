@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 937ffb89cccc15081a336bcc34f01b8e4c9b23e905bdec4dcde38a98574a35e2
+ * Schema SHA-256: 6521149171741ff699791bd8c315db696c7c3e946687d7f66302c481dfd4cb4b
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -3431,6 +3431,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/selections/factor-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Factor Catalog
+         * @description List factors eligible for visual conditions and weights (#740).
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["selections_list_factor_catalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/selections/industry-rotations/{snapshot_id}": {
         parameters: {
             query?: never;
@@ -6003,6 +6025,21 @@ export interface components {
              */
             read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
+        /** APIResponse[tuple[SelectionFactorCatalogEntryResponse, ...]] */
+        APIResponse_tuple_SelectionFactorCatalogEntryResponse__________: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["SelectionFactorCatalogEntryResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
+        };
         /** APIResponse[tuple[SelectionRunResponse, ...]] */
         APIResponse_tuple_SelectionRunResponse__________: {
             /**
@@ -7290,6 +7327,11 @@ export interface components {
              *     ]
              */
             excluded_limit_states: components["schemas"]["HttpTuple_LimitStateRequest_"];
+            /**
+             * Factor Filter Groups
+             * @default []
+             */
+            factor_filter_groups: components["schemas"]["SelectionFilterGroupRequest"][];
             /** Factor Weights */
             factor_weights: components["schemas"]["SelectionFactorWeightRequest"][];
             /** Knowledge Cutoff */
@@ -10553,6 +10595,11 @@ export interface components {
             excluded_limit_states: components["schemas"]["HttpTuple_LimitStateRequest_"];
             /** Factor Weights */
             factor_weights: components["schemas"]["SelectionFactorWeightRequest"][];
+            /**
+             * Filter Groups
+             * @default []
+             */
+            filter_groups: components["schemas"]["SelectionFilterGroupRequest"][];
             /** Max Tracking Error */
             max_tracking_error?: number | null;
             /** Min Average Turnover */
@@ -15433,6 +15480,8 @@ export interface components {
             /** Score */
             score: number;
         };
+        /** @enum {string} */
+        SelectionConditionOperatorRequest: "gte" | "lte";
         /**
          * SelectionExclusionChangeResponse
          * @description Why-in/why-out change between two exact runs.
@@ -15460,6 +15509,37 @@ export interface components {
             reason_code: string;
             /** Stage */
             stage: string;
+        };
+        /**
+         * SelectionFactorCatalogEntryResponse
+         * @description One assembly-eligible factor for the visual screener (#740).
+         */
+        SelectionFactorCatalogEntryResponse: {
+            /** Dependencies */
+            dependencies: string[];
+            /** Description */
+            description: string;
+            /** Factor Id */
+            factor_id: string;
+            /** Group */
+            group: string;
+            /** Group Label */
+            group_label: string;
+            /** Lookback Trading Days */
+            lookback_trading_days: number;
+            /** Value Unit */
+            value_unit: string;
+        };
+        /**
+         * SelectionFactorConditionRequest
+         * @description One factor threshold: field, operator, value (#740).
+         */
+        SelectionFactorConditionRequest: {
+            /** Factor Name */
+            factor_name: string;
+            operator: components["schemas"]["SelectionConditionOperatorRequest"];
+            /** Value */
+            value: number;
         };
         /**
          * SelectionFactorContributionResponse
@@ -15508,6 +15588,14 @@ export interface components {
             field: string;
             /** Snapshot Id */
             snapshot_id: string;
+        };
+        /**
+         * SelectionFilterGroupRequest
+         * @description One OR group of conditions; groups compose with AND.
+         */
+        SelectionFilterGroupRequest: {
+            /** Conditions */
+            conditions: components["schemas"]["SelectionFactorConditionRequest"][];
         };
         /**
          * SelectionInstrumentRequest
@@ -15745,6 +15833,11 @@ export interface components {
             excluded_limit_states: components["schemas"]["HttpTuple_LimitStateRequest_"];
             /** Factor Weights */
             factor_weights: components["schemas"]["SelectionFactorWeightRequest"][];
+            /**
+             * Filter Groups
+             * @default []
+             */
+            filter_groups: components["schemas"]["SelectionFilterGroupRequest"][];
             /** Min Average Turnover */
             min_average_turnover: number;
             /** Min Listing Days */
@@ -30753,6 +30846,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_list_StrategyVersionResponse__"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    selections_list_factor_catalog: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_tuple_SelectionFactorCatalogEntryResponse__________"];
                 };
             };
             /** @description Bad request */

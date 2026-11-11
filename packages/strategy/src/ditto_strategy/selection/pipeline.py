@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from ditto_strategy.selection.contracts import (
     EtfSelectionSpec,
     SelectionCandidate,
+    SelectionConditionOperator,
     SelectionExclusion,
     SelectionExclusionReason,
     SelectionFactorContribution,
@@ -53,6 +54,13 @@ def _required_missing(
     for factor in spec.factor_weights:
         if factor.name not in observed_factors:
             missing.add(f"{prefix}factor:{factor.name}")
+    # Condition factors gate eligibility exactly like weighted factors: a
+    # missing observation fails closed as missing data instead of silently
+    # reading as an unsatisfied threshold.
+    for group in spec.filter_groups:
+        for condition in group:
+            if condition.factor_name not in observed_factors:
+                missing.add(f"{prefix}factor:{condition.factor_name}")
     return tuple(sorted(missing))
 
 
@@ -104,6 +112,32 @@ def _tradability_filter(
             "tracking_error_above_maximum",
         )
     return None
+
+
+def _condition_filter(
+    value: SelectionInstrumentInput,
+    spec: SelectionSpec,
+) -> tuple[SelectionExclusionReason, str] | None:
+    """Apply filter groups: AND across groups, OR within one group."""
+    factor_values = {item.name: item.value for item in value.factor_values}
+    failed: list[str] = []
+    for group in spec.filter_groups:
+        satisfied = any(
+            (
+                factor_values[condition.factor_name] >= condition.value
+                if condition.operator is SelectionConditionOperator.GTE
+                else factor_values[condition.factor_name] <= condition.value
+            )
+            for condition in group
+        )
+        if not satisfied:
+            failed.append(" OR ".join(condition.describe() for condition in group))
+    if not failed:
+        return None
+    return (
+        SelectionExclusionReason.FACTOR_CONDITION_UNSATISFIED,
+        " AND ".join(failed),
+    )
 
 
 def _score(
@@ -168,6 +202,14 @@ class SelectionPipeline:
         for instrument in value.instruments:
             missing = _required_missing(instrument, value.spec)
             filter_result = _hard_filter(instrument, value.spec)
+            if filter_result is None:
+                # Condition groups only judge instruments that carry every
+                # required fact; a missing condition factor is already a
+                # hard-filter exclusion.
+                filter_result = _condition_filter(instrument, value.spec)
+                stage = "condition_filter"
+            else:
+                stage = "hard_filter"
             if filter_result is not None:
                 reason, detail = filter_result
                 exclusions.append(
@@ -175,7 +217,7 @@ class SelectionPipeline:
                         instrument,
                         reason=reason,
                         detail=detail,
-                        stage="hard_filter",
+                        stage=stage,
                     )
                 )
                 missing_inputs.update(missing)

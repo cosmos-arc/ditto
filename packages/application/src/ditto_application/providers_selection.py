@@ -51,6 +51,9 @@ from ditto_application.queries.selection_evidence import (
     IndustryRotationEvidenceQueryFacade,
     SelectionRunEvidenceQueryFacade,
 )
+from ditto_application.queries.selection_factor_catalog import (
+    SelectionFactorCatalogQuery,
+)
 from ditto_application.queries.selection_runs import SelectionRunQueryService
 from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
 from ditto_application.research_case_contracts import ResearchCaseFactory
@@ -351,6 +354,11 @@ class AppSelectionProvider(Provider):
     ) -> CreateResearchCaseFromSelection:
         """Bind Analysis Research Cases to exact persisted SelectionRuns."""
         return CreateResearchCaseFromSelection(reader, factory)
+
+    @provide
+    def selection_factor_catalog_query(self) -> SelectionFactorCatalogQuery:
+        """Serve the assembly-eligible factor catalog for visual screening."""
+        return SelectionFactorCatalogQuery(ALL_FACTOR_SPECS)
 
     @provide
     def selection_run_query_service(

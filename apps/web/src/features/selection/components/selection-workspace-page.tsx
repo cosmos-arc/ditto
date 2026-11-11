@@ -17,9 +17,16 @@ function shortRunId(value: string): string {
 	return value.split(":sha256:").at(-1)?.slice(0, 12) ?? value;
 }
 
-export function SelectionWorkspacePage() {
+export function SelectionWorkspacePage({
+	initialSpecId = DEFAULT_SELECTION_SPEC_ID,
+	onSpecIdChange,
+}: {
+	/** 从 URL/导航携带的 spec 身份：刷新或返回后恢复运行历史范围。 */
+	readonly initialSpecId?: string | undefined;
+	readonly onSpecIdChange?: (specId: string) => void;
+}) {
 	const queryClient = useQueryClient();
-	const [specId, setSpecId] = useState(DEFAULT_SELECTION_SPEC_ID);
+	const [specId, setSpecId] = useState(initialSpecId);
 	const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 	const [compareIds, setCompareIds] = useState<readonly string[]>([]);
 	const [tab, setTab] = useState<ResultsTab>("candidates");
@@ -50,13 +57,23 @@ export function SelectionWorkspacePage() {
 	const createRun = useMutation({
 		mutationFn: createSelectionRun,
 		onSuccess: async (receipt) => {
-			setSpecId(receipt.selection_run.spec_id);
+			commitSpecId(receipt.selection_run.spec_id);
 			setSelectedRunId(receipt.selection_run.run_id);
-			setFeedback(`已保存 SelectionRun ${shortRunId(receipt.selection_run.run_id)}`);
+			// 保存的条件（SelectionSpec，用户命名的可重跑身份）与固定结果
+			// （SelectionRun，内容寻址身份）分别展示；live 车道的知识截止
+			// 按发起时刻签发，重复提交各得一个固定身份。
+			setFeedback(
+				`已保存固定 SelectionRun ${shortRunId(receipt.selection_run.run_id)} · 可重跑条件 ${receipt.selection_run.spec_id}:${receipt.selection_run.spec_version}`,
+			);
 			queryClient.setQueryData(selectionKeys.run(receipt.selection_run.run_id), receipt.selection_run);
 			await queryClient.invalidateQueries({ queryKey: selectionKeys.runs(receipt.selection_run.spec_id) });
 		},
 	});
+
+	function commitSpecId(next: string): void {
+		setSpecId(next);
+		onSpecIdChange?.(next);
+	}
 
 	function toggleCompare(runId: string): void {
 		setCompareIds((current) => {
@@ -87,7 +104,7 @@ export function SelectionWorkspacePage() {
 							aria-label="SelectionSpec ID"
 							className="w-52 rounded-(--radius-sm) border border-(--color-border-primary) bg-(--color-surface-1) px-2 py-1.5 font-mono text-xs text-(--color-foreground)"
 							value={specId}
-							onChange={(event) => setSpecId(event.currentTarget.value)}
+							onChange={(event) => commitSpecId(event.currentTarget.value)}
 						/>
 					</label>
 					<Button

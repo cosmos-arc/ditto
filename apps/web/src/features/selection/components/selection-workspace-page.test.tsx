@@ -95,7 +95,9 @@ describe("SelectionWorkspacePage", () => {
 		await waitFor(() => expect(createButton).toBeEnabled());
 		await user.click(createButton);
 
-		await expect(screen.findByText("已保存 SelectionRun 111111111111")).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText("已保存固定 SelectionRun 111111111111 · 可重跑条件 a-share-stock-discovery:1"),
+		).resolves.toBeInTheDocument();
 		const created = createdBody as AssembleSelectionRunBody;
 		expect(created.spec_id).toBe("stock-momentum-manual");
 		expect(created.factor_weights).toEqual([{ name: "momentum_1m", weight: 1 }]);
@@ -148,7 +150,9 @@ describe("SelectionWorkspacePage", () => {
 		);
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		await user.click(screen.getByRole("button", { name: "组装并预览" }));
+		const assembleButton = await screen.findByRole("button", { name: "组装并预览" });
+		await waitFor(() => expect(assembleButton).toBeEnabled());
+		await user.click(assembleButton);
 
 		const summary = await screen.findByRole("region", { name: "组装摘要" });
 		expect(summary).toHaveTextContent(ASSEMBLED_UNIVERSE_SNAPSHOT_ID);
@@ -157,7 +161,9 @@ describe("SelectionWorkspacePage", () => {
 
 		await user.click(screen.getByRole("button", { name: "创建运行" }));
 
-		await expect(screen.findByText("已保存 SelectionRun 111111111111")).resolves.toBeInTheDocument();
+		await expect(
+			screen.findByText("已保存固定 SelectionRun 111111111111 · 可重跑条件 a-share-stock-discovery:1"),
+		).resolves.toBeInTheDocument();
 		const created = createdBody as AssembleSelectionRunBody;
 		expect(created).toEqual(assembledBody);
 		expect(created).toMatchObject({
@@ -195,7 +201,9 @@ describe("SelectionWorkspacePage", () => {
 		);
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		await user.click(screen.getByRole("button", { name: "组装并预览" }));
+		const assembleButton = await screen.findByRole("button", { name: "组装并预览" });
+		await waitFor(() => expect(assembleButton).toBeEnabled());
+		await user.click(assembleButton);
 
 		const summary = await screen.findByRole("region", { name: "组装摘要" });
 		expect(summary).toHaveTextContent("行业轮动缺失输入：industry_inputs");
@@ -211,13 +219,12 @@ describe("SelectionWorkspacePage", () => {
 		server.use(http.post("/api/v1/selections/runs:assembled", () => assembleError()));
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		await user.click(screen.getByRole("button", { name: "添加因子" }));
-		await user.type(screen.getByLabelText("因子 2 名称"), "momentum_1m");
+		await user.click(await screen.findByRole("button", { name: "添加因子" }));
+		await user.selectOptions(screen.getByLabelText("因子 2"), "momentum_1m");
 		expect(screen.getByRole("button", { name: "组装并预览" })).toBeDisabled();
 		expect(screen.getByText("因子名称重复：momentum_1m")).toBeInTheDocument();
 
-		await user.clear(screen.getByLabelText("因子 2 名称"));
-		await user.type(screen.getByLabelText("因子 2 名称"), "reversal_1w");
+		await user.selectOptions(screen.getByLabelText("因子 2"), "reversal_1w");
 		await user.clear(screen.getByLabelText("因子 1 权重"));
 		await user.type(screen.getByLabelText("因子 1 权重"), "0.4");
 		await user.clear(screen.getByLabelText("因子 2 权重"));
@@ -245,7 +252,9 @@ describe("SelectionWorkspacePage", () => {
 		);
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 
-		await user.click(screen.getByRole("button", { name: "组装并预览" }));
+		const assembleButton = await screen.findByRole("button", { name: "组装并预览" });
+		await waitFor(() => expect(assembleButton).toBeEnabled());
+		await user.click(assembleButton);
 
 		await expect(screen.findByText("因子权重不得重复且权重之和必须为 1")).resolves.toBeInTheDocument();
 		// policy-only：预览失败不阻塞创建，数据完整性由服务端在创建时把关。
@@ -293,7 +302,9 @@ it("rejects an assembled response whose policy echo drifts from the submitted wi
 	render(<SelectionWorkspacePage />, { wrapper: wrapper() });
 	await waitFor(() => expect((screen.getByLabelText("universe 证券池") as HTMLSelectElement).value).not.toBe(""));
 
-	await user.click(screen.getByRole("button", { name: "组装并预览" }));
+	const assembleButton = await screen.findByRole("button", { name: "组装并预览" });
+	await waitFor(() => expect(assembleButton).toBeEnabled());
+	await user.click(assembleButton);
 
 	await waitFor(() =>
 		expect(screen.getByRole("alert")).toHaveTextContent(/组装响应的策略回显或服务端事实与提交不一致/),

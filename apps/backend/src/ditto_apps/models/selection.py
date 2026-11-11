@@ -25,9 +25,12 @@ __all__ = [
     "SelectionCandidateResponse",
     "SelectionExclusionChangeResponse",
     "SelectionExclusionResponse",
+    "SelectionFactorCatalogEntryResponse",
+    "SelectionFactorConditionRequest",
     "SelectionFactorContributionResponse",
     "SelectionFactorValueRequest",
     "SelectionFactorWeightRequest",
+    "SelectionFilterGroupRequest",
     "SelectionInstrumentRequest",
     "SelectionRankChangeResponse",
     "SelectionRunDiffResponse",
@@ -132,6 +135,30 @@ class SelectionFactorValueRequest(BaseModel):
     value: float = Field(ge=-1.0, le=1.0)
 
 
+type SelectionConditionOperatorRequest = Literal["gte", "lte"]
+
+
+class SelectionFactorConditionRequest(BaseModel):
+    """One factor threshold: field, operator, value (#740)."""
+
+    model_config = _REQUEST_CONFIG
+
+    factor_name: str = Field(min_length=1)
+    operator: SelectionConditionOperatorRequest
+    value: float = Field(allow_inf_nan=False)
+
+
+class SelectionFilterGroupRequest(BaseModel):
+    """One OR group of conditions; groups compose with AND."""
+
+    model_config = _REQUEST_CONFIG
+
+    conditions: Annotated[
+        tuple[SelectionFactorConditionRequest, ...],
+        BeforeValidator(_parse_http_array),
+    ] = Field(min_length=1)
+
+
 type LimitStateRequest = Literal["normal", "limit_up", "limit_down"]
 
 
@@ -153,6 +180,9 @@ class StockSelectionSpecRequest(BaseModel):
         "limit_up",
         "limit_down",
     )
+    filter_groups: Annotated[
+        tuple[SelectionFilterGroupRequest, ...], BeforeValidator(_parse_http_array)
+    ] = Field(default=(), min_length=0)
 
 
 class EtfSelectionSpecRequest(BaseModel):
@@ -174,6 +204,9 @@ class EtfSelectionSpecRequest(BaseModel):
         "limit_up",
         "limit_down",
     )
+    filter_groups: Annotated[
+        tuple[SelectionFilterGroupRequest, ...], BeforeValidator(_parse_http_array)
+    ] = Field(default=(), min_length=0)
 
 
 type SelectionSpecRequest = Annotated[
@@ -264,6 +297,9 @@ class AssembleSelectionRunBody(BaseModel):
         "limit_up",
         "limit_down",
     )
+    factor_filter_groups: Annotated[
+        tuple[SelectionFilterGroupRequest, ...], BeforeValidator(_parse_http_array)
+    ] = Field(default=(), min_length=0)
     knowledge_cutoff: HttpDateTime | None = None
     publication_cutoff: HttpDateTime | None = None
     seed: int = Field(default=0, ge=0)
@@ -319,6 +355,20 @@ class IndustryRotationResponse(BaseModel):
     status: Literal["ready", "degraded", "blocked"]
     rankings: tuple[IndustryRotationRankResponse, ...]
     missing_inputs: tuple[str, ...]
+
+
+class SelectionFactorCatalogEntryResponse(BaseModel):
+    """One assembly-eligible factor for the visual screener (#740)."""
+
+    model_config = _RESPONSE_CONFIG
+
+    factor_id: str
+    group: str
+    group_label: str
+    description: str
+    lookback_trading_days: int
+    dependencies: tuple[str, ...]
+    value_unit: str
 
 
 class SelectionFactorContributionResponse(BaseModel):

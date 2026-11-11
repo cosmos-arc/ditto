@@ -6,6 +6,7 @@ export type AssembleSelectionRunBody = components["schemas"]["AssembleSelectionR
 export type CreateResearchCaseBody = components["schemas"]["CreateResearchCaseBody"];
 export type IndustryRotation = components["schemas"]["IndustryRotationResponse"];
 export type ResearchCase = components["schemas"]["ResearchCaseResponse"];
+export type SelectionFactorCatalogEntry = components["schemas"]["SelectionFactorCatalogEntryResponse"];
 export type SelectionRun = components["schemas"]["SelectionRunResponse"];
 export type SelectionRunDiff = components["schemas"]["SelectionRunDiffResponse"];
 export type SelectionWorkspaceReceipt = components["schemas"]["SelectionWorkspaceReceiptResponse"];
@@ -18,6 +19,7 @@ export const selectionKeys = {
 	compare: (beforeRunId: string, afterRunId: string) =>
 		[...selectionKeys.all, "compare", beforeRunId, afterRunId] as const,
 	researchCases: (runId: string) => [...selectionKeys.all, "research-cases", runId] as const,
+	factorCatalog: ["selection", "factor-catalog"] as const,
 };
 
 export function listSelectionRuns(specId: string, limit = 20): Promise<readonly SelectionRun[]> {
@@ -49,6 +51,11 @@ export function createSelectionRun(body: AssembleSelectionRunBody): Promise<Sele
 
 export function assembleSelectionRun(body: AssembleSelectionRunBody): Promise<AssembledSelectionRunResponse> {
 	return apiClient.post("/api/v1/selections/runs:assembled", { body });
+}
+
+/** 可视条件与权重可选用的合格因子目录（服务端裁定 PIT 合格集合）。 */
+export function listFactorCatalog(): Promise<readonly SelectionFactorCatalogEntry[]> {
+	return apiClient.get("/api/v1/selections/factor-catalog");
 }
 
 export interface UniverseOption {

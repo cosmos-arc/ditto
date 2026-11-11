@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
+from typing import cast
 
 from ditto_kernel.identity import InstrumentId
 
@@ -62,11 +64,14 @@ __all__ = [
     "EtfSelectionSpec",
     "SelectionAssetKind",
     "SelectionCandidate",
+    "SelectionConditionOperator",
     "SelectionExclusion",
     "SelectionExclusionReason",
+    "SelectionFactorCondition",
     "SelectionFactorContribution",
     "SelectionFactorValue",
     "SelectionFactorWeight",
+    "SelectionFilterGroup",
     "SelectionInputBundle",
     "SelectionInstrumentInput",
     "SelectionLimitState",
@@ -108,6 +113,7 @@ class SelectionExclusionReason(StrEnum):
     INSUFFICIENT_LISTING_DAYS = "insufficient_listing_days"
     PRICE_LIMITED = "price_limited"
     EXCESSIVE_TRACKING_ERROR = "excessive_tracking_error"
+    FACTOR_CONDITION_UNSATISFIED = "factor_condition_unsatisfied"
     BELOW_TOP_K = "below_top_k"
     UNIVERSE_INELIGIBLE = "universe_ineligible"
 
@@ -173,6 +179,85 @@ def _validated_limit_states(value: object) -> tuple[SelectionLimitState, ...]:
     return tuple(sorted(states, key=lambda item: item.value))
 
 
+class SelectionConditionOperator(StrEnum):
+    """Threshold comparison applied to a unit-normalized factor value."""
+
+    GTE = "gte"
+    LTE = "lte"
+
+
+@dataclass(frozen=True, slots=True)
+class SelectionFactorCondition:
+    """One factor threshold: the named factor's value must pass the operator."""
+
+    factor_name: str
+    operator: SelectionConditionOperator
+    value: float
+
+    def __post_init__(self) -> None:
+        """Validate the factor name and a finite threshold value."""
+        object.__setattr__(
+            self, "factor_name", _text(self.factor_name, field_name="factor name")
+        )
+        object.__setattr__(
+            self,
+            "value",
+            _finite(self.value, field_name="condition value"),
+        )
+
+    def describe(self) -> str:
+        """Render the condition for exclusion evidence."""
+        symbol = ">=" if self.operator is SelectionConditionOperator.GTE else "<="
+        return f"{self.factor_name}{symbol}{self.value:g}"
+
+
+type SelectionFilterGroup = tuple[SelectionFactorCondition, ...]
+
+
+def _validated_filter_groups(
+    value: object,
+) -> tuple[SelectionFilterGroup, ...]:
+    if isinstance(value, str | bytes | bytearray) or not isinstance(value, Sequence):
+        raise _error(
+            "selection filter_groups must be an ordered sequence",
+            reason="invalid_selection_sequence",
+            field_name="filter_groups",
+        )
+    groups: list[SelectionFilterGroup] = []
+    raw_groups: tuple[Sequence[object], ...] = tuple(
+        cast("Sequence[Sequence[object]]", value)
+    )
+    group: Sequence[object]
+    for position, group in enumerate(raw_groups, start=1):
+        # _ordered_sequence rejects strings/bytes and non-condition items
+        # per group, with the group-scoped field name in the error.
+        rows = _ordered_sequence(
+            group,
+            item_type=SelectionFactorCondition,
+            field_name=f"filter_groups[{position}]",
+        )
+        if not rows:
+            raise _error(
+                "selection filter group must hold at least one condition",
+                reason="invalid_selection_filter_group",
+            )
+        groups.append(
+            tuple(
+                sorted(rows, key=lambda row: (row.factor_name, row.operator, row.value))
+            )
+        )
+    # Group order carries no semantics (groups compose with AND); sorting
+    # keeps the replay identity independent of the authoring order.
+    return tuple(
+        sorted(
+            groups,
+            key=lambda group: tuple(
+                (row.factor_name, row.operator.value, row.value) for row in group
+            ),
+        )
+    )
+
+
 def _validate_spec(value: StockSelectionSpec | EtfSelectionSpec) -> None:
     for field_name in ("spec_id", "spec_version"):
         object.__setattr__(
@@ -199,6 +284,9 @@ def _validate_spec(value: StockSelectionSpec | EtfSelectionSpec) -> None:
         "excluded_limit_states",
         _validated_limit_states(value.excluded_limit_states),
     )
+    object.__setattr__(
+        value, "filter_groups", _validated_filter_groups(value.filter_groups)
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -222,6 +310,7 @@ class StockSelectionSpec:
         SelectionLimitState.LIMIT_UP,
         SelectionLimitState.LIMIT_DOWN,
     )
+    filter_groups: tuple[SelectionFilterGroup, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate stock-specific selection policy fields."""
@@ -253,6 +342,7 @@ class EtfSelectionSpec:
         SelectionLimitState.LIMIT_UP,
         SelectionLimitState.LIMIT_DOWN,
     )
+    filter_groups: tuple[SelectionFilterGroup, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate ETF-specific selection policy fields."""

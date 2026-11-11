@@ -17,6 +17,26 @@ function sameLimitStates(left: readonly string[], right: readonly string[]): boo
 	return [...left].sort().join("\n") === [...right].sort().join("\n");
 }
 
+type EchoedCondition = { factor_name: string; operator: string; value: number };
+
+/** 条件组回显与提交按多重集合等价（组间 AND、组内 OR 无序）。 */
+function sameFilterGroups(
+	left: readonly { conditions: readonly EchoedCondition[] }[] | undefined,
+	right: readonly { conditions: readonly EchoedCondition[] }[] | undefined,
+): boolean {
+	const canon = (groups: readonly { conditions: readonly EchoedCondition[] }[] | undefined) =>
+		(groups ?? [])
+			.map((group) =>
+				group.conditions
+					.map((c) => `${c.factor_name}:${c.operator}:${c.value}`)
+					.sort()
+					.join("|"),
+			)
+			.sort()
+			.join("&");
+	return canon(left) === canon(right);
+}
+
 /** 返回区间必须可解析、有序、不晚于决策时点。 */
 function windowWellFormed(
 	dataFrom: string | null | undefined,
@@ -66,6 +86,7 @@ export function toAssembledRunView(value: AssembledSelectionRunResponse, submitt
 		spec.min_listing_days === submitted.min_listing_days &&
 		sameFactorWeights(spec.factor_weights, submitted.factor_weights) &&
 		sameLimitStates(spec.excluded_limit_states, submitted.excluded_limit_states) &&
+		sameFilterGroups(spec.filter_groups, submitted.factor_filter_groups) &&
 		UNIVERSE_SNAPSHOT_PATTERN.test(request.universe_snapshot_id) &&
 		request.universe_sources != null &&
 		request.universe_sources.universe_id === submitted.universe_id &&

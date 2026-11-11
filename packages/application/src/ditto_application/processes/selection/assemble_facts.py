@@ -77,6 +77,7 @@ from ditto_application.processes.execution._factor_signal_spec import (
 )
 from ditto_application.processes.selection.facade import (
     CreateSelectionRunRequest,
+    SelectionFactorConditionDraft,
     SelectionFactorValueDraft,
     SelectionFactorWeightDraft,
     SelectionInstrumentDraft,
@@ -97,7 +98,9 @@ __all__ = [
     "SnapshotWindow",
 ]
 
-_MARKET_BAR_COLUMNS: Mapping[str, str] = {
+# Public alias: the eligible-factor catalog reuses the exact same
+# market-leaf vocabulary instead of re-declaring the read-model columns.
+MARKET_BAR_COLUMNS: Mapping[str, str] = {
     "market.open": "open",
     "market.high": "high",
     "market.low": "low",
@@ -129,8 +132,8 @@ _STRUCTURAL_CONSUMERS = (
 _BAR_LINEAGE_COLUMN = "source_snapshot_id"
 _RESERVED_FACTOR_COLUMNS = frozenset(
     {
-        *_MARKET_BAR_COLUMNS,
-        *_MARKET_BAR_COLUMNS.values(),
+        *MARKET_BAR_COLUMNS,
+        *MARKET_BAR_COLUMNS.values(),
         "instrument_id",
         "trade_date",
         "source",
@@ -310,6 +313,7 @@ class AssembleSelectionFactsRequest:
         "limit_up",
         "limit_down",
     )
+    factor_filter_groups: tuple[tuple[SelectionFactorConditionDraft, ...], ...] = ()
     knowledge_cutoff: datetime | None = None
     publication_cutoff: datetime | None = None
     seed: int = 0
@@ -460,6 +464,7 @@ class AssembleSelectionFacts:
                 min_listing_days=request.min_listing_days,
                 factor_weights=request.factor_weights,
                 excluded_limit_states=request.excluded_limit_states,
+                filter_groups=request.factor_filter_groups,
             ),
             seed=request.seed,
             instruments=instruments,
@@ -651,6 +656,33 @@ class AssembleSelectionFacts:
                     "excluded_limit_states": tuple(states),
                 },
             )
+        for position, group in enumerate(request.factor_filter_groups, start=1):
+            if not group:
+                raise AppProcessError(
+                    "assembly filter group must hold at least one condition",
+                    details={
+                        "reason": "ASSEMBLY_FILTER_GROUP_EMPTY",
+                        "group_position": position,
+                    },
+                )
+            for condition in group:
+                if condition.operator not in ("gte", "lte"):
+                    raise AppProcessError(
+                        "assembly condition operator must be gte or lte",
+                        details={
+                            "reason": "ASSEMBLY_CONDITION_OPERATOR_INVALID",
+                            "factor_name": condition.factor_name,
+                            "operator": condition.operator,
+                        },
+                    )
+                if not math.isfinite(condition.value):
+                    raise AppProcessError(
+                        "assembly condition value must be finite",
+                        details={
+                            "reason": "ASSEMBLY_CONDITION_VALUE_INVALID",
+                            "factor_name": condition.factor_name,
+                        },
+                    )
 
     def _plan_factors(
         self, request: AssembleSelectionFactsRequest
@@ -710,8 +742,13 @@ class AssembleSelectionFacts:
             return leaves[factor_id]
 
         requested = {weight.name for weight in request.factor_weights}
-        for weight in request.factor_weights:
-            visit(weight.name, ())
+        # Condition factors gate eligibility even when unweighted, so they
+        # join the requested closure and the cross-sectional projection.
+        for group in request.factor_filter_groups:
+            for condition in group:
+                requested.add(condition.factor_name)
+        for factor_id in sorted(requested):
+            visit(factor_id, ())
         return tuple(
             _FactorNode(
                 factor_id=factor_id,
@@ -750,7 +787,7 @@ class AssembleSelectionFacts:
         """Classify one declared dependency as market leaf or nested factor."""
         if self._factors.get(dependency) is not None:
             return visit(dependency, (*path, factor_id))
-        if dependency in _MARKET_BAR_COLUMNS:
+        if dependency in MARKET_BAR_COLUMNS:
             return frozenset({dependency})
         raise AppProcessError(
             "factor dependency is not available for assembly: "
@@ -847,7 +884,7 @@ class AssembleSelectionFacts:
             )
         evaluation = frame.sort(["instrument_id", "trade_date"])
         for leaf in sorted(needed_leaves):
-            column = _MARKET_BAR_COLUMNS[leaf]
+            column = MARKET_BAR_COLUMNS[leaf]
             evaluation = evaluation.with_columns(
                 pl.col(column).cast(pl.Float64).alias(leaf)
             )
@@ -884,7 +921,7 @@ class AssembleSelectionFacts:
         missing_leaves = sorted(
             leaf
             for leaf in needed_leaves
-            if _MARKET_BAR_COLUMNS[leaf] not in frame.columns
+            if MARKET_BAR_COLUMNS[leaf] not in frame.columns
         )
         if missing_leaves:
             raise AppProcessError(
@@ -1594,7 +1631,7 @@ def data_fields(
         for leaf in sorted(node.leaves):
             bind(
                 "stock_daily",
-                _MARKET_BAR_COLUMNS[leaf],
+                MARKET_BAR_COLUMNS[leaf],
                 f"instruments.factor_values.{node.factor_id}",
             )
         if node.leaves & _PRICE_LEAVES:

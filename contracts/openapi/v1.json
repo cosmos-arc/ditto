@@ -6037,6 +6037,51 @@
         "title": "APIResponse[list[str]]",
         "type": "object"
       },
+      "APIResponse_tuple_SelectionFactorCatalogEntryResponse__________": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/SelectionFactorCatalogEntryResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[tuple[SelectionFactorCatalogEntryResponse, ...]]",
+        "type": "object"
+      },
       "APIResponse_tuple_SelectionRunResponse__________": {
         "properties": {
           "data": {
@@ -9101,6 +9146,15 @@
               "limit_up",
               "limit_down"
             ]
+          },
+          "factor_filter_groups": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SelectionFilterGroupRequest"
+            },
+            "minItems": 0,
+            "title": "Factor Filter Groups",
+            "type": "array"
           },
           "factor_weights": {
             "items": {
@@ -15712,6 +15766,15 @@
             },
             "minItems": 1,
             "title": "Factor Weights",
+            "type": "array"
+          },
+          "filter_groups": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SelectionFilterGroupRequest"
+            },
+            "minItems": 0,
+            "title": "Filter Groups",
             "type": "array"
           },
           "max_tracking_error": {
@@ -25875,6 +25938,13 @@
         "title": "SelectionCandidateResponse",
         "type": "object"
       },
+      "SelectionConditionOperatorRequest": {
+        "enum": [
+          "gte",
+          "lte"
+        ],
+        "type": "string"
+      },
       "SelectionExclusionChangeResponse": {
         "description": "Why-in/why-out change between two exact runs.",
         "properties": {
@@ -25945,6 +26015,78 @@
           "detail"
         ],
         "title": "SelectionExclusionResponse",
+        "type": "object"
+      },
+      "SelectionFactorCatalogEntryResponse": {
+        "description": "One assembly-eligible factor for the visual screener (#740).",
+        "properties": {
+          "dependencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "factor_id": {
+            "title": "Factor Id",
+            "type": "string"
+          },
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "group_label": {
+            "title": "Group Label",
+            "type": "string"
+          },
+          "lookback_trading_days": {
+            "title": "Lookback Trading Days",
+            "type": "integer"
+          },
+          "value_unit": {
+            "title": "Value Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "factor_id",
+          "group",
+          "group_label",
+          "description",
+          "lookback_trading_days",
+          "dependencies",
+          "value_unit"
+        ],
+        "title": "SelectionFactorCatalogEntryResponse",
+        "type": "object"
+      },
+      "SelectionFactorConditionRequest": {
+        "additionalProperties": false,
+        "description": "One factor threshold: field, operator, value (#740).",
+        "properties": {
+          "factor_name": {
+            "minLength": 1,
+            "title": "Factor Name",
+            "type": "string"
+          },
+          "operator": {
+            "$ref": "#/components/schemas/SelectionConditionOperatorRequest"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "factor_name",
+          "operator",
+          "value"
+        ],
+        "title": "SelectionFactorConditionRequest",
         "type": "object"
       },
       "SelectionFactorContributionResponse": {
@@ -26054,6 +26196,25 @@
           "consumer_field"
         ],
         "title": "SelectionFieldRequirementBody",
+        "type": "object"
+      },
+      "SelectionFilterGroupRequest": {
+        "additionalProperties": false,
+        "description": "One OR group of conditions; groups compose with AND.",
+        "properties": {
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/SelectionFactorConditionRequest"
+            },
+            "minItems": 1,
+            "title": "Conditions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conditions"
+        ],
+        "title": "SelectionFilterGroupRequest",
         "type": "object"
       },
       "SelectionInstrumentRequest": {
@@ -26638,6 +26799,15 @@
             },
             "minItems": 1,
             "title": "Factor Weights",
+            "type": "array"
+          },
+          "filter_groups": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SelectionFilterGroupRequest"
+            },
+            "minItems": 0,
+            "title": "Filter Groups",
             "type": "array"
           },
           "min_average_turnover": {
@@ -50605,6 +50775,113 @@
           "research"
         ],
         "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/selections/factor-catalog": {
+      "get": {
+        "description": "List factors eligible for visual conditions and weights (#740).\n\nCapability maturity: `initial-focus`. Primary near-term product scope under architecture review.",
+        "operationId": "selections_list_factor_catalog",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_tuple_SelectionFactorCatalogEntryResponse__________"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "List Factor Catalog",
+        "tags": [
+          "selections"
+        ],
+        "x-ditto-maturity": "initial-focus"
       }
     },
     "/api/v1/selections/industry-rotations/{snapshot_id}": {
