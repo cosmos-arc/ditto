@@ -8,5 +8,7 @@ export const Route = createFileRoute("/research/cases/$id")({
 
 function CaseDetailRoute() {
 	const { id } = Route.useParams();
-	return <ResearchCaseDetailPage caseId={decodeURIComponent(id)} />;
+	// useParams 已经过一次 URL 解码：再解会把身份中本来就有的 % 序列
+	// 二次解码（甚至抛 URIError），用原始 id 原样请求。
+	return <ResearchCaseDetailPage caseId={id} />;
 }
