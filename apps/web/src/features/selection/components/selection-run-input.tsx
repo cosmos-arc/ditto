@@ -11,11 +11,15 @@ import {
 } from "../api";
 import { toAssembledRunView } from "../assembled-run";
 
+
 // 镜像服务端 math.isclose(total, 1.0, abs_tol=1e-12)：默认 rel_tol=1e-9 主导有效容差。
 const WEIGHT_SUM_TOLERANCE = 1e-9;
 
 // 全市场池的缺失输入证券可达数千只：预览只展开前 N 只，其余汇总计数。
 const MISSING_INSTRUMENT_PREVIEW_LIMIT = 20;
+
+// 新建条件行的默认阈值：截面分数秩口径下即「排进截面前 20%」。
+const DEFAULT_CONDITION_THRESHOLD = "0.8";
 
 function shanghaiIso(localValue: string): string {
 	const withSeconds = localValue.length === 16 ? `${localValue}:00` : localValue;
@@ -560,7 +564,7 @@ export function SelectionRunInput({
 															{
 																factorName: entries[0]?.factor_id ?? "",
 																operator: "gte" as const,
-																value: "0.8",
+																value: DEFAULT_CONDITION_THRESHOLD,
 															},
 														],
 													}
@@ -584,7 +588,13 @@ export function SelectionRunInput({
 									groups: [
 										...current.groups,
 										{
-											rows: [{ factorName: entries[0]?.factor_id ?? "", operator: "gte" as const, value: "0.8" }],
+											rows: [
+												{
+													factorName: entries[0]?.factor_id ?? "",
+													operator: "gte" as const,
+													value: DEFAULT_CONDITION_THRESHOLD,
+												},
+											],
 										},
 									],
 								}))

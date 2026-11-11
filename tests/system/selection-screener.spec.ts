@@ -39,6 +39,12 @@ test.describe.serial("visual conditions and factor weights produce saved fixed r
 		await expect(
 			page.getByText(/1-month price momentum \(20-day return\) · 回看 20 个交易日/).first(),
 		).toBeVisible();
+		// 键盘可达：因子选择聚焦后 Tab 依序到达算子与阈值输入。
+		await factorSelect.focus();
+		await page.keyboard.press("Tab");
+		await expect(page.getByLabel("条件组 1 算子 1")).toBeFocused();
+		await page.keyboard.press("Tab");
+		await expect(page.getByLabel("条件组 1 阈值 1")).toBeFocused();
 	});
 
 	test("conditions and weights create a fixed run with candidate and exclusion evidence", async ({ page }) => {
