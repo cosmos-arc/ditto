@@ -496,7 +496,7 @@ class SelectionRunDiffResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Strategy template handoff (#744): SelectionRun -> strategy version draft
+# Strategy template handoff: SelectionRun -> strategy version draft
 # ---------------------------------------------------------------------------
 
 
