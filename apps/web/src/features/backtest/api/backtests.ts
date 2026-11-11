@@ -301,6 +301,8 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 				}
 			: null,
 		rebalanceFreq: dto.rebalance_freq,
+		// null = 报告未记录 usage context（旧报告）：展示层各自回落 legacy 说明，
+		// 口径核对据 null 如实判「未记录」，不以 legacy 常量冒充已记录事实。
 		usageContext: dto.usage_context
 			? {
 					intendedUse: dto.usage_context.intended_use,
@@ -309,7 +311,7 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 					inputInstrumentIds: dto.usage_context.input_instrument_ids ?? [],
 					limitations: dto.usage_context.limitations ?? legacyBacktestUsage.limitations,
 				}
-			: legacyBacktestUsage,
+			: null,
 		strategyPromotion: dto.strategy_promotion ?? null,
 		pitPolicy: dto.pit_policy ?? null,
 		alphaStats: alpha

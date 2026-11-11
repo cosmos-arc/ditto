@@ -230,9 +230,11 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 			),
 		[resources, reports],
 	);
-	const navLoading = resources.some((item) => item.navLoading);
+	// nav 门与 series 同集：只看可并入成员——被口径排除的 run 其 nav 读取
+	// 失败不得连坐撤掉可比成员的叠加图（排除原因已在口径表分开解释）
+	const navLoading = memberResources.some((item) => item.navLoading);
 	// nav 与 report 失败分开处置：净值图只依赖 nav，report 失败不连坐撤图（CR）
-	const navFetchError = resources.find((item) => item.fetchError?.kind === "nav")?.fetchError ?? null;
+	const navFetchError = memberResources.find((item) => item.fetchError?.kind === "nav")?.fetchError ?? null;
 	const reportFetchError = resources.find((item) => item.fetchError?.kind === "report")?.fetchError ?? null;
 	// PNG/CSV 导出 footer 内嵌 run 身份：跟随可见序列并携带色槽位（#N）——
 	// 隐藏产生的空槽下，仅凭顺序会误读曲线归属（导出物无 DOM 图例）

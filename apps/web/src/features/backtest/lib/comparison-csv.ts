@@ -65,5 +65,5 @@ export function toComparisonCsv(rows: readonly MultiRunMetricsRow[], partition: 
 		unverified,
 		header.join(","),
 		...dataRows,
-	].join("\n");
+	].join("\r\n");
 }

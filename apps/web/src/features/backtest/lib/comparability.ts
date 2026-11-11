@@ -6,10 +6,11 @@ import type { BacktestReport, BacktestRun } from "../types";
  * 全部事实直接来自各 run 已发布 report 的既读结果，不另发请求、不在前端
  * 重算金融规则：
  * - 资产池 = usage_context.input_instrument_ids（引擎清单的实际输入集合，
- *   升序去重；空集合视为未记录——真实运行至少消费一个标的）；
+ *   升序去重；空集合视为未记录）；
  * - 币种 = 逐笔费用账单或分红账本声明的币种；
  * - 时间样本 = 报告期间（start → end）；
- * - 收益定义 = 用途/历史可得性（usage_context 已记录时）；
+ * - 收益定义 = 用途/历史可得性（usage_context 本身已记录时；契约允许
+ *   「已记录但 input ids 为空」，故此轴的已记录判定与资产池独立）；
  * - 费用口径 = 费用账单 policy。
  *
  * 合并规则：只有已发布 report 且五轴「同记录同值」的 run 才并入同一叠加；
@@ -44,21 +45,20 @@ export type CaliberFacts = {
 
 export function caliberFacts(run: BacktestRun, outcome: ReportReadOutcome): CaliberFacts {
 	const report = outcome.state === "published" ? outcome.report : undefined;
-	const usage = report?.usageContext;
+	// null = 报告未记录 usage context；「已记录」与「ids 为空」是两回事
+	// （契约允许 usage_context 已记录而 input_instrument_ids 为空列表）
+	const usage = report?.usageContext ?? null;
 	const inputIds = [...new Set(usage?.inputInstrumentIds ?? [])]
 		.filter((id) => Number.isSafeInteger(id) && id > 0)
 		.sort((left, right) => left - right);
-	const usageRecorded = inputIds.length > 0;
 	const period = report?.periodStart && report?.periodEnd ? `${report.periodStart} → ${report.periodEnd}` : null;
 	return {
 		runId: run.runId,
 		values: {
-			assetPool: usageRecorded ? inputIds.join(",") : null,
+			assetPool: inputIds.length > 0 ? inputIds.join(",") : null,
 			currency: report?.feeStatement?.currency ?? report?.dividendStatement?.currency ?? null,
 			period,
-			returnDefinition: usageRecorded
-				? `${usage?.intendedUse ?? "unknown"} · ${usage?.historicalAvailability ?? "unknown"}`
-				: null,
+			returnDefinition: usage !== null ? `${usage.intendedUse} · ${usage.historicalAvailability}` : null,
 			feePolicy: report?.feeStatement?.policy ?? null,
 		},
 	};

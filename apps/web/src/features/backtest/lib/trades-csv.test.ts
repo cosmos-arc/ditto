@@ -30,7 +30,7 @@ const trades: BacktestTradeRecord[] = [
 describe("toTradesCsv", () => {
 	it("mirrors the trades table source with run identity header lines", () => {
 		const csv = toTradesCsv("bt-001", trades);
-		const lines = csv.split("\n");
+		const lines = csv.split("\r\n");
 		expect(lines[0]).toBe("# run_id=bt-001");
 		expect(lines[1]).toBe("# source=GET /api/v1/backtests/runs/bt-001/trades（与成交记录表同一读取结果）");
 		expect(lines[2]).toBe(
@@ -38,6 +38,14 @@ describe("toTradesCsv", () => {
 		);
 		expect(lines[3]).toBe("2025-03-03,600519,long,2025-01-06,1480,2025-03-03,1612.5,400,53000");
 		expect(lines[4]).toBe("2025-04-10,510300,short,2025-02-14,3.9,2025-04-10,3.72,100000,-18000.5");
+	});
+
+	it("uses CRLF record separators per RFC 4180", () => {
+		const csv = toTradesCsv("bt-001", trades);
+		expect(csv).toContain("# run_id=bt-001\r\n# source=");
+		expect(csv.split("\r\n")).toHaveLength(5);
+		// 记录间不得混入裸 LF（单元格转义已把换行封进引号）
+		expect(csv.replaceAll("\r\n", "")).not.toContain("\n");
 	});
 
 	it("escapes cells that could break the csv structure", () => {
@@ -54,7 +62,7 @@ describe("toTradesCsv", () => {
 				pnl: 0,
 			},
 		];
-		const line = toTradesCsv("bt-1", tricky).split("\n")[3] ?? "";
+		const line = toTradesCsv("bt-1", tricky).split("\r\n")[3] ?? "";
 		expect(line).toContain('"long, ""quoted"""');
 	});
 
@@ -62,6 +70,6 @@ describe("toTradesCsv", () => {
 		const csv = toTradesCsv("bt-empty", []);
 		expect(csv).toContain("# run_id=bt-empty");
 		expect(csv).toContain("trade_date,instrument_id,direction");
-		expect(csv.split("\n")).toHaveLength(3);
+		expect(csv.split("\r\n")).toHaveLength(3);
 	});
 });

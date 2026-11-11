@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { BacktestReport, BacktestRun } from "../types";
-import { legacyBacktestUsage } from "../types";
 import { caliberFacts, partitionByComparability, type ReportReadOutcome } from "./comparability";
 
 function run(runId: string): BacktestRun {
@@ -32,7 +31,8 @@ function report(overrides: Partial<BacktestReport> = {}): BacktestReport {
 		dividendStatement: null,
 		feeStatement: null,
 		rebalanceFreq: "daily",
-		usageContext: { ...legacyBacktestUsage },
+		// 缺省 = 报告未记录 usage context（映射层对旧报告输出 null）
+		usageContext: null,
 		strategyPromotion: null,
 		pitPolicy: null,
 		alphaStats: null,
@@ -106,6 +106,27 @@ describe("caliberFacts", () => {
 		const facts = caliberFacts(run("run-a"), published(report({ periodStart: "", periodEnd: "" })));
 		expect(facts.values.period).toBeNull();
 	});
+
+	it("treats a recorded usage context with empty input ids as recorded return definition", () => {
+		// 契约允许 usage_context 已记录而 input_instrument_ids 为空列表：
+		// 收益定义轴按 usage context 本身判「已记录」，与资产池 ids 判定独立
+		const facts = caliberFacts(
+			run("run-a"),
+			published(
+				report({
+					usageContext: {
+						intendedUse: "research_protocol",
+						historicalAvailability: "not_certified",
+						samplePool: "recorded_input_union",
+						inputInstrumentIds: [],
+						limitations: [],
+					},
+				}),
+			),
+		);
+		expect(facts.values.returnDefinition).toBe("research_protocol · not_certified");
+		expect(facts.values.assetPool).toBeNull();
+	});
 });
 
 describe("partitionByComparability", () => {
@@ -158,6 +179,47 @@ describe("partitionByComparability", () => {
 		expect(partition.excluded[0]?.reasons.join("\n")).toContain("资产池");
 		expect(partition.excluded[0]?.reasons.join("\n")).toContain("未记录");
 		expect(partition.excluded[0]?.reasons.join("\n")).toContain("510300");
+	});
+
+	it("separates runs whose recorded return definitions differ even when both input id sets are empty", () => {
+		// 回归：intended_use 已记录且互异、ids 皆空（契约合法形态）——
+		// 不得按「对称未记录」合并，须按收益定义分开解释
+		const partition = partitionByComparability([
+			{
+				run: run("run-a"),
+				reportOutcome: published(
+					report({
+						usageContext: {
+							intendedUse: "research_protocol",
+							historicalAvailability: "not_certified",
+							samplePool: "recorded_input_union",
+							inputInstrumentIds: [],
+							limitations: [],
+						},
+					}),
+				),
+			},
+			{
+				run: run("run-b"),
+				reportOutcome: published(
+					report({
+						usageContext: {
+							intendedUse: "limited_historical_research",
+							historicalAvailability: "not_certified",
+							samplePool: "recorded_input_union",
+							inputInstrumentIds: [],
+							limitations: [],
+						},
+					}),
+				),
+			},
+		]);
+		expect(partition.members).toEqual(["run-a"]);
+		expect(partition.excluded).toHaveLength(1);
+		expect(partition.excluded[0]?.runId).toBe("run-b");
+		expect(partition.excluded[0]?.reasons.join("\n")).toContain("收益定义不同");
+		expect(partition.excluded[0]?.reasons.join("\n")).toContain("research_protocol");
+		expect(partition.excluded[0]?.reasons.join("\n")).toContain("limited_historical_research");
 	});
 
 	it("always excludes runs without a resolved published report", () => {

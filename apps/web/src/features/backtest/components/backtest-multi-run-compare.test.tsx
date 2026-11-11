@@ -317,6 +317,39 @@ describe("BacktestMultiRunCompare", () => {
 		expect(alert.querySelector("button")).toHaveTextContent("重试读取 report 证据");
 	});
 
+	it("does not let an excluded run's nav failure block the comparable members' overlay", async () => {
+		// run-b 被 口径排除（report 未发布）且其 nav 读取 5xx：
+		// navLoading/navFetchError 只看可并入成员——排除项的证据失败不得连坐整图
+		server.use(
+			navHandler("run-a", [{ trade_date: "2026-01-05", nav: 1_000_000 }]),
+			http.get("/api/v1/backtests/runs/run-b/nav", () =>
+				HttpResponse.json({ detail: "boom", error_code: "NAV_500" }, { status: 500 }),
+			),
+			navHandler("run-c", [{ trade_date: "2026-01-05", nav: 900_000 }]),
+			http.get("/api/v1/backtests/runs/run-a/report", () => HttpResponse.json({ data: reportDto("run-a") })),
+			http.get("/api/v1/backtests/runs/run-b/report", () =>
+				HttpResponse.json({ detail: "report not found", error_code: "BACKTEST_REPORT_NOT_FOUND" }, { status: 404 }),
+			),
+			http.get("/api/v1/backtests/runs/run-c/report", () => HttpResponse.json({ data: reportDto("run-c") })),
+		);
+		cockpitProps.length = 0;
+		render(<BacktestMultiRunCompare runs={[run("run-a"), run("run-b"), run("run-c")]} />, {
+			wrapper: createWrapper(),
+		});
+
+		await waitFor(() => {
+			expect(cockpitProps.at(-1)?.series.map((spec) => spec.id)).toEqual(["run-a", "run-c"]);
+		});
+		// 排除项的 nav 失败不产生 fetch-error（其 report 未发布已在口径表分开解释）
+		await waitFor(() => {
+			expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		});
+		const caliber = screen.getByTestId("multi-run-caliber");
+		expect(caliber.querySelector("tr[data-run-id='run-b']")?.getAttribute("data-caliber-conclusion")).toContain(
+			"未并入",
+		);
+	});
+
 	it("excludes vanished runs from the hidden-series guard", async () => {
 		server.use(
 			http.get("/api/v1/backtests/runs/:runId/nav", () =>

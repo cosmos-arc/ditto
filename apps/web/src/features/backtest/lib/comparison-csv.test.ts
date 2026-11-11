@@ -62,7 +62,7 @@ const partition: ComparabilityPartition = {
 describe("toComparisonCsv", () => {
 	it("exports metric cells exactly as displayed plus caliber axes and conclusion", () => {
 		const csv = toComparisonCsv(rows, partition);
-		const lines = csv.split("\n");
+		const lines = csv.split("\r\n");
 		expect(lines[0]).toBe("# comparison=run-a,run-b");
 		expect(lines[1]).toBe("# caliber=资产池/币种/时间样本/收益定义/费用；同记录同值才并入同一叠加");
 		expect(lines[2]).toBe("# unverified_axes=无");
@@ -77,6 +77,14 @@ describe("toComparisonCsv", () => {
 		expect(lines[5]).toContain("未并入叠加：资产池不同：510300 ≠ 未记录");
 		// 未记录轴在导出中如实标注
 		expect(lines[5]).toContain("未记录,未记录,2026-01-05 → 2026-03-31,未记录,未记录");
+	});
+
+	it("uses CRLF record separators per RFC 4180", () => {
+		const csv = toComparisonCsv(rows, partition);
+		expect(csv).toContain("# comparison=run-a,run-b\r\n# caliber=");
+		expect(csv.split("\r\n")).toHaveLength(6);
+		// 记录间不得混入裸 LF（单元格转义已把换行封进引号）
+		expect(csv.replaceAll("\r\n", "")).not.toContain("\n");
 	});
 
 	it("discloses symmetric unrecorded axes in the identity header", () => {

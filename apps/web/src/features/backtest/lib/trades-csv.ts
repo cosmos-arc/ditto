@@ -43,5 +43,5 @@ export function toTradesCsv(runId: string, trades: readonly BacktestTradeRecord[
 		`# source=GET /api/v1/backtests/runs/${runId}/trades（与成交记录表同一读取结果）`,
 		header.join(","),
 		...rows,
-	].join("\n");
+	].join("\r\n");
 }
