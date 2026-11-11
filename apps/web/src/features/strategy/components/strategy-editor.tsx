@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import type { NodeDescriptorView, StrategySpec } from "@/types/strategy";
 import type { StudioMode } from "../state/strategy-studio-store";
 import { ParamConstraintsEditor } from "./param-constraints-editor";
-import { SignalExpressionsEditor } from "./signal-expressions-editor";
+import { type SignalExpressionCompileStatus, SignalExpressionsEditor } from "./signal-expressions-editor";
 import { ConstraintsPipeline } from "./strategy-pipeline-view";
 import { StrategySpecForm } from "./strategy-spec-form";
 
@@ -13,6 +13,8 @@ interface StrategyEditorProps {
 	readonly selectedKey: string | null;
 	readonly onChange: (updater: (draft: StrategySpec) => StrategySpec) => void;
 	readonly onSelect: (key: string | null) => void;
+	/** Author 预览后的行级编译状态（索引与表达式行对齐）。 */
+	readonly compileStatuses?: readonly (SignalExpressionCompileStatus | undefined)[] | undefined;
 }
 
 /**
@@ -28,6 +30,7 @@ export function StrategyEditor({
 	selectedKey,
 	onChange,
 	onSelect,
+	compileStatuses,
 }: StrategyEditorProps): ReactElement {
 	if (mode === "pipeline") {
 		return (
@@ -46,7 +49,7 @@ export function StrategyEditor({
 			<div className="2xl:col-span-2">
 				<StrategySpecForm spec={spec} onChange={onChange} />
 			</div>
-			<SignalExpressionsEditor spec={spec} onChange={onChange} />
+			<SignalExpressionsEditor spec={spec} onChange={onChange} compileStatuses={compileStatuses} />
 			<ParamConstraintsEditor spec={spec} onChange={onChange} />
 		</div>
 	);

@@ -1,9 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { StrategyAuthorOperation, StrategyAuthorPreview } from "@/types/strategy";
+import { ExpressionCompileDiagnosticView, toExpressionDiagnostic } from "./expression-compile-diagnostic";
 
 interface StrategyAuthorPreviewSheetProps {
 	readonly error: string | null;
+	/** 行号→表达式文本（编译卡与编辑器行对齐，错误定位到具体表达式）。 */
+	readonly expressions: readonly string[];
 	readonly isPending: boolean;
 	readonly isStale: boolean;
 	readonly onClose: () => void;
@@ -11,11 +14,29 @@ interface StrategyAuthorPreviewSheetProps {
 	readonly preview: StrategyAuthorPreview | null;
 }
 
-function StageCard({ title, operation }: { readonly title: string; readonly operation: StrategyAuthorOperation }) {
+function StageCard({
+	title,
+	operation,
+	subtitle,
+}: {
+	readonly title: string;
+	readonly operation: StrategyAuthorOperation;
+	readonly subtitle?: string | undefined;
+}) {
+	const diagnostic = operation.valid ? null : toExpressionDiagnostic(operation.payload);
 	return (
 		<section className="rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-2) p-3">
 			<div className="flex items-center justify-between gap-3">
-				<h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-(--color-foreground)">{title}</h3>
+				<div className="min-w-0">
+					<h3 className="truncate text-xs font-semibold uppercase tracking-[0.14em] text-(--color-foreground)">
+						{title}
+					</h3>
+					{subtitle ? (
+						<code className="mt-0.5 block truncate font-data text-[11px] text-(--color-foreground-tertiary)">
+							{subtitle}
+						</code>
+					) : null}
+				</div>
 				<span className={operation.valid ? "text-(--color-led-success)" : "text-(--color-led-danger)"}>
 					{operation.valid ? "PASS" : "FAIL"}
 				</span>
@@ -28,12 +49,19 @@ function StageCard({ title, operation }: { readonly title: string; readonly oper
 				<dt className="text-(--color-foreground-tertiary)">payload</dt>
 				<dd className="truncate font-data text-(--color-foreground-secondary)">{operation.payloadHash}</dd>
 			</dl>
+			{diagnostic ? <div className="mt-2">{ExpressionCompileDiagnosticView({ diagnostic })}</div> : null}
 		</section>
 	);
 }
 
+function expressionTitle(subjectId: string): number | null {
+	const match = /^author_expression_(\d+)$/.exec(subjectId);
+	return match ? Number(match[1]) : null;
+}
+
 export function StrategyAuthorPreviewSheet({
 	error,
+	expressions,
 	isPending,
 	isStale,
 	onClose,
@@ -87,13 +115,18 @@ export function StrategyAuthorPreviewSheet({
 								</h3>
 								{preview.compile.length > 0 ? (
 									<div className="space-y-2">
-										{preview.compile.map((operation) => (
-											<StageCard
-												key={`${operation.subjectId}@${operation.subjectVersion}`}
-												title={operation.subjectId}
-												operation={operation}
-											/>
-										))}
+										{preview.compile.map((operation) => {
+											const rowNumber = expressionTitle(operation.subjectId);
+											const expressionText = rowNumber !== null ? expressions[rowNumber - 1] : undefined;
+											return (
+												<StageCard
+													key={`${operation.subjectId}@${operation.subjectVersion}`}
+													title={rowNumber !== null ? `表达式 ${rowNumber}` : operation.subjectId}
+													subtitle={expressionText}
+													operation={operation}
+												/>
+											);
+										})}
 									</div>
 								) : (
 									<p className="text-(--color-foreground-tertiary)">working copy 没有表达式。</p>

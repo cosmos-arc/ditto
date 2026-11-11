@@ -25,6 +25,8 @@ interface StrategyStudioOverlaysProps {
 	readonly open: StrategyStudioOverlay | null;
 	readonly strategyId: string;
 	readonly validation: SpecValidation | null;
+	/** 行号→表达式文本：Author 预览编译卡与编辑器行对齐。 */
+	readonly expressions: readonly string[];
 	readonly validationIsStale: boolean;
 	readonly workingSpec: StrategySpec | null;
 	readonly authorPreview: StrategyAuthorPreview | null;
@@ -56,6 +58,7 @@ function IdentityGrid({
 
 export function StrategyStudioOverlays({
 	detail,
+	expressions,
 	isSaving,
 	onClose,
 	onConfirmSave,
@@ -82,6 +85,7 @@ export function StrategyStudioOverlays({
 				isPending={authorPreviewIsPending}
 				isStale={authorPreviewIsStale}
 				error={authorPreviewError}
+				expressions={expressions}
 			/>
 			<Dialog open={open === "save"} onOpenChange={(isOpen) => !isOpen && !isSaving && onClose()}>
 				<DialogContent aria-label="保存新版本">

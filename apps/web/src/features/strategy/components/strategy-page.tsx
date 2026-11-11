@@ -1,5 +1,5 @@
 import { useParams } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/api/errors";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
@@ -105,8 +105,10 @@ export function StrategyPage() {
 				version: data.version,
 				payload: {
 					spec_json: specJson,
+					// derived_id 固定按行号生成：编译结果可确定映射回编辑器行
+					// （表达式文本本身可能重复或含特殊字符，不能当键）。
 					expressions: workingSpec.signalExpressions.map((expression, index) => ({
-						derived_id: /^[A-Za-z_][A-Za-z0-9_]*$/.test(expression) ? expression : `author_expression_${index + 1}`,
+						derived_id: `author_expression_${index + 1}`,
 						version: 1,
 						expression,
 					})),
@@ -174,6 +176,20 @@ export function StrategyPage() {
 
 	const mutationErrorMessage = mutationError(validate.error) ?? mutationError(save.error);
 	const authorPreviewError = mutationError(authorPreview.error);
+	// 行级编译反馈：只反映未过期的预览结果（工作副本变动后清空，不误导）。
+	const compileStatuses = useMemo(() => {
+		if (!authorPreview.data || authorPreviewIsStale) return undefined;
+		const workingExpressions = workingSpec?.signalExpressions ?? [];
+		return workingExpressions.map((expression, index) => {
+			const operation = authorPreview.data?.compile.find((item) => item.subjectId === `author_expression_${index + 1}`);
+			if (!operation) return undefined;
+			if (operation.valid) return { valid: true, message: "" };
+			const raw = operation.payload["diagnostics"];
+			const first = Array.isArray(raw) ? (raw[0] as Record<string, unknown> | undefined) : undefined;
+			const message = typeof first?.["message"] === "string" ? first["message"] : `表达式 ${expression} 编译未通过`;
+			return { valid: false, message };
+		});
+	}, [authorPreview.data, authorPreviewIsStale, workingSpec]);
 	const saveReady = Boolean(isDirty && validation?.valid && !validationIsStale && !save.isPending);
 
 	return (
@@ -273,6 +289,7 @@ export function StrategyPage() {
 									selectedKey={selectedNodeKey}
 									onChange={updateSpec}
 									onSelect={selectNode}
+									compileStatuses={compileStatuses}
 								/>
 							) : (
 								<LoadingSkeleton variant="panel" />
@@ -342,6 +359,7 @@ export function StrategyPage() {
 				strategyId={strategyId}
 				detail={data}
 				workingSpec={workingSpec}
+				expressions={workingSpec?.signalExpressions ?? []}
 				authorPreview={authorPreview.data ?? null}
 				authorPreviewError={authorPreviewError}
 				authorPreviewIsPending={authorPreview.isPending}

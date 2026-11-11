@@ -361,6 +361,8 @@ test.describe.serial("reopen fixed runs and hand off to research (#741)", () => 
 });
 
 test.describe.serial("research templates form explicit strategy versions (#744)", () => {
+	let createdStrategyId = "";
+
 	test("case handoff converts weights, explains unconverted conditions, and saves a readable version", async ({
 		page,
 	}) => {
@@ -390,6 +392,7 @@ test.describe.serial("research templates form explicit strategy versions (#744)"
 		// 修改身份后创建草稿（用户修改与模板共存，创建走真实策略命令）。
 		const stamp = Date.now().toString(36);
 		const strategyId = `handoff-journey-${stamp}`;
+		createdStrategyId = strategyId;
 		await handoff.getByLabel("新策略 ID").fill(strategyId);
 		await handoff.getByRole("button", { name: "创建策略草稿" }).click();
 		await expect(handoff.getByText(`已创建策略草稿 ${strategyId} · v1`)).toBeVisible();
@@ -407,5 +410,45 @@ test.describe.serial("research templates form explicit strategy versions (#744)"
 		await expect(page.getByTestId("strategy-detail-bottom")).toContainText("csi_a_share");
 		expect(browserErrors).toEqual([]);
 		expect(runId).toContain("selection-run:sha256:");
+	});
+
+	test("editing a controlled formula in the studio gets row-located readable validation", async ({
+		page,
+	}) => {
+		const browserErrors: string[] = [];
+		page.on("pageerror", (error) => browserErrors.push(error.message));
+
+		// 同一策略版本流程内编辑受控公式：Studio 表单模式直接可编辑信号表达式。
+		await page.goto(`${webOrigin}/research/strategies/${createdStrategyId}/studio`);
+		const expressionInput = page.getByLabel("信号表达式 1");
+		await expect(expressionInput).toHaveValue("momentum_1m", { timeout: 15_000 });
+
+		// 键盘焦点可达：聚焦后直接键入非法公式（未知函数）。
+		await expressionInput.focus();
+		await expressionInput.fill("unknown_fn(close)");
+		await page.getByRole("button", { name: "Author 预览" }).click();
+
+		// 只读预览给出可读诊断：类别+代码+位置+源码行，行号定位到具体表达式。
+		const sheet = page.getByRole("dialog", { name: "Author 安全预览" });
+		await expect(sheet).toBeVisible();
+		await expect(sheet.getByText("表达式 1")).toBeVisible();
+		await expect(sheet.getByText("unknown_fn(close)").first()).toBeVisible();
+		const diagnostic = sheet.getByRole("alert");
+		await expect(diagnostic).toContainText(/错误/);
+		await expect(diagnostic).toContainText(/E0/);
+		await expect(diagnostic).toContainText("第 1 行");
+
+		// 编辑器行内同步失败状态（错误不只藏在预览抽屉里）；模态打开时
+		// 背景在 aria-hidden 内，先关闭抽屉再断言行状态。
+		await sheet.getByRole("button", { name: "关闭" }).click();
+		await expect(sheet).toBeHidden();
+		const rowStatus = page.getByRole("alert").filter({ hasText: "表达式 1" });
+		await expect(rowStatus).toContainText("unknown");
+
+		// 改回合法表达式后重新预览：同一行回到通过，形成可收敛的编辑回路。
+		await expressionInput.fill("momentum_1m");
+		await page.getByRole("button", { name: "Author 预览" }).click();
+		await expect(page.getByText("表达式 1 编译通过")).toBeVisible();
+		expect(browserErrors).toEqual([]);
 	});
 });
