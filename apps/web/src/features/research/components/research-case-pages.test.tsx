@@ -134,6 +134,14 @@ describe("ResearchCaseDetailPage", () => {
 		// 下钻可供性（视觉门 V2）：强调色 + hover 下划线，与域内比较入口同语言。
 		expect(candidate.className).toContain("text-(--color-accent)");
 		expect(candidate.className).toContain("hover:underline");
+		// 观察日入口（视觉门 V2'）同样可辨认可点：指向首席选的观察日锚定图表。
+		const observeEntry = screen.getByRole("link", { name: "按观察日 2026-08-31 打开首席选图表" });
+		expect(observeEntry).toHaveAttribute(
+			"href",
+			`/instruments/600519?tab=chart&observeDate=2026-08-31&selectionRunId=${encodeURIComponent(selectionRunFixtures[0].run_id)}`,
+		);
+		expect(observeEntry.className).toContain("text-(--color-accent)");
+		expect(observeEntry.className).toContain("hover:underline");
 	});
 
 	it("explains a missing case instead of rendering a broken page", async () => {

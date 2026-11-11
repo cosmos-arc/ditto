@@ -185,6 +185,10 @@ export function ResearchCaseDetailPage({ caseId }: { readonly caseId: string }) 
 	const roster = value.candidate_instrument_ids
 		.map((instrumentId) => runCandidates.find((item) => item.instrument_id === instrumentId))
 		.map((candidate, index) => ({ candidate, instrumentId: value.candidate_instrument_ids[index] as number }));
+	// 候选下钻与观察日入口共用同一锚定合同（图表截至日=用例观察日）。
+	const rosterHref = (instrumentId: number) =>
+		`/instruments/${instrumentId}?tab=chart${observeDate ? `&observeDate=${observeDate}` : ""}&selectionRunId=${encodeURIComponent(value.selection_run_id)}`;
+	const firstRosterEntry = roster.find((item) => item.candidate);
 
 	return (
 		<div className="h-full overflow-y-auto bg-(--color-surface-0) p-3 text-sm">
@@ -223,7 +227,20 @@ export function ResearchCaseDetailPage({ caseId }: { readonly caseId: string }) 
 					>
 						<div className="mb-2 flex items-center justify-between">
 							<h3 className="text-sm font-semibold">候选名单（{value.candidate_instrument_ids.length} 只）</h3>
-							{observeDate && <span className="text-xs text-(--color-foreground-tertiary)">观察日 {observeDate}</span>}
+							{observeDate &&
+								(firstRosterEntry ? (
+									// 观察日入口与候选行同语言（视觉门 V2'）：强调色 + hover
+									// 下划线，点击按该观察日打开首席选图表（真实锚定动作）。
+									<a
+										aria-label={`按观察日 ${observeDate} 打开首席选图表`}
+										className="text-xs font-medium text-(--color-accent) hover:underline"
+										href={rosterHref(firstRosterEntry.instrumentId)}
+									>
+										观察日 {observeDate} ↗
+									</a>
+								) : (
+									<span className="text-xs text-(--color-foreground-tertiary)">观察日 {observeDate}</span>
+								))}
 						</div>
 						{run.isLoading && <LoadingSkeleton variant="table" rows={3} />}
 						{run.isError && (
@@ -248,7 +265,7 @@ export function ResearchCaseDetailPage({ caseId }: { readonly caseId: string }) 
 												{/* 下钻可供性与域内比较入口同语言：强调色 + hover 下划线。 */}
 												<a
 													className="font-medium text-(--color-accent) hover:underline"
-													href={`/instruments/${instrumentId}?tab=chart${observeDate ? `&observeDate=${observeDate}` : ""}&selectionRunId=${encodeURIComponent(value.selection_run_id)}`}
+													href={rosterHref(instrumentId)}
 												>
 													{candidate?.instrument_name ?? "来源运行未含该候选"}
 												</a>

@@ -181,28 +181,33 @@ export function SelectionRunDetail({
 				title="SelectionRun 证据"
 				subtitle={run ? `${run.asset_kind} · ${run.status}` : "exact run required"}
 			/>
+			{/* 运行身份常驻面板顶部（不进滚动流）：滚动容器首块在无等待截图下
+				有 paint 丢失前科（视觉门 V1'），固定区不受滚动重绘影响。 */}
+			{run && (
+				<div data-info-unit="selection-identity" className="shrink-0 border-b border-(--color-border-subtle) px-4 py-3">
+					<section aria-label="运行身份" className="space-y-2">
+						<p className="break-all font-mono text-xs leading-5 text-(--color-foreground-secondary)">
+							{compactIdentity(run.run_id)}
+						</p>
+						<dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+							<dt className="text-(--color-foreground-tertiary)">as of</dt>
+							<dd>{new Date(run.as_of).toLocaleString("zh-CN")}</dd>
+							<dt className="text-(--color-foreground-tertiary)">spec</dt>
+							<dd>
+								{run.spec_id} · v{run.spec_version}
+							</dd>
+							<dt className="text-(--color-foreground-tertiary)">seed</dt>
+							<dd className="font-mono">{run.seed}</dd>
+							<dt className="text-(--color-foreground-tertiary)">universe</dt>
+							<dd className="break-all font-mono">{run.universe_snapshot_id}</dd>
+						</dl>
+					</section>
+				</div>
+			)}
 			<PanelBody className="space-y-5 overflow-y-auto p-4" reveal={false}>
 				{run ? (
 					<>
-						<section aria-label="运行身份" className="space-y-2">
-							<p className="break-all font-mono text-xs leading-5 text-(--color-foreground-secondary)">
-								{compactIdentity(run.run_id)}
-							</p>
-							<dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-								<dt className="text-(--color-foreground-tertiary)">as of</dt>
-								<dd>{new Date(run.as_of).toLocaleString("zh-CN")}</dd>
-								<dt className="text-(--color-foreground-tertiary)">spec</dt>
-								<dd>
-									{run.spec_id} · v{run.spec_version}
-								</dd>
-								<dt className="text-(--color-foreground-tertiary)">seed</dt>
-								<dd className="font-mono">{run.seed}</dd>
-								<dt className="text-(--color-foreground-tertiary)">universe</dt>
-								<dd className="break-all font-mono">{run.universe_snapshot_id}</dd>
-							</dl>
-						</section>
-
-						<section aria-labelledby="selection-lineage" className="border-t border-(--color-border-subtle) pt-4">
+						<section aria-labelledby="selection-lineage" className="pt-1">
 							<h3
 								id="selection-lineage"
 								className="text-xs font-semibold tracking-wide text-(--color-foreground-secondary)"

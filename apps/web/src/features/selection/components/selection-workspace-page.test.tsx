@@ -76,12 +76,17 @@ describe("SelectionWorkspacePage", () => {
 		// 同一 run 身份跨面板必须一致（#740 V3）。
 		const identity = within(screen.getByLabelText("运行身份")).getAllByText(/selection-run · /)[0] as HTMLElement;
 		expect(identity).toHaveTextContent(`selection-run · ${"1".repeat(12)}`);
-		// 身份行防裁切（视觉门 V1）：可换行 + 显式行高，且证据面板不参与
-		// 入场动画（reveal-up 动画层在无等待截图下有纹理竞态前科）。
+		// 身份行防裁切（视觉门 V1'）：可换行 + 显式行高；身份块固定在面板
+		// header 下的非滚动区（滚动容器首块在无等待截图下有 paint 丢失前科，
+		// 两次重判均为滚动流首块整体/半截消失）。
 		expect(identity.className).toContain("break-all");
 		expect(identity.className).toContain("leading-5");
-		const detailBody = document.querySelector('[data-info-unit="selection-detail"] > div');
-		expect(detailBody?.className ?? "").not.toContain("reveal-up");
+		const identityBlock = document.querySelector('[data-info-unit="selection-identity"]');
+		expect(identityBlock).not.toBeNull();
+		const scrollBody = document.querySelector('[data-info-unit="selection-detail"] .overflow-y-auto');
+		expect(scrollBody).not.toBeNull();
+		expect(scrollBody?.contains(identityBlock)).toBe(false);
+		expect(scrollBody?.className ?? "").not.toContain("reveal-up");
 
 		const memo = screen.getByRole("link", { name: "生成 SelectionMemo" });
 		expect(memo).toHaveAttribute("data-context-type", "selection");
