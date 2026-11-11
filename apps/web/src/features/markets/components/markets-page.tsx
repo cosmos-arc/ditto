@@ -8,7 +8,13 @@ import { Panel, PanelBody, PanelHeader, RadarLayout, StatusBar } from "@/feature
 import { ErrorState } from "@/lib/error-boundary";
 import type { MarketContext } from "../api/market-evidence";
 import { MarketsOverviewOverlay, type MarketsOverviewOverlayId, marketsOverviewActions } from "./market-page-overlays";
-import type { MarketCatalogInstrument, MarketCatalogQuery, MarketContextQuery } from "./market-view-contracts";
+import type {
+	MarketCalendarStatusQuery,
+	MarketCatalogInstrument,
+	MarketCatalogQuery,
+	MarketContextQuery,
+} from "./market-view-contracts";
+import { observationAnchorLabel } from "./market-view-contracts";
 
 const CONTEXT_CATEGORIES = new Set(["global", "rates", "fx", "commodity", "macro"]);
 
@@ -242,10 +248,12 @@ function EvidenceRail({
 export function MarketsPage({
 	catalogQuery,
 	contextQuery,
+	calendarQuery,
 	etfCandidates,
 }: {
 	readonly catalogQuery: MarketCatalogQuery;
 	readonly contextQuery: MarketContextQuery;
+	readonly calendarQuery?: MarketCalendarStatusQuery | undefined;
 	readonly etfCandidates?: ReactNode;
 }) {
 	const [activeOverlay, setActiveOverlay] = useState<MarketsOverviewOverlayId | null>(null);
@@ -275,6 +283,17 @@ export function MarketsPage({
 							}
 						/>
 						<ContextBarSep />
+						{calendarQuery && (
+							<>
+								<ContextBarItem
+									data-info-level="l1"
+									data-info-unit="market-observation-anchor"
+									label="最近完整交易日"
+									value={observationAnchorLabel(calendarQuery.data, calendarQuery.isError, calendarQuery.isLoading)}
+								/>
+								<ContextBarSep />
+							</>
+						)}
 						<ContextBarItem label="Regime" value={regimeLabel(context?.regime_label)} />
 						<ContextBarSep />
 						<ContextBarItem label="Snapshots" value={context?.source_snapshot_ids.length ?? 0} />

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
@@ -72,5 +72,24 @@ describe("MarketsPage public evidence boundary", () => {
 		await user.click(await screen.findByRole("button", { name: "市场深度" }));
 		expect(screen.getByRole("dialog", { name: "市场深度" })).toHaveTextContent("价格快照");
 		expect(screen.getByRole("dialog", { name: "市场深度" })).toHaveTextContent("未查询");
+	});
+
+	it("盘后落地先看到最近完整交易日（日历数据集真实摄取结果）", async () => {
+		render(<MarketsPage />, { wrapper: wrapper() });
+		const item = await screen.findByText("最近完整交易日");
+		// calendar 数据集 latest_status=success、latest_date=2026-09-30（msw 真实形状）。
+		await waitFor(() =>
+			expect(item.closest('[data-info-unit="market-observation-anchor"]')).toHaveTextContent("2026-09-30"),
+		);
+	});
+
+	it("日历状态不可得时最近完整交易日如实显示未解析，页面其余事实不受阻断", async () => {
+		server.use(http.get("/api/v1/ingestion/status", () => HttpResponse.json({ detail: "boom" }, { status: 500 })));
+		render(<MarketsPage />, { wrapper: wrapper() });
+		const item = await screen.findByText("最近完整交易日");
+		await waitFor(() =>
+			expect(item.closest('[data-info-unit="market-observation-anchor"]')).toHaveTextContent("未解析"),
+		);
+		await expect(screen.findByText("5 个标的")).resolves.toBeInTheDocument();
 	});
 });

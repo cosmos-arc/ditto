@@ -577,6 +577,27 @@ def main() -> int:
                 ),
             )
 
+            # The post-market workspace journey (#739) drives the observation
+            # anchor (calendar ingestion), watchlist quotes over retained
+            # bars/NAV, the anchored instrument chart with matching numbers,
+            # keyboard chart interaction, and context restore through the
+            # production UI and API.
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.market_workspace_app:app", api_port
+                    ),
+                    prefix="ditto-system-market-workspace-",
+                    spec="market-workspace.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             _run_fixture_acceptance(
                 root,
                 node,

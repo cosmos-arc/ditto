@@ -44,6 +44,38 @@ const timeScaleStub = {
 	}),
 };
 
+// pane 桩持久化：stretch 因子与高度调用要跨内容重填断言（视觉门 V3）。
+const paneStubs = [
+	{
+		attachPrimitive,
+		setHeight: vi.fn(),
+		setStretchFactor: vi.fn(),
+		getHeight: vi.fn(() => 247),
+		getStretchFactor: vi.fn(() => 3),
+	},
+	{
+		attachPrimitive,
+		setHeight: vi.fn(),
+		setStretchFactor: vi.fn(),
+		getHeight: vi.fn(() => 84),
+		getStretchFactor: vi.fn(() => 1),
+	},
+	{
+		attachPrimitive,
+		setHeight: vi.fn(),
+		setStretchFactor: vi.fn(),
+		getHeight: vi.fn(() => 96),
+		getStretchFactor: vi.fn(() => 1),
+	},
+	{
+		attachPrimitive,
+		setHeight: vi.fn(),
+		setStretchFactor: vi.fn(),
+		getHeight: vi.fn(() => 96),
+		getStretchFactor: vi.fn(() => 1),
+	},
+];
+
 const chartStub = {
 	addSeries: vi.fn((_definition: unknown, _options: unknown, _paneIndex?: number) => {
 		return {
@@ -54,10 +86,7 @@ const chartStub = {
 		};
 	}),
 	removeSeries: vi.fn(),
-	panes: vi.fn(() => [
-		{ attachPrimitive, setHeight: vi.fn() },
-		{ attachPrimitive, setHeight: vi.fn() },
-	]),
+	panes: vi.fn(() => paneStubs),
 	subscribeCrosshairMove: vi.fn((handler: (param: MouseEventParams<Time>) => void) => {
 		crosshairHandlers.push(handler);
 	}),
@@ -371,6 +400,50 @@ describe("ChartCockpit 数据映射", () => {
 		const paneIndexes = chartStub.addSeries.mock.calls.map((call) => call[2]);
 		expect(paneIndexes).toEqual([0, 0, 1, 2, 3]);
 		expect(screen.getByLabelText("演示收盘价图表（fixture）")).toHaveAttribute("data-chart-panes", "4");
+	});
+
+	it("pane 比例经 stretch 因子声明且内容重填后仍成立：主图占主导、量图约 1/4（视觉门 V3）", () => {
+		const view = renderCockpit({ showVolumePane: true });
+		expect(paneStubs[0]!.setStretchFactor).toHaveBeenCalledWith(3);
+		expect(paneStubs[1]!.setStretchFactor).toHaveBeenCalledWith(1);
+		// 像素 setHeight 已被 stretch 取代：重填时新 pane 高度未布局（0），
+		// 像素换算会除零退化成「量图吸走全部剩余高度」。
+		expect(paneStubs[0]!.setHeight).not.toHaveBeenCalled();
+		expect(paneStubs[1]!.setHeight).not.toHaveBeenCalled();
+		// 内容重填（数据变化重建序列/pane）：主图比例必须再次显式声明。
+		view.rerender(
+			<ChartCockpit
+				chartId="spec-close"
+				rangeId="spec-range"
+				ariaLabel="演示收盘价图表（fixture）"
+				showVolumePane
+				series={[{ ...SERIES[0]!, bars: [...BARS, { time: 400, close: 13, volume: 130 }] }]}
+				identity={{ dataSourceName: "fixture", snapshotId: "snap-full-id" }}
+			/>,
+		);
+		expect(paneStubs[0]!.setStretchFactor).toHaveBeenLastCalledWith(3);
+		expect(paneStubs[1]!.setStretchFactor).toHaveBeenLastCalledWith(1);
+	});
+
+	it("主图叠加线在图例有身份标签与读数（视觉门 V4：净值线不再只能靠颜色猜）", () => {
+		renderCockpit({
+			overlays: [
+				{
+					id: "etf-nav",
+					label: "净值",
+					color: "var(--chart-combo-manual)",
+					format: (value: number) => value.toFixed(4),
+					points: [
+						{ time: 100, close: 3.8765, volume: null },
+						{ time: 300, close: 3.9, volume: null },
+					],
+				},
+			],
+		});
+		expect(screen.getByText("净值")).toBeInTheDocument();
+		const readout = screen.getByTestId("chart-readout-spec-close-etf-nav");
+		// 初始读数锚最晚非空点（time 300）→ 净值 3.9000（4 位小数格式）。
+		expect(readout).toHaveTextContent("3.9000");
 	});
 
 	it("renders candle specs through the candle series with market up/down colors", () => {

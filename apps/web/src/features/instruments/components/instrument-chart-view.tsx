@@ -4,6 +4,7 @@ import type { BarPeriod, CockpitBar } from "@/components/chart/cockpit/chart-dat
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain";
 import { ErrorState } from "@/lib/error-boundary";
+import { dateYearsBefore, isValidIsoCalendarDate } from "@/lib/iso-calendar-date";
 import { StaleIndicator } from "@/lib/stale-indicator";
 import type { OverlayKind } from "../api/indicator-overlays";
 import type { BarAdjustment } from "../api/instrument-workspace";
@@ -22,6 +23,11 @@ interface InstrumentChartViewProps {
 	readonly id: string;
 	/** 回测买卖点下钻上下文：定位日滚入可视中心 + 买卖 marker + as_of 水位线。 */
 	readonly drill?: InstrumentDrillContext | undefined;
+	/**
+	 * 观察日锚点（如自选/筛选带入）：合法 YYYY-MM-DD 时成为初始截至日期，
+	 * 使 K 线 Primary Answer 与来源观察面同日同口径；非法值忽略。
+	 */
+	readonly observeDate?: string | undefined;
 }
 
 const ADJUSTMENT_OPTIONS: ReadonlyArray<{ readonly value: BarAdjustment; readonly label: string }> = [
@@ -82,12 +88,19 @@ function SegmentedControl<T extends string>({
 	);
 }
 
-export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
+export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartViewProps) {
+	// 观察日锚点：来自观察面（自选等）的合法日期成为初始截至日期；与图表
+	// 默认窗口同一状态位，用户手动改期即覆盖锚点（不锁死后续分析）。
+	// 观察日经 Date 往返校验：正则放行的假日期（如 2026-13-45）会让
+	// 日期算术抛 RangeError 炸掉整页，两层（route + view）同规则拒绝。
+	const anchoredEndDate = observeDate !== undefined && isValidIsoCalendarDate(observeDate) ? observeDate : null;
 	const [period, setPeriod] = useState<BarPeriod>("daily");
 	const [adjustment, setAdjustment] = useState<BarAdjustment>("none");
 	const [includeExperimental, setIncludeExperimental] = useState(false);
-	const [startDate, setStartDate] = useState(() => dateDaysAgo(365));
-	const [endDate, setEndDate] = useState(() => dateDaysAgo(0));
+	const [startDate, setStartDate] = useState(() =>
+		anchoredEndDate ? dateYearsBefore(anchoredEndDate, 1) : dateDaysAgo(365),
+	);
+	const [endDate, setEndDate] = useState(() => anchoredEndDate ?? dateDaysAgo(0));
 	const [toggles, setToggles] = useState<IndicatorToggles>(() => readIndicatorToggles());
 	const updateToggle = (key: keyof IndicatorToggles, value: boolean) => {
 		setToggles((previous) => {
@@ -192,6 +205,8 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 		return {
 			id: "etf-nav",
 			color: "var(--chart-combo-manual)",
+			label: "净值",
+			format: (value: number) => value.toFixed(4),
 			lineWidth: 2,
 			points: navPoints.map((point: { nav_date: string; nav: number }) => ({
 				time: tradeDateToUnix(point.nav_date),
@@ -279,7 +294,9 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							/>
 						</label>
 					</div>
-					<div className="max-w-lg text-right text-xs leading-5 text-(--color-foreground-tertiary)">
+					{/* 身份串（snapshot:...:sha256:...）不可在右缘切半：break-all
+					    安全换行，完整身份始终可见可下钻（视觉门 V2）。 */}
+					<div className="max-w-lg break-all text-right text-xs leading-5 text-(--color-foreground-tertiary)">
 						复权：{effectiveAdjustment} · experimental：{includeExperimental ? "开" : "关"}
 						<br />
 						{query.data
@@ -305,6 +322,23 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 						<span className="font-data text-(--color-foreground-tertiary)">run {drill.runId}</span>
 						<span className="font-data text-(--color-foreground-tertiary)">as_of {drill.asOf || "—"}</span>
 						<span className="text-(--color-foreground-muted)">决策线为源 run as_of；K 线按当前图表来源截止</span>
+					</div>
+				)}
+
+				{anchoredEndDate && (
+					<div
+						data-state="observe-anchor"
+						data-testid={`observe-anchor-${id}`}
+						className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-(--color-border-subtle) px-3 py-2 text-xs"
+					>
+						<span className="font-medium text-(--color-foreground)">观察日锚定</span>
+						<span className="font-data text-(--color-foreground-secondary)">{anchoredEndDate}</span>
+						<span className="text-(--color-foreground-muted)">
+							来自观察面（自选/筛选）的同一交易日；
+							{endDate === anchoredEndDate
+								? "K 线截至该日，知识截止仍为服务端当前时钟"
+								: "截至日期已手动覆盖，知识截止仍为服务端当前时钟"}
+						</span>
 					</div>
 				)}
 
@@ -356,7 +390,11 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 						</span>
 					)}
 					{overlayShown && (
-						<span className="text-xs text-(--color-foreground-muted)">叠加线来源未绑定；CSV 仅含 K 线</span>
+						// 导出范围说明（P4 裁决）：叠加线/净值线只在图上，不入 CSV——
+						// 不是"线没画出来"或来源缺失；线本身的身份见图例与覆盖说明。
+						<span className="text-xs text-(--color-foreground-muted)">
+							CSV 导出仅含 K 线；叠加线（MA/轨道/净值）不入导出，身份见图例
+						</span>
 					)}
 				</div>
 
@@ -458,7 +496,7 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 							identity={{
 								// P4（issue 628）：叠加限制随身份进导出——NAV 不入 CSV，
 								// 其覆盖限制（状态/库尾/测量时点）随 dataSourceName 携带。
-								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线来源未绑定" : ""}${isEtf && toggles.nav ? `；etf_nav ${navCoverage ? `${navCoverage.status}(库内至 ${navCoverage.measured_end ?? "?"}, 测量 ${navCoverage.measured_at})` : "覆盖未知"}` : ""}`,
+								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线不入 CSV 导出" : ""}${isEtf && toggles.nav ? `；etf_nav ${navCoverage ? `${navCoverage.status}(库内至 ${navCoverage.measured_end ?? "?"}, 测量 ${navCoverage.measured_at})` : "覆盖未知"}` : ""}`,
 								// Exports carry the actual chart cutoff: the bars
 								// always come from the server's current decision
 								// clock, so a drill timestamp would claim a

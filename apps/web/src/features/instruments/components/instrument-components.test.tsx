@@ -214,6 +214,108 @@ describe("InstrumentChartView", () => {
 		expect(screen.queryByText(/最新价格日/)).not.toBeInTheDocument();
 	});
 
+	it("观察日上下文锚定截至日期并以同一观察日进入图表请求", async () => {
+		const requested: Array<{ end_date: string; start_date: string }> = [];
+		server.use(
+			http.post("/api/v1/market/chart", async ({ request }) => {
+				const body = (await request.json()) as { end_date: string; start_date: string };
+				requested.push({ end_date: body.end_date, start_date: body.start_date });
+				return HttpResponse.json({
+					data: {
+						instrument_id: 1000001,
+						period: "daily",
+						adjustment: "none",
+						as_of: "2026-03-10T08:00:00Z",
+						knowledge_cutoff: "2026-03-10T08:00:00Z",
+						publication_cutoff: "2026-03-10T08:00:00Z",
+						timezone: "Asia/Shanghai",
+						calendar_snapshot_ids: ["calendar-exact-1"],
+						source_snapshot_ids: ["bars-exact-1"],
+						sources: ["tushare"],
+						latest_price_date: "2026-03-10",
+						stale_reason: null,
+						missing_sessions: [],
+						bars: [
+							{
+								trade_date: "2026-03-09",
+								first_trade_date: "2026-03-09",
+								last_trade_date: "2026-03-09",
+								open: 1752,
+								high: 1760,
+								low: 1732.1,
+								close: 1746.3,
+								volume: 3140000,
+								amount: 5490000000,
+								source_snapshot_ids: ["bars-exact-1"],
+								available_at: "2026-03-10T08:00:00Z",
+								published_at: "2026-03-10T08:00:00Z",
+								partial: false,
+							},
+							{
+								trade_date: "2026-03-10",
+								first_trade_date: "2026-03-10",
+								last_trade_date: "2026-03-10",
+								open: 1744.6,
+								high: 1768.8,
+								low: 1738.4,
+								close: 1750.2,
+								volume: 3210000,
+								amount: 5632000000,
+								source_snapshot_ids: ["bars-exact-1"],
+								available_at: "2026-03-10T08:00:00Z",
+								published_at: "2026-03-10T08:00:00Z",
+								partial: false,
+							},
+						],
+					},
+				});
+			}),
+		);
+		render(<InstrumentChartView id="1000001" observeDate="2026-03-10" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		// 观察锚点：进入工作面携带的观察日成为图表截至日期与请求边界。
+		expect(screen.getByLabelText("截至日期")).toHaveValue("2026-03-10");
+		expect(requested.at(-1)).toMatchObject({ end_date: "2026-03-10" });
+		const chip = screen.getByTestId("observe-anchor-1000001");
+		expect(chip).toHaveAttribute("data-state", "observe-anchor");
+		expect(chip.textContent).toContain("2026-03-10");
+		// Primary Answer 与自选行情列同日同收盘（表图数字对齐）。
+		expect(screen.getByText("1750.20")).toBeInTheDocument();
+		expect(screen.getByText(/2026-03-10 收盘/)).toBeInTheDocument();
+	});
+
+	it("非法观察日不锚定，回落到默认窗口不封死页面", async () => {
+		render(<InstrumentChartView id="1000001" observeDate="not-a-date" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		expect(screen.queryByTestId("observe-anchor-1000001")).not.toBeInTheDocument();
+		// 默认窗口仍是合法日期（上海今天），非法参数不进入请求边界。
+		const endInput = screen.getByLabelText("截至日期") as HTMLInputElement;
+		expect(endInput.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+		expect(endInput.value).not.toBe("not-a-date");
+	});
+
+	it("形似合法的假观察日（2026-13-45）不进入日期算术，不炸渲染", async () => {
+		render(<InstrumentChartView id="1000001" observeDate="2026-13-45" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		expect(screen.queryByTestId("observe-anchor-1000001")).not.toBeInTheDocument();
+		const endInput = screen.getByLabelText("截至日期") as HTMLInputElement;
+		expect(endInput.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+		expect(endInput.value).not.toBe("2026-13-45");
+	});
+
+	it("手动改期后锚定条如实转「已手动覆盖」，不再宣称 K 线截至锚点日", async () => {
+		const user = userEvent.setup();
+		render(<InstrumentChartView id="1000001" observeDate="2026-03-10" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		const chip = screen.getByTestId("observe-anchor-1000001");
+		expect(chip.textContent).toContain("K 线截至该日");
+		expect(chip.textContent).not.toContain("已手动覆盖");
+		await user.clear(screen.getByLabelText("截至日期"));
+		await user.type(screen.getByLabelText("截至日期"), "2026-03-06");
+		expect(chip.textContent).not.toContain("K 线截至该日");
+		expect(chip.textContent).toContain("截至日期已手动覆盖");
+	});
+
 	it("指标开关把 MA overlay 与 MACD/RSI 副图喂给图表 shell，并持久化选择", async () => {
 		const user = userEvent.setup();
 		const view = render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
@@ -228,8 +330,9 @@ describe("InstrumentChartView", () => {
 		const props = await waitForCockpit(
 			(next) => (next.overlays ?? []).length === 3 && (next.subPanes ?? []).length === 2,
 		);
-		expect(props.identity?.dataSourceName).toContain("叠加线来源未绑定");
-		expect(screen.getByText("叠加线来源未绑定；CSV 仅含 K 线")).toBeInTheDocument();
+		// 导出范围说明（视觉门 V4②）：叠加线在图有图例身份，但不入 CSV 导出。
+		expect(props.identity?.dataSourceName).toContain("叠加线不入 CSV 导出");
+		expect(screen.getByText(/CSV 导出仅含 K 线；叠加线（MA\/轨道\/净值）不入导出/)).toBeInTheDocument();
 		const overlayIds = (props.overlays as Array<{ id: string }>).map((overlay) => overlay.id);
 		expect(overlayIds).toEqual(["ma_5", "ma_20", "ma_60"]);
 		const paneIds = (props.subPanes as Array<{ id: string }>).map((pane) => pane.id);
