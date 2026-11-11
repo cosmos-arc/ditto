@@ -9,6 +9,8 @@ import {
 	CALIBER_AXES,
 	CALIBER_AXIS_LABELS,
 	type CaliberAxis,
+	type CaliberFacts,
+	type ComparabilityExcluded,
 	partitionByComparability,
 	type ReportReadOutcome,
 } from "../lib/comparability";
@@ -111,23 +113,15 @@ function useRunResources(runs: readonly BacktestRun[]) {
 	return { resources, refetchAll };
 }
 
-const CALIBER_VALUE_TESTIDS: Readonly<Record<CaliberAxis, string>> = {
-	assetPool: "asset-pool",
-	currency: "currency",
-	period: "time-sample",
-	returnDefinition: "return-definition",
-	feePolicy: "fee-policy",
-};
-
 function CaliberTable({
 	facts,
 	members,
 	excluded,
 	unverifiedAxes,
 }: {
-	readonly facts: ReturnType<typeof partitionByComparability>["facts"];
+	readonly facts: readonly CaliberFacts[];
 	readonly members: readonly string[];
-	readonly excluded: readonly { runId: string; reasons: readonly string[] }[];
+	readonly excluded: readonly ComparabilityExcluded[];
 	readonly unverifiedAxes: readonly CaliberAxis[];
 }) {
 	const conclusionByRun = new Map(excluded.map((item) => [item.runId, item.reasons]));
@@ -166,7 +160,6 @@ function CaliberTable({
 								{CALIBER_AXES.map((axis) => (
 									<td
 										key={axis}
-										data-caliber-axis={CALIBER_VALUE_TESTIDS[axis]}
 										className={`max-w-48 truncate px-2 py-2 font-data ${
 											fact.values[axis] === null
 												? "text-(--color-foreground-tertiary)"

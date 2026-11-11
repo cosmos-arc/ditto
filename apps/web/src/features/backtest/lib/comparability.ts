@@ -82,8 +82,8 @@ export type ComparabilityPartition = {
 	readonly facts: readonly CaliberFacts[];
 };
 
-function describeOutcome(outcome: ReportReadOutcome): string | null {
-	if (outcome.state === "published") return null;
+/** 非 published 状态的口径结论：发布前/读取失败都无法核对，读取中不下结论。 */
+function describeUnpublishedOutcome(outcome: ReportReadOutcome): string {
 	if (outcome.state === "unpublished") return "report 未发布，口径无法核对";
 	if (outcome.state === "pending") return "report 读取中，口径尚未可知";
 	return "report 读取失败，口径无法核对";
@@ -101,18 +101,20 @@ export function partitionByComparability(
 	if (anchorIndex >= 0) {
 		const anchor = facts[anchorIndex]!;
 		members.push(anchor.runId);
-		for (const fact of facts.slice(0, anchorIndex)) {
-			const outcome = entries[facts.indexOf(fact)]?.reportOutcome;
+		// 锚点之前的 run 必然未发布（锚点是首个已发布者）
+		for (let index = 0; index < anchorIndex; index += 1) {
 			excluded.push({
-				runId: fact.runId,
-				reasons: [describeOutcome(outcome ?? { state: "failed" }) ?? "report 未发布，口径无法核对"],
+				runId: facts[index]!.runId,
+				reasons: [describeUnpublishedOutcome(entries[index]!.reportOutcome)],
 			});
 		}
 		for (let index = anchorIndex + 1; index < entries.length; index += 1) {
 			const fact = facts[index]!;
-			const outcomeReason = describeOutcome(entries[index]!.reportOutcome);
-			if (outcomeReason !== null) {
-				excluded.push({ runId: fact.runId, reasons: [outcomeReason] });
+			if (entries[index]!.reportOutcome.state !== "published") {
+				excluded.push({
+					runId: fact.runId,
+					reasons: [describeUnpublishedOutcome(entries[index]!.reportOutcome)],
+				});
 				continue;
 			}
 			const reasons: string[] = [];
@@ -132,13 +134,11 @@ export function partitionByComparability(
 			}
 		}
 	} else {
-		for (const fact of facts) {
-			const outcomeReason = describeOutcome(
-				entries[facts.indexOf(fact)]?.reportOutcome ?? {
-					state: "failed",
-				},
-			);
-			excluded.push({ runId: fact.runId, reasons: [outcomeReason ?? "report 未发布，口径无法核对"] });
+		for (let index = 0; index < entries.length; index += 1) {
+			excluded.push({
+				runId: facts[index]!.runId,
+				reasons: [describeUnpublishedOutcome(entries[index]!.reportOutcome)],
+			});
 		}
 	}
 
