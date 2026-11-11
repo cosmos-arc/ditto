@@ -11,6 +11,7 @@ export { ResearchCaseDetailPage, ResearchCaseListPage } from "./components/resea
 export {
 	ResearchCaseStrategyHandoff,
 	type ResearchCaseStrategyHandoffProps,
+	type StrategyHandoffCatalogState,
 	type StrategyHandoffCreateResult,
 	type StrategyHandoffCreateTarget,
 	type StrategyHandoffTemplateOption,

@@ -58,6 +58,9 @@ class StrategyTemplateHandoffRequest:
     selection_run_id: str
     template_id: str
     research_case_id: str | None = None
+    #: 来源运行的名义池 ID；运行本体只持久化内容寻址 universe 快照，
+    #: 名义池由调用方（筛选工作面）在知道时显式携带。
+    universe_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +165,15 @@ class ProposeStrategyTemplateDraft:
                 template_asset_class=template.asset_class,
                 run_asset_kind=run.asset_kind.value,
             )
+        if request.universe_id is not None and request.universe_id != template.universe:
+            # 名义池已知且与模板池不同：草稿按模板池回测会静默换池，拒绝。
+            raise _error(
+                "template universe does not match the selection run universe",
+                reason="template_universe_mismatch",
+                template_id=template.template_id,
+                template_universe=template.universe,
+                run_universe_id=request.universe_id,
+            )
         policy = self._policy_reader.policy_by_hash(run.spec_hash)
         if policy is None:
             message = (
@@ -192,6 +204,7 @@ class ProposeStrategyTemplateDraft:
             policy=policy,
             objective=objective,
             research_case_id=research_case_id,
+            universe_id=request.universe_id,
         )
 
     def _objective(
@@ -258,10 +271,11 @@ class ProposeStrategyTemplateDraft:
         policy: StockSelectionSpec | EtfSelectionSpec,
         objective: str,
         research_case_id: str | None,
+        universe_id: str | None,
     ) -> StrategyTemplateDraftProposal:
         name = f"研究: {objective}"
         run_digest = run.run_id.rsplit(":", 1)[-1][:8]
-        strategy_id = f"handoff-{run_digest}"
+        strategy_id = f"handoff-{template.template_id}-{run_digest}"
         tags: list[str] = ["handoff", f"selection-spec:{policy.spec_id}"]
         if research_case_id is not None:
             tags.append(f"research-case:{research_case_id.rsplit(':', 1)[-1][:12]}")
@@ -282,13 +296,20 @@ class ProposeStrategyTemplateDraft:
                 "default_order_type": "market",
             },
             "constraints": _template_constraints(template.template_id),
-            "params": {"top_k": policy.top_k},
+            "params": _template_params(template, policy),
             "tags": tags,
             "signal_expressions": [item.name for item in policy.factor_weights],
             "signal_weights": [item.weight for item in policy.factor_weights],
             "required_datasets": list(template.required_datasets),
         }
         self._assert_runnable(strategy_id, name, spec_json)
+        constraint_names = {item["name"] for item in template.param_constraints}
+        top_k_detail = f"入选数量转入选取器 top_k={policy.top_k}"
+        if "max_positions" in constraint_names and "top_k" not in constraint_names:
+            top_k_detail = (
+                f"入选数量转入模板参数 max_positions={policy.top_k}"
+                f"(选取器 top_k={policy.top_k})"
+            )
         converted = (
             HandoffConversion(
                 source="factor_weights",
@@ -297,10 +318,7 @@ class ProposeStrategyTemplateDraft:
                     f"{_factor_detail(policy)}"
                 ),
             ),
-            HandoffConversion(
-                source="top_k",
-                detail=f"入选数量转入选取器 top_k={policy.top_k}",
-            ),
+            HandoffConversion(source="top_k", detail=top_k_detail),
         )
         unconverted = [
             HandoffGap(
@@ -359,6 +377,22 @@ class ProposeStrategyTemplateDraft:
             "universe_snapshot_id": run.universe_snapshot_id,
             "candidate_count": len(run.candidates),
         }
+        if universe_id is not None:
+            lineage["universe_id"] = universe_id
+        else:
+            # 名义池未随请求携带：池身份无法核对，向用户明示而不是静默换池。
+            unconverted.append(
+                HandoffGap(
+                    source="universe",
+                    reason_code="universe_membership_not_transferable",
+                    explanation=(
+                        f"草稿适用池为模板池 {template.universe}; 来源运行的池成员"
+                        "身份冻结在其 universe 快照中, 不能自动转换。回测按模板池"
+                        "执行, 请确认候选与模板池的适用范围一致。"
+                    ),
+                    detail=run.universe_snapshot_id,
+                )
+            )
         if research_case_id is not None:
             lineage["research_case_id"] = research_case_id
         return StrategyTemplateDraftProposal(
@@ -368,6 +402,25 @@ class ProposeStrategyTemplateDraft:
             unconverted=tuple(unconverted),
             lineage=lineage,
         )
+
+
+def _template_params(
+    template: StrategyTemplateCatalogEntry,
+    policy: StockSelectionSpec | EtfSelectionSpec,
+) -> dict[str, object]:
+    """
+    Build template params strictly from the template's constraint names.
+
+    草稿只携带模板声明的参数（键集 ⊆ 约束名集）：etf_trend_swing 没有
+    top_k 约束, 入选数量改写其 max_positions, 避免与派生逻辑双写。
+    """
+    constraint_names = {item["name"] for item in template.param_constraints}
+    params: dict[str, object] = {}
+    if "top_k" in constraint_names:
+        params["top_k"] = policy.top_k
+    if "max_positions" in constraint_names:
+        params["max_positions"] = policy.top_k
+    return params
 
 
 def _template_constraints(template_id: str) -> list[dict[str, object]]:

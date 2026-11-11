@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import {
 	ResearchCaseDetailPage,
 	ResearchCaseStrategyHandoff,
+	type StrategyHandoffCatalogState,
 	type StrategyHandoffCreateResult,
 	type StrategyHandoffCreateTarget,
 } from "@/features/research";
@@ -43,8 +44,22 @@ export function ResearchCaseDetailWithHandoff({ caseId }: { readonly caseId: str
 						displayName: entry.display_name,
 						description: entry.description,
 					}));
+				const catalogState: StrategyHandoffCatalogState = catalog.isError
+					? {
+							state: "error",
+							message: catalog.error.message,
+							retry: () => void catalog.refetch(),
+						}
+					: catalog.isPending
+						? { state: "pending" }
+						: { state: "ready" };
 				return (
-					<ResearchCaseStrategyHandoff caseDetail={value} templates={options} createStrategy={createHandoffStrategy} />
+					<ResearchCaseStrategyHandoff
+						caseDetail={value}
+						templates={options}
+						catalogState={catalogState}
+						createStrategy={createHandoffStrategy}
+					/>
 				);
 			}}
 		/>

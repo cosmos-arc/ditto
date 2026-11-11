@@ -11,6 +11,7 @@ const PAYLOAD = {
 	diagnostics: [
 		{
 			code: "E021_UNKNOWN_FUNCTION",
+			category: "SemanticError",
 			message: "unknown function 'cs_ranks'",
 			source_line: "cs_ranks(close)",
 			span: {
@@ -39,8 +40,16 @@ describe("toExpressionDiagnostic", () => {
 		expect(toExpressionDiagnostic(undefined)).toBeNull();
 	});
 
-	it("classifies field/type/usage/limit error families readably", () => {
-		expect(diagnosticCategory("E021_UNKNOWN_FUNCTION")).toBe("字段/用途错误");
+	it("uses the backend category as the single authority when present", () => {
+		expect(diagnosticCategory("E021_UNKNOWN_FUNCTION", "SemanticError")).toBe("语义错误");
+		expect(diagnosticCategory("E031", "TypeError")).toBe("类型错误");
+		// 未知后端类别按原文透出，不再前端自造分类。
+		expect(diagnosticCategory("E099", "FutureCategory")).toBe("FutureCategory");
+	});
+
+	it("falls back to the same backend mapping for legacy payloads without a category", () => {
+		// E02x 统一为语义错误；不再分出不存在的 E022 分支。
+		expect(diagnosticCategory("E021_UNKNOWN_FUNCTION")).toBe("语义错误");
 		expect(diagnosticCategory("E031")).toBe("类型错误");
 		expect(diagnosticCategory("E011")).toBe("语法错误");
 		expect(diagnosticCategory("E041_EXPRESSION_TOO_LONG")).toBe("表达式限制");
@@ -54,7 +63,7 @@ describe("ExpressionCompileDiagnosticView", () => {
 
 		render(<ExpressionCompileDiagnosticView diagnostic={diagnostic} />);
 
-		expect(screen.getByRole("alert")).toHaveTextContent("字段/用途错误 [E021_UNKNOWN_FUNCTION]");
+		expect(screen.getByRole("alert")).toHaveTextContent("语义错误 [E021_UNKNOWN_FUNCTION]");
 		expect(screen.getByRole("alert")).toHaveTextContent("第 1 行 第 1 列");
 		expect(screen.getByText("cs_ranks(close)")).toBeInTheDocument();
 		expect(screen.getByTestId("expression-diagnostic-caret").textContent).toBe("^^^^^^^^");

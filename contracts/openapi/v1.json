@@ -27637,6 +27637,18 @@
             "minLength": 1,
             "title": "Template Id",
             "type": "string"
+          },
+          "universe_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "来源运行的名义池 ID(运行只持久化内容寻址快照时由调用方携带)",
+            "title": "Universe Id"
           }
         },
         "required": [

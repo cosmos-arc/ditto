@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { type FormEvent, type ReactElement, useState } from "react";
+import { type FormEvent, type ReactElement, useRef, useState } from "react";
 import { ApiError } from "@/api/errors";
 import { Button } from "@/components/ui/button";
 import type { ResearchCaseDetail } from "../api/research-cases";
@@ -31,10 +31,18 @@ export type StrategyHandoffCreateResult = {
 	readonly version: number;
 };
 
+/** 模板目录的加载状态（由组合层从目录查询映射，空态不再与 pending/error 混淆）。 */
+export type StrategyHandoffCatalogState =
+	| { readonly state: "pending" }
+	| { readonly state: "error"; readonly message: string; readonly retry: () => void }
+	| { readonly state: "ready" };
+
 export type ResearchCaseStrategyHandoffProps = {
 	readonly caseDetail: ResearchCaseDetail;
 	/** 按用例资产类别筛过的模板选项（由组合层提供）。 */
 	readonly templates: readonly StrategyHandoffTemplateOption[];
+	/** 目录查询状态；ready 时 templates 为空才是真正的「无适用模板」。 */
+	readonly catalogState: StrategyHandoffCatalogState;
 	readonly createStrategy: (
 		target: StrategyHandoffCreateTarget,
 		idempotencyKey: string,
@@ -125,30 +133,49 @@ function ProposalPanel({
 export function ResearchCaseStrategyHandoff({
 	caseDetail,
 	templates,
+	catalogState,
 	createStrategy,
 }: ResearchCaseStrategyHandoffProps): ReactElement {
 	const assetKindLabel = caseDetail.asset_kind === "stock" ? "股票" : "ETF";
 	const [templateId, setTemplateId] = useState<string | null>(null);
 	const [strategyId, setStrategyId] = useState("");
 	const [name, setName] = useState("");
+	// 用户已编辑过的字段不再被新提案的默认值覆盖（切换模板保留已改输入）。
+	const strategyIdEdited = useRef(false);
+	const nameEdited = useRef(false);
 	const proposal = useMutation({
 		mutationFn: (selected: string) =>
 			proposeStrategyTemplateDraft(caseDetail.selection_run_id, selected, caseDetail.case_id),
 		onSuccess: (data) => {
-			const proposedId = typeof data.spec_json["strategy_id"] === "string" ? data.spec_json["strategy_id"] : "";
-			const proposedName = typeof data.spec_json["name"] === "string" ? data.spec_json["name"] : "";
-			setStrategyId(proposedId);
-			setName(proposedName);
+			if (!strategyIdEdited.current) {
+				setStrategyId(typeof data.spec_json["strategy_id"] === "string" ? data.spec_json["strategy_id"] : "");
+			}
+			if (!nameEdited.current) {
+				setName(typeof data.spec_json["name"] === "string" ? data.spec_json["name"] : "");
+			}
 		},
 	});
 	const current = templateId !== null && proposal.variables === templateId ? (proposal.data ?? null) : null;
+	// 幂等键对同一提交目标复用：失败重试走幂等重放而不是撞 strategy_id
+	// （与 Strategy Studio saveAttemptRef 同模式）。
+	const createAttemptRef = useRef<{ readonly fingerprint: string; readonly key: string } | null>(null);
 	const create = useMutation({
-		mutationFn: (target: StrategyHandoffCreateTarget) =>
-			// 键长上限 128（服务端合同）：全量用例身份放不进键，由表单状态
-			// 防重复（成功后表单收起、pending 期间禁用）。
-			createStrategy(target, `strategy-handoff:${globalThis.crypto.randomUUID()}`),
+		mutationFn: (target: StrategyHandoffCreateTarget) => {
+			const fingerprint = JSON.stringify([target.strategyId, target.name, target.specJson, target.tags]);
+			const previous = createAttemptRef.current;
+			// 键长上限 128（服务端合同）：全量提交指纹放不进键，靠 ref 比对。
+			const key =
+				previous?.fingerprint === fingerprint ? previous.key : `strategy-handoff:${globalThis.crypto.randomUUID()}`;
+			createAttemptRef.current = { fingerprint, key };
+			return createStrategy(target, key);
+		},
 	});
 	const created = create.data;
+	const conflict =
+		create.error instanceof ApiError &&
+		(create.error.status === 409 ||
+			create.error.errorCode === "STRATEGY_REVISION_CONFLICT" ||
+			create.error.errorCode === "IDEMPOTENCY_KEY_REUSED");
 
 	function selectTemplate(next: string): void {
 		setTemplateId(next);
@@ -180,7 +207,18 @@ export function ResearchCaseStrategyHandoff({
 				<h3 className="text-sm font-semibold">形成策略版本</h3>
 				<span className="text-[11px] text-(--color-foreground-tertiary)">{assetKindLabel}研究模板</span>
 			</div>
-			{templates.length === 0 ? (
+			{catalogState.state === "pending" ? (
+				<p className="text-xs text-(--color-foreground-tertiary)" role="status">
+					正在读取研究模板…
+				</p>
+			) : catalogState.state === "error" ? (
+				<div className="text-xs" role="alert">
+					<p className="text-(--color-led-danger)">模板目录读取失败：{catalogState.message}</p>
+					<button type="button" className="underline" onClick={catalogState.retry}>
+						重试模板目录
+					</button>
+				</div>
+			) : templates.length === 0 ? (
 				<p className="text-xs text-(--color-foreground-tertiary)">当前目录没有适用于该用例资产类别的研究模板。</p>
 			) : (
 				<fieldset className="space-y-2" data-info-unit="strategy-handoff-templates">
@@ -266,7 +304,10 @@ export function ResearchCaseStrategyHandoff({
 									pattern="[a-z0-9][a-z0-9_-]*"
 									required
 									value={strategyId}
-									onChange={(event) => setStrategyId(event.currentTarget.value)}
+									onChange={(event) => {
+										strategyIdEdited.current = true;
+										setStrategyId(event.currentTarget.value);
+									}}
 								/>
 							</label>
 							<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary)">
@@ -276,13 +317,25 @@ export function ResearchCaseStrategyHandoff({
 									className={FIELD_CLASS}
 									required
 									value={name}
-									onChange={(event) => setName(event.currentTarget.value)}
+									onChange={(event) => {
+										nameEdited.current = true;
+										setName(event.currentTarget.value);
+									}}
 								/>
 							</label>
 							{create.isError ? (
-								<p role="alert" className="text-xs text-(--color-led-danger)">
-									{errorMessage(create.error)}
-								</p>
+								<div role="alert" className="space-y-1 text-xs">
+									<p className="text-(--color-led-danger)">{errorMessage(create.error)}</p>
+									{conflict ? (
+										<Link
+											className="text-(--color-accent) hover:underline"
+											to="/research/strategies/$id"
+											params={{ id: strategyId }}
+										>
+											查看已存在策略 {strategyId}
+										</Link>
+									) : null}
+								</div>
 							) : null}
 							<Button type="submit" size="sm" disabled={create.isPending || !strategyId.trim() || !name.trim()}>
 								{create.isPending ? "创建中…" : "创建策略草稿"}

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 14e07a589a452c6756d3c001fca8f32f33dac6350b2bb7ba63298e91955a9d93
+ * Schema SHA-256: 2f6f311615a9a1cdb2d5aa6d685d1fde5ab29959e94ab46289d3769f94b6a517
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -16299,6 +16299,11 @@ export interface components {
             research_case_id?: string | null;
             /** Template Id */
             template_id: string;
+            /**
+             * Universe Id
+             * @description 来源运行的名义池 ID(运行只持久化内容寻址快照时由调用方携带)
+             */
+            universe_id?: string | null;
         };
         /**
          * StrategyTemplateParamConstraintResponse

@@ -245,7 +245,12 @@ def test_stock_handoff_converts_weights_and_top_k_and_explains_the_rest() -> Non
         "min_average_turnover",
         "min_listing_days",
         "excluded_limit_states",
+        # 名义池未随请求携带：池身份不可核对，明示缺口而不是静默换池。
+        "universe",
     }
+    assert "universe" in unconverted
+    assert unconverted["universe"].reason_code == "universe_membership_not_transferable"
+    assert unconverted["universe"].explanation
     # 每条不可转换条件都有可读解释与原因码，不静默丢弃。
     for item in proposal.unconverted:
         assert item.reason_code
@@ -440,6 +445,140 @@ def test_handoff_rejects_blocked_runs() -> None:
             )
         )
     assert error.value.details["reason"] == "selection_run_blocked"
+
+
+def test_handoff_universe_rejects_mismatch_and_confirms_known_pool() -> None:
+    run = _stock_run()
+    policy = _stock_policy(run)
+
+    # 名义池已知且不同于模板池：拒绝, 不静默换池。
+    with pytest.raises(AppProcessError) as mismatch:
+        _process(run=run, policy=policy).propose(
+            StrategyTemplateHandoffRequest(
+                selection_run_id=run.run_id,
+                template_id="stock_selection",
+                universe_id="csi300",
+            )
+        )
+    assert mismatch.value.details["reason"] == "template_universe_mismatch"
+    assert mismatch.value.details["run_universe_id"] == "csi300"
+    assert mismatch.value.details["template_universe"] == "csi_a_share"
+
+    # 名义池与模板池一致：无 universe 缺口, lineage 携带名义池。
+    proposal = _process(run=run, policy=policy).propose(
+        StrategyTemplateHandoffRequest(
+            selection_run_id=run.run_id,
+            template_id="stock_selection",
+            universe_id="csi_a_share",
+        )
+    )
+    assert "universe" not in {item.source for item in proposal.unconverted}
+    assert proposal.lineage["universe_id"] == "csi_a_share"
+    assert proposal.lineage["universe_snapshot_id"] == run.universe_snapshot_id
+
+
+def test_draft_params_stay_within_template_constraints_per_template() -> None:
+    stock_run = _stock_run()
+    stock_policy = _stock_policy(stock_run)
+    stock_proposal = _process(run=stock_run, policy=stock_policy).propose(
+        StrategyTemplateHandoffRequest(
+            selection_run_id=stock_run.run_id,
+            template_id="stock_selection",
+        )
+    )
+    # 草稿参数键集 ⊆ 模板约束名集：无约束外冗余键。
+    stock_constraints = {
+        "top_k",
+        "max_weight",
+        "trend_threshold",
+        "cash_target",
+        "allocation_method",
+        "rebalance_freq",
+    }
+    stock_params = stock_proposal.spec_json["params"]
+    assert isinstance(stock_params, dict)
+    assert set(stock_params) <= stock_constraints
+    assert stock_params == {"top_k": 5}
+
+    etf_run = _etf_run()
+    etf_policy = EtfSelectionSpec(
+        spec_id=etf_run.spec_id,
+        spec_version=etf_run.spec_version,
+        top_k=3,
+        min_average_turnover=10_000_000.0,
+        min_listing_days=60,
+        factor_weights=(SelectionFactorWeight("momentum_1m", 1.0),),
+        max_tracking_error=0.02,
+    )
+    trend_constraints = {
+        "lookback_window",
+        "trend_threshold",
+        "trailing_stop_pct",
+        "max_positions",
+        "cash_target",
+        "allocation_method",
+    }
+    trend = _process(run=etf_run, policy=etf_policy).propose(
+        StrategyTemplateHandoffRequest(
+            selection_run_id=etf_run.run_id,
+            template_id="etf_trend_swing",
+        )
+    )
+    # etf_trend_swing 无 top_k 约束：入选数量改写 max_positions, 不双写。
+    trend_params = trend.spec_json["params"]
+    assert isinstance(trend_params, dict)
+    assert set(trend_params) <= trend_constraints
+    assert trend_params == {"max_positions": 3}
+    top_k_conversion = next(item for item in trend.converted if item.source == "top_k")
+    assert "max_positions=3" in top_k_conversion.detail
+
+    rotation = _process(run=etf_run, policy=etf_policy).propose(
+        StrategyTemplateHandoffRequest(
+            selection_run_id=etf_run.run_id,
+            template_id="etf_rotation",
+        )
+    )
+    rotation_constraints = {"top_k", "cash_target", "allocation_method"}
+    rotation_params = rotation.spec_json["params"]
+    assert isinstance(rotation_params, dict)
+    assert set(rotation_params) <= rotation_constraints
+    assert rotation_params == {"top_k": 3}
+
+
+def test_draft_strategy_id_distinguishes_templates_for_the_same_run() -> None:
+    etf_run = _etf_run()
+    etf_policy = EtfSelectionSpec(
+        spec_id=etf_run.spec_id,
+        spec_version=etf_run.spec_version,
+        top_k=3,
+        min_average_turnover=10_000_000.0,
+        min_listing_days=60,
+        factor_weights=(SelectionFactorWeight("momentum_1m", 1.0),),
+        max_tracking_error=0.02,
+    )
+    process = _process(run=etf_run, policy=etf_policy)
+
+    rotation = process.propose(
+        StrategyTemplateHandoffRequest(
+            selection_run_id=etf_run.run_id,
+            template_id="etf_rotation",
+        )
+    )
+    trend = process.propose(
+        StrategyTemplateHandoffRequest(
+            selection_run_id=etf_run.run_id,
+            template_id="etf_trend_swing",
+        )
+    )
+
+    # 同一运行的两个 ETF 模板提案得到互不碰撞的默认 ID。
+    rotation_id = rotation.spec_json["strategy_id"]
+    trend_id = trend.spec_json["strategy_id"]
+    assert isinstance(rotation_id, str)
+    assert isinstance(trend_id, str)
+    assert rotation_id != trend_id
+    assert rotation_id.startswith("handoff-etf_rotation-")
+    assert trend_id.startswith("handoff-etf_trend_swing-")
 
 
 def test_handoff_live_lane_knowledge_cutoff_after_as_of_is_accepted() -> None:

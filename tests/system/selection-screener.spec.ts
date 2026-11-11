@@ -387,7 +387,9 @@ test.describe.serial("research templates form explicit strategy versions (#744)"
 		await expect(handoff.getByText(/momentum_1mx1/)).toBeVisible();
 		await expect(handoff.getByText(/不能直接转换/)).toBeVisible();
 		await expect(handoff.getByText(/截面分数秩阈值/)).toBeVisible();
-		await expect(handoff.getByText("csi_a_share")).toBeVisible();
+		await expect(handoff.getByText("csi_a_share", { exact: true })).toBeVisible();
+		// 名义池未随请求携带：池身份不可核对，缺口明示而不是静默换池。
+		await expect(handoff.getByText(/池成员身份冻结在其 universe 快照/)).toBeVisible();
 
 		// 修改身份后创建草稿（用户修改与模板共存，创建走真实策略命令）。
 		const stamp = Date.now().toString(36);

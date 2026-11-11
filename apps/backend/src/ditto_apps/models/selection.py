@@ -507,6 +507,10 @@ class StrategyTemplateHandoffBody(BaseModel):
 
     template_id: str = Field(min_length=1)
     research_case_id: str | None = None
+    universe_id: str | None = Field(
+        default=None,
+        description="来源运行的名义池 ID(运行只持久化内容寻址快照时由调用方携带)",
+    )
 
 
 class HandoffConversionResponse(BaseModel):

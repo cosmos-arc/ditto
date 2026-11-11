@@ -53,6 +53,7 @@ describe("StrategyAuthorPreviewSheet readable compile diagnostics", () => {
 						diagnostics: [
 							{
 								code: "E021_UNKNOWN_FUNCTION",
+								category: "SemanticError",
 								message: "unknown function 'cs_ranks'",
 								source_line: "cs_ranks(close)",
 								span: {
@@ -74,13 +75,48 @@ describe("StrategyAuthorPreviewSheet readable compile diagnostics", () => {
 		// 编译卡按行号命名并展示表达式文本：错误定位到具体表达式。
 		expect(screen.getByText("表达式 2")).toBeInTheDocument();
 		expect(screen.getAllByText("cs_ranks(close)").length).toBeGreaterThanOrEqual(2);
-		// 诊断可读：类别+代码、位置、源行、修复建议。
+		// 诊断可读：后端权威类别+代码、位置、源行、修复建议。
 		const alert = screen.getByRole("alert");
-		expect(alert).toHaveTextContent("字段/用途错误 [E021_UNKNOWN_FUNCTION]");
+		expect(alert).toHaveTextContent("语义错误 [E021_UNKNOWN_FUNCTION]");
 		expect(alert).toHaveTextContent("第 1 行 第 1 列");
 		expect(alert).toHaveTextContent("unknown function 'cs_ranks'");
 		expect(alert).toHaveTextContent("试试：cs_rank");
 		expect(screen.getByTestId("expression-diagnostic-caret").textContent).toBe("^^^^^^^^");
+	});
+
+	it("hides the expression subtitle when the preview is stale", () => {
+		render(
+			<StrategyAuthorPreviewSheet
+				open
+				onClose={() => {}}
+				preview={preview([
+					operation("author_expression_1", false, {
+						valid: false,
+						diagnostics: [
+							{
+								code: "E021_UNKNOWN_FUNCTION",
+								category: "SemanticError",
+								message: "unknown function",
+								source_line: "unknown_fn(close)",
+								span: {
+									start: { offset: 0, line: 1, column: 1 },
+									end: { offset: 10, line: 1, column: 11 },
+								},
+								suggestions: [],
+							},
+						],
+					}),
+				])}
+				expressions={["edited_after_preview(close)"]}
+				isPending={false}
+				isStale
+				error={null}
+			/>,
+		);
+
+		// 过期时 expressions 是编辑后文本，展示会错位：subtitle 隐藏。
+		expect(screen.getByText("表达式 1")).toBeInTheDocument();
+		expect(screen.queryByText("edited_after_preview(close)")).toBeNull();
 	});
 
 	it("keeps passing rows compact without diagnostics blocks", () => {

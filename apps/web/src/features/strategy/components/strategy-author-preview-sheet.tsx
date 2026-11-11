@@ -117,7 +117,9 @@ export function StrategyAuthorPreviewSheet({
 									<div className="space-y-2">
 										{preview.compile.map((operation) => {
 											const rowNumber = expressionTitle(operation.subjectId);
-											const expressionText = rowNumber !== null ? expressions[rowNumber - 1] : undefined;
+											// 预览过期时编辑器文本已变动：subtitle 只展示预览
+											// 请求时点的表达式，取不到时点快照就隐藏，避免错位。
+											const expressionText = !isStale && rowNumber !== null ? expressions[rowNumber - 1] : undefined;
 											return (
 												<StageCard
 													key={`${operation.subjectId}@${operation.subjectVersion}`}

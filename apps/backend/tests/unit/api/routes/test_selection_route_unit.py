@@ -539,6 +539,66 @@ def test_assemble_handler_maps_process_errors(gate) -> None:
     assert error.value.error_code == "ASSEMBLY_CUTOFF_BACKDATED"
 
 
+def _stock_run_with_policy():
+    """One ready stock run plus its exact policy snapshot for handoff routes."""
+    from ditto_strategy.selection.contracts import (
+        SelectionFactorValue,
+        SelectionFactorWeight,
+        SelectionInputBundle,
+        SelectionInstrumentInput,
+        SelectionLimitState,
+        StockSelectionSpec,
+    )
+
+    spec = StockSelectionSpec(
+        spec_id="stock-core",
+        spec_version="1",
+        top_k=2,
+        min_average_turnover=20_000_000.0,
+        min_listing_days=120,
+        factor_weights=(SelectionFactorWeight("momentum_1m", 1.0),),
+    )
+    run = SelectionPipeline().run(
+        SelectionInputBundle(
+            as_of=_AS_OF,
+            knowledge_cutoff=_AS_OF,
+            publication_cutoff=_AS_OF,
+            universe_snapshot_id="universe:sha256:abc",
+            industry_rotation_snapshot_id=None,
+            source_snapshot_ids=("market-a",),
+            spec=spec,
+            seed=17,
+            instruments=(
+                SelectionInstrumentInput(
+                    instrument_id=InstrumentId(600001),
+                    instrument_name="Instrument 600001",
+                    industry_id="801010",
+                    factor_values=(SelectionFactorValue("momentum_1m", 1.0),),
+                    average_turnover=100_000_000.0,
+                    is_st=False,
+                    is_suspended=False,
+                    listing_days=500,
+                    limit_state=SelectionLimitState.NORMAL,
+                    tracking_error=None,
+                ),
+                SelectionInstrumentInput(
+                    instrument_id=InstrumentId(600002),
+                    instrument_name="Instrument 600002",
+                    industry_id="801010",
+                    factor_values=(SelectionFactorValue("momentum_1m", 0.4),),
+                    average_turnover=100_000_000.0,
+                    is_st=False,
+                    is_suspended=False,
+                    listing_days=500,
+                    limit_state=SelectionLimitState.NORMAL,
+                    tracking_error=None,
+                ),
+            ),
+        )
+    )
+    return run, spec
+
+
 def test_propose_strategy_template_draft_returns_saveable_spec_and_gaps() -> None:
     from ditto_application.processes.strategy.template_handoff import (
         ProposeStrategyTemplateDraft,
@@ -689,3 +749,32 @@ def test_propose_strategy_template_draft_maps_not_found_and_mismatch() -> None:
             )
         )
     assert mismatch.value.error_code == "unknown_strategy_template"
+
+    # 名义池随请求携带且与模板池不同：422 拒绝而不是静默换池。
+    universe_run, universe_policy = _stock_run_with_policy()
+    store = _Store()
+    store.saved[universe_run.run_id] = universe_run
+    store.save_policy(universe_policy)
+    universe_process = ProposeStrategyTemplateDraft(
+        run_reader=store,
+        policy_reader=store,
+        case_reader=_CaseStore(),
+    )
+    with (
+        patch(
+            "ditto_apps.api.routes.selection.asyncio.to_thread",
+            side_effect=_inline_to_thread,
+        ),
+        pytest.raises(UnprocessableEntityError) as universe_error,
+    ):
+        asyncio.run(
+            handler(
+                run_id=universe_run.run_id,
+                body=StrategyTemplateHandoffBody(
+                    template_id="stock_selection",
+                    universe_id="csi300",
+                ),
+                process=universe_process,
+            )
+        )
+    assert universe_error.value.error_code == "template_universe_mismatch"

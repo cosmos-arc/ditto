@@ -276,12 +276,15 @@ async def propose_strategy_template_draft(
                 selection_run_id=run_id,
                 template_id=body.template_id,
                 research_case_id=body.research_case_id,
+                universe_id=body.universe_id,
             ),
         )
     except AppProcessError as exc:
         reason = str(exc.details.get("reason", "STRATEGY_HANDOFF_INVALID"))
         if reason in {"selection_run_not_found", "research_case_not_found"}:
             raise NotFoundError(str(exc)) from exc
+        if reason == "template_universe_mismatch":
+            raise UnprocessableEntityError(str(exc), error_code=reason) from exc
         raise UnprocessableEntityError(str(exc), error_code=reason) from exc
     lineage = {
         key: (
