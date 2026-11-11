@@ -124,7 +124,12 @@ async def list_etf_allocations(
     command: Annotated[ETFAllocationCommand, FromComponent()],
 ) -> APIResponse[list[ETFAllocationVersionResponse]]:
     """Reopen saved ETF research allocations by business identity."""
-    versions = await asyncio.to_thread(command.list_allocations)
+    try:
+        versions = await asyncio.to_thread(command.list_allocations)
+    except AppCommandError as exc:
+        raise UnprocessableEntityError(
+            str(exc), error_code="ETF_ALLOCATION_INVALID"
+        ) from exc
     return APIResponse(
         data=[ETFAllocationVersionResponse.model_validate(item) for item in versions]
     )
