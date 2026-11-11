@@ -76,6 +76,12 @@ describe("SelectionWorkspacePage", () => {
 		// 同一 run 身份跨面板必须一致（#740 V3）。
 		const identity = within(screen.getByLabelText("运行身份")).getAllByText(/selection-run · /)[0] as HTMLElement;
 		expect(identity).toHaveTextContent(`selection-run · ${"1".repeat(12)}`);
+		// 身份行防裁切（视觉门 V1）：可换行 + 显式行高，且证据面板不参与
+		// 入场动画（reveal-up 动画层在无等待截图下有纹理竞态前科）。
+		expect(identity.className).toContain("break-all");
+		expect(identity.className).toContain("leading-5");
+		const detailBody = document.querySelector('[data-info-unit="selection-detail"] > div');
+		expect(detailBody?.className ?? "").not.toContain("reveal-up");
 
 		const memo = screen.getByRole("link", { name: "生成 SelectionMemo" });
 		expect(memo).toHaveAttribute("data-context-type", "selection");

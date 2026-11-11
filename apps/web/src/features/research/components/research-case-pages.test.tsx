@@ -54,6 +54,21 @@ describe("ResearchCaseListPage", () => {
 		expect(row).not.toBeNull();
 		expect(row).toHaveTextContent("2 只候选");
 		expect(row).toHaveTextContent(/2026/);
+		// 计数按数量单复数化（视觉门 V3）。
+		expect(screen.getByText("1 case")).toBeInTheDocument();
+	});
+
+	it("pluralizes the counter beyond one case", async () => {
+		server.use(
+			http.get("/api/v1/selections/research-cases", () =>
+				HttpResponse.json({
+					data: [summaryFixture, { ...summaryFixture, case_id: `research-case:sha256:${"0".repeat(64)}` }],
+				}),
+			),
+		);
+		render(<ResearchCaseListPage />, { wrapper: wrapper() });
+
+		await expect(screen.findByText("2 cases")).resolves.toBeInTheDocument();
 	});
 
 	it("keeps an honest empty state pointing at the selection workspace", async () => {
@@ -116,6 +131,9 @@ describe("ResearchCaseDetailPage", () => {
 			"href",
 			`/instruments/600519?tab=chart&observeDate=2026-08-31&selectionRunId=${encodeURIComponent(selectionRunFixtures[0].run_id)}`,
 		);
+		// 下钻可供性（视觉门 V2）：强调色 + hover 下划线，与域内比较入口同语言。
+		expect(candidate.className).toContain("text-(--color-accent)");
+		expect(candidate.className).toContain("hover:underline");
 	});
 
 	it("explains a missing case instead of rendering a broken page", async () => {

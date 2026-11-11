@@ -181,11 +181,13 @@ export function SelectionRunDetail({
 				title="SelectionRun 证据"
 				subtitle={run ? `${run.asset_kind} · ${run.status}` : "exact run required"}
 			/>
-			<PanelBody className="space-y-5 overflow-y-auto p-4">
+			<PanelBody className="space-y-5 overflow-y-auto p-4" reveal={false}>
 				{run ? (
 					<>
 						<section aria-label="运行身份" className="space-y-2">
-							<p className="font-mono text-xs text-(--color-foreground-secondary)">{compactIdentity(run.run_id)}</p>
+							<p className="break-all font-mono text-xs leading-5 text-(--color-foreground-secondary)">
+								{compactIdentity(run.run_id)}
+							</p>
 							<dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
 								<dt className="text-(--color-foreground-tertiary)">as of</dt>
 								<dd>{new Date(run.as_of).toLocaleString("zh-CN")}</dd>

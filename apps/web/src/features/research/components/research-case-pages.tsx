@@ -46,7 +46,9 @@ export function ResearchCaseListPage() {
 							从 SelectionRun 交接的持久化研究用例，重开不依赖创建时的页面
 						</p>
 					</div>
-					<span className="text-xs text-(--color-foreground-tertiary)">{cases.data?.length ?? 0} cases</span>
+					<span className="text-xs text-(--color-foreground-tertiary)">
+						{cases.data?.length ?? 0} {cases.data?.length === 1 ? "case" : "cases"}
+					</span>
 				</div>
 			}
 			main={
@@ -243,8 +245,9 @@ export function ResearchCaseDetailPage({ caseId }: { readonly caseId: string }) 
 										<tr key={instrumentId}>
 											<td className="px-2 py-2 font-mono">#{candidate?.rank ?? "—"}</td>
 											<td className="px-2 py-2">
+												{/* 下钻可供性与域内比较入口同语言：强调色 + hover 下划线。 */}
 												<a
-													className="font-medium hover:text-(--color-accent)"
+													className="font-medium text-(--color-accent) hover:underline"
 													href={`/instruments/${instrumentId}?tab=chart${observeDate ? `&observeDate=${observeDate}` : ""}&selectionRunId=${encodeURIComponent(value.selection_run_id)}`}
 												>
 													{candidate?.instrument_name ?? "来源运行未含该候选"}
