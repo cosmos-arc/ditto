@@ -57,23 +57,43 @@ function column(response: IndicatorSeriesResponse, name: string): CockpitBar[] {
 	return found ? seriesToBars(response.trade_dates, found.values) : [];
 }
 
-/** 主图叠加线：MA(5/20/60) + Donchian 上下轨。 */
+/** 主图叠加线：MA(5/20/60) + Donchian 上下轨（label 供图例身份）。 */
 export function indicatorOverlays(response: IndicatorSeriesResponse, toggles: IndicatorToggles): CockpitOverlay[] {
 	const overlays: CockpitOverlay[] = [];
 	if (toggles.ma) {
-		overlays.push({ id: "ma_5", points: column(response, "ma_5"), color: "var(--chart-run-1)", lineWidth: 1 });
-		overlays.push({ id: "ma_20", points: column(response, "ma_20"), color: "var(--chart-run-2)", lineWidth: 1 });
-		overlays.push({ id: "ma_60", points: column(response, "ma_60"), color: "var(--chart-run-3)", lineWidth: 1 });
+		overlays.push({
+			id: "ma_5",
+			label: "MA5",
+			points: column(response, "ma_5"),
+			color: "var(--chart-run-1)",
+			lineWidth: 1,
+		});
+		overlays.push({
+			id: "ma_20",
+			label: "MA20",
+			points: column(response, "ma_20"),
+			color: "var(--chart-run-2)",
+			lineWidth: 1,
+		});
+		overlays.push({
+			id: "ma_60",
+			label: "MA60",
+			points: column(response, "ma_60"),
+			color: "var(--chart-run-3)",
+			lineWidth: 1,
+		});
 	}
 	if (toggles.donchian) {
 		overlays.push({
 			id: "donchian_high",
+			label: "DON(20) 上轨",
 			points: column(response, "donchian_high"),
 			color: "var(--chart-run-6)",
 			lineWidth: 1,
 		});
 		overlays.push({
 			id: "donchian_low",
+			label: "DON(20) 下轨",
 			points: column(response, "donchian_low"),
 			color: "var(--chart-run-6)",
 			lineWidth: 1,

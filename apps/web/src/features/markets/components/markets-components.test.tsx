@@ -141,6 +141,9 @@ describe("WatchlistPage", () => {
 		expect(screen.getByText(/^\+3\.90/)).toBeInTheDocument();
 		expect(screen.getByText(/\+0\.22%/)).toBeInTheDocument();
 		expect(screen.getByText(/行情日 2026-03-10/)).toBeInTheDocument();
+		// ISO 日期与涨跌串禁止在连字符处折行（视觉门 V1），列内整值呈现。
+		expect(screen.getByText(/行情日 2026-03-10/)).toHaveClass("whitespace-nowrap");
+		expect(screen.getByText(/^\+3\.90/)).toHaveClass("whitespace-nowrap");
 		// 表（自选行情列）与图（标的 K 线）共用同一观察日与同一收盘数字。
 		expect(screen.getByRole("link", { name: "贵州茅台" })).toHaveAttribute(
 			"href",

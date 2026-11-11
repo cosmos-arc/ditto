@@ -30,6 +30,13 @@ function formatSigned(value: number, digits = 2): string {
 	return `${sign}${Math.abs(value).toFixed(digits)}`;
 }
 
+/**
+ * 行情列统一宽度（收盘 + 涨跌 + 行情日三段 nowrap 不折行；视觉门 V1）：
+ * 各状态共用同一列宽，行间列边界稳定，数值 tabular 右对齐；flex-none
+ * 保证空间不足时整列换行而非挤压内部断行。
+ */
+const QUOTE_CELL_WIDTH_CLASS = "inline-flex w-[23rem] flex-none justify-end";
+
 export function WatchlistPage({
 	resolveEntry,
 	searchCatalog,
@@ -320,23 +327,23 @@ function WatchlistQuoteCell({
 	};
 }) {
 	if (anchorPending || query.isLoading) {
-		return <span className="w-56 text-xs text-(--color-foreground-tertiary)">行情解析中…</span>;
+		return <span className={QUOTE_CELL_WIDTH_CLASS}>行情解析中…</span>;
 	}
 	if (anchorDate === null) {
 		return (
 			<span
 				data-quote-state="anchor-unresolved"
 				title="日历数据集未报告最近成功摄取的交易日；行情列不猜测锚点日期发起注定失败的请求，待日历恢复后自动重解析"
-				className="w-56 text-xs text-(--color-foreground-muted)"
+				className={QUOTE_CELL_WIDTH_CLASS}
 			>
-				锚点未落定
+				<span className="text-xs text-(--color-foreground-muted)">锚点未落定</span>
 			</span>
 		);
 	}
 	if (query.isError) {
 		return (
-			<span className="flex w-56 items-center gap-2 text-xs">
-				<span data-quote-state="error" className="text-(--color-risk-warning-fg)">
+			<span className={`${QUOTE_CELL_WIDTH_CLASS} flex items-center justify-end gap-2`}>
+				<span data-quote-state="error" className="text-xs text-(--color-risk-warning-fg)">
 					行情读取失败
 				</span>
 				<button
@@ -356,33 +363,37 @@ function WatchlistQuoteCell({
 			<span
 				data-quote-state="unavailable"
 				title={`标的 ${instrumentId}：本地行情库当前窗口内没有可见日 K（数据集未覆盖或未晋级）`}
-				className="w-56 text-xs text-(--color-foreground-muted)"
+				className={QUOTE_CELL_WIDTH_CLASS}
 			>
-				行情不可得
+				<span className="text-xs text-(--color-foreground-muted)">行情不可得</span>
 			</span>
 		);
 	}
 	const direction = snapshot.change === null || snapshot.change === 0 ? "flat" : snapshot.change > 0 ? "up" : "down";
 	return (
-		<span className="flex w-56 items-baseline justify-end gap-3 tabular-nums">
-			<span data-quote-field="close" className="font-data text-sm">
+		<span className={`${QUOTE_CELL_WIDTH_CLASS} flex items-baseline justify-end gap-3`}>
+			<span data-quote-field="close" className="w-20 text-right font-data text-sm tabular-nums">
 				{snapshot.close.toFixed(2)}
 			</span>
 			<span
 				data-quote-field="change"
-				className={
+				className={`w-[9rem] whitespace-nowrap text-right font-data text-sm tabular-nums ${
 					direction === "up"
-						? "font-data text-sm text-(--color-market-up)"
+						? "text-(--color-market-up)"
 						: direction === "down"
-							? "font-data text-sm text-(--color-market-down)"
-							: "font-data text-sm text-(--color-foreground-secondary)"
-				}
+							? "text-(--color-market-down)"
+							: "text-(--color-foreground-secondary)"
+				}`}
 			>
 				{snapshot.change === null
 					? "—"
 					: `${formatSigned(snapshot.change)}${snapshot.changePercent === null ? "" : ` (${formatSigned(snapshot.changePercent)}%)`}`}
 			</span>
-			<span data-quote-field="date" className="w-[6.5rem] text-right text-xs text-(--color-foreground-tertiary)">
+			{/* ISO 日期禁止在连字符处断行（视觉门 V1）：固定列宽整列右对齐。 */}
+			<span
+				data-quote-field="date"
+				className="w-[7.5rem] whitespace-nowrap text-right text-xs text-(--color-foreground-tertiary)"
+			>
 				行情日 {snapshot.tradeDate}
 			</span>
 		</span>

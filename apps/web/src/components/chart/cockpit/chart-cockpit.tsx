@@ -77,6 +77,10 @@ export type CockpitOverlay = {
 	readonly points: readonly CockpitBar[];
 	readonly color: string;
 	readonly lineWidth?: 1 | 2 | 3 | 4;
+	/** 图例标签（缺省用 id）：叠加线身份在图例可读，不靠颜色猜。 */
+	readonly label?: string;
+	/** 图例读数格式化（如净值 4 位小数）。 */
+	readonly format?: (value: number) => string;
 };
 
 /** 独立副图（新 pane），与主图共享时间轴，如 MACD/RSI/ATR/超额/回撤。 */
@@ -96,6 +100,7 @@ export type CockpitSubPane = {
 	readonly id: string;
 	readonly label: string;
 	readonly series: readonly CockpitSubPaneSeries[];
+	/** 相对高度权重（基准 96；pane 实际像素随 stretch 因子分配，主图始终占主导）。 */
 	readonly height?: number;
 };
 
@@ -157,7 +162,13 @@ export type ChartCockpitProps = {
 	readonly exportName?: string;
 };
 
-const VOLUME_PANE_HEIGHT = 84;
+// Pane 高度用 stretch 因子分配（库原生语义），不用像素 setHeight：内容
+// effect 重填时新 pane 尚未布局（高度 0），像素换算会除以 0 得到退化的
+// stretch 分布，最后一个 pane（量图）吸走全部剩余高度——缩放后量图反超
+// 主图的正源。比例：主图始终占主导（3），量图约 1/4（1），指标副图按
+// 声明高度相对 96px 基准折算。
+const PRICE_PANE_STRETCH = 3;
+const VOLUME_PANE_STRETCH = 1;
 const SUB_PANE_HEIGHT = 96;
 // 空默认值必须用稳定引用：每次渲染新建数组会让内容 effect 失稳（重跑→fitContent 重置区间）。
 const EMPTY_OVERLAYS: readonly CockpitOverlay[] = [];
@@ -169,6 +180,7 @@ const AFFORDANCES = "crosshair tooltip zoom-pan linked-time-range";
 type Readout = {
 	readonly time: number;
 	readonly values: readonly (number | null)[];
+	readonly overlayValues: readonly (number | null)[];
 	readonly subValues: readonly (number | null)[];
 	readonly volume: number | null;
 };
@@ -176,6 +188,7 @@ type Readout = {
 /** time → close/volume 查找索引：数据变更时构建一次，crosshair mousemove 上 O(1) 读数。 */
 type ReadoutIndex = {
 	readonly seriesValues: readonly ReadonlyMap<number, number | null>[];
+	readonly overlayValues: readonly ReadonlyMap<number, number | null>[];
 	readonly subPaneValues: readonly ReadonlyMap<number, number | null>[];
 	readonly volume: ReadonlyMap<number, number | null>;
 };
@@ -196,19 +209,27 @@ function buildVolumeIndex(bars: readonly CockpitBar[]): ReadonlyMap<number, numb
 	return index;
 }
 
-function buildReadoutIndex(series: readonly CockpitSeriesSpec[], subPanes: readonly CockpitSubPane[]): ReadoutIndex {
+function buildReadoutIndex(
+	series: readonly CockpitSeriesSpec[],
+	overlays: readonly CockpitOverlay[],
+	subPanes: readonly CockpitSubPane[],
+): ReadoutIndex {
 	return {
 		seriesValues: series.map((spec) => buildCloseIndex(spec.bars)),
+		overlayValues: overlays.map((overlay) => buildCloseIndex(overlay.points)),
 		subPaneValues: subPanes.flatMap((pane) => pane.series.map((paneSeries) => buildCloseIndex(paneSeries.points))),
 		volume: buildVolumeIndex(series[0]?.bars ?? []),
 	};
 }
 
 function readoutAtIndex(index: ReadoutIndex, time: number): Readout | null {
-	if (index.seriesValues.length === 0 && index.subPaneValues.length === 0) return null;
+	if (index.seriesValues.length === 0 && index.overlayValues.length === 0 && index.subPaneValues.length === 0) {
+		return null;
+	}
 	return {
 		time,
 		values: index.seriesValues.map((closeByTime) => closeByTime.get(time) ?? null),
+		overlayValues: index.overlayValues.map((closeByTime) => closeByTime.get(time) ?? null),
 		subValues: index.subPaneValues.map((closeByTime) => closeByTime.get(time) ?? null),
 		volume: index.volume.get(time) ?? null,
 	};
@@ -296,8 +317,20 @@ export function ChartCockpit(props: ChartCockpitProps) {
 	propsRef.current = props;
 
 	const [visibleRangeLabel, setVisibleRangeLabel] = useState("");
+	// 诊断契约：各 pane 实际像素高度（主图应始终占主导；量图约 1/4）。
+	const [paneHeightsLabel, setPaneHeightsLabel] = useState("");
+	const publishPaneHeights = useCallback(() => {
+		const chart = chartRef.current;
+		if (!chart || chart.panes().length === 0) return;
+		setPaneHeightsLabel(
+			chart
+				.panes()
+				.map((pane) => `${pane.getHeight()}:${pane.getStretchFactor().toFixed(3)}`)
+				.join(","),
+		);
+	}, []);
 	// 读数索引随数据重建一次；mousemove 联动回调经 ref 取最新索引，O(1) 查值。
-	const readoutIndex = useMemo(() => buildReadoutIndex(series, subPanes), [series, subPanes]);
+	const readoutIndex = useMemo(() => buildReadoutIndex(series, overlays, subPanes), [series, overlays, subPanes]);
 	const readoutIndexRef = useRef(readoutIndex);
 	readoutIndexRef.current = readoutIndex;
 	const initialReadout = useMemo(
@@ -390,6 +423,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 			if (range) {
 				setVisibleRangeLabel(`${range.from.toFixed(1)},${range.to.toFixed(1)}`);
 			}
+			publishPaneHeights();
 			if (range && !applyingLinkedRangeRef.current) {
 				broadcastVisibleRange(rangeId, chartId, range);
 			}
@@ -438,7 +472,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 			watermarkRef.current = null;
 			bandsRef.current = null;
 		};
-	}, [theme, rangeId, chartId, applyLinkedCrosshair, timeVisible]);
+	}, [theme, rangeId, chartId, applyLinkedCrosshair, publishPaneHeights, timeVisible]);
 
 	// 内容 effect：序列/水位线/成交量随数据、新鲜度或主题更新。
 	useEffect(() => {
@@ -497,6 +531,9 @@ export function ChartCockpit(props: ChartCockpitProps) {
 			}
 		}
 		primarySeriesRef.current = primary ?? primaryCandle;
+		// 主 pane 比例在每次内容重填时都显式声明：重填会重建 pane，旧的
+		// stretch 随销毁丢失，不重设会回退均分（主图不再占主导）。
+		chart.panes()[0]?.setStretchFactor(PRICE_PANE_STRETCH);
 
 		// 主图叠加线（MA/Donchian/净值等）：pane 0，warm-up 断口由 whitespace 语义承载。
 		for (const overlay of overlays) {
@@ -529,7 +566,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 				),
 			);
 			contentSeriesRef.current.push(volume);
-			chart.panes()[nextPaneIndex]?.setHeight(VOLUME_PANE_HEIGHT);
+			chart.panes()[nextPaneIndex]?.setStretchFactor(VOLUME_PANE_STRETCH);
 			nextPaneIndex += 1;
 		}
 
@@ -564,7 +601,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 				line.setData(toLineSeriesData(paneSeries.points));
 				contentSeriesRef.current.push(line);
 			}
-			chart.panes()[nextPaneIndex]?.setHeight(pane.height ?? SUB_PANE_HEIGHT);
+			chart.panes()[nextPaneIndex]?.setStretchFactor((pane.height ?? SUB_PANE_HEIGHT) / SUB_PANE_HEIGHT);
 			nextPaneIndex += 1;
 		}
 
@@ -628,6 +665,8 @@ export function ChartCockpit(props: ChartCockpitProps) {
 				timeScale.fitContent();
 			}
 		}
+		// 内容填充后发布一次 pane 高度诊断（fitContent/定位也会经订阅发布）。
+		window.requestAnimationFrame(publishPaneHeights);
 	}, [
 		series,
 		overlays,
@@ -640,6 +679,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 		effectiveNowMs,
 		theme,
 		showVolumePane,
+		publishPaneHeights,
 	]);
 
 	const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -779,6 +819,19 @@ export function ChartCockpit(props: ChartCockpitProps) {
 						</span>
 					</span>
 				))}
+				{overlays.map((overlay, index) => (
+					<span key={overlay.id} className="inline-flex items-center gap-1.5">
+						<span
+							aria-hidden="true"
+							className="inline-block h-0.5 w-3 rounded-full"
+							style={{ background: theme.resolve(overlay.color) }}
+						/>
+						<span className="font-medium">{overlay.label ?? overlay.id}</span>
+						<span className="tabular-nums" data-testid={`chart-readout-${chartId}-${overlay.id}`}>
+							{activeReadout ? formatValue(activeReadout.overlayValues[index], overlay.format) : "—"}
+						</span>
+					</span>
+				))}
 				{subPaneChips.map(({ paneSeries }, index) => (
 					<span key={paneSeries.id} className="inline-flex items-center gap-1.5">
 						<span
@@ -849,6 +902,7 @@ export function ChartCockpit(props: ChartCockpitProps) {
 				data-chart-affordances={AFFORDANCES}
 				data-chart-linked-time-range={rangeId}
 				data-chart-panes={1 + (showVolumePane ? 1 : 0) + subPanes.length}
+				data-chart-pane-heights={paneHeightsLabel}
 				data-chart-visible-range={visibleRangeLabel}
 				data-chart-as-of={asOf ? String(asOf.time) : undefined}
 				data-chart-marker-times={markers.length > 0 ? markers.map((marker) => marker.time).join(",") : undefined}

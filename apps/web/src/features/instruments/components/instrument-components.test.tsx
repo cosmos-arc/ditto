@@ -330,8 +330,9 @@ describe("InstrumentChartView", () => {
 		const props = await waitForCockpit(
 			(next) => (next.overlays ?? []).length === 3 && (next.subPanes ?? []).length === 2,
 		);
-		expect(props.identity?.dataSourceName).toContain("叠加线来源未绑定");
-		expect(screen.getByText("叠加线来源未绑定；CSV 仅含 K 线")).toBeInTheDocument();
+		// 导出范围说明（视觉门 V4②）：叠加线在图有图例身份，但不入 CSV 导出。
+		expect(props.identity?.dataSourceName).toContain("叠加线不入 CSV 导出");
+		expect(screen.getByText(/CSV 导出仅含 K 线；叠加线（MA\/轨道\/净值）不入导出/)).toBeInTheDocument();
 		const overlayIds = (props.overlays as Array<{ id: string }>).map((overlay) => overlay.id);
 		expect(overlayIds).toEqual(["ma_5", "ma_20", "ma_60"]);
 		const paneIds = (props.subPanes as Array<{ id: string }>).map((pane) => pane.id);

@@ -205,6 +205,8 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 		return {
 			id: "etf-nav",
 			color: "var(--chart-combo-manual)",
+			label: "净值",
+			format: (value: number) => value.toFixed(4),
 			lineWidth: 2,
 			points: navPoints.map((point: { nav_date: string; nav: number }) => ({
 				time: tradeDateToUnix(point.nav_date),
@@ -292,7 +294,9 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 							/>
 						</label>
 					</div>
-					<div className="max-w-lg text-right text-xs leading-5 text-(--color-foreground-tertiary)">
+					{/* 身份串（snapshot:...:sha256:...）不可在右缘切半：break-all
+					    安全换行，完整身份始终可见可下钻（视觉门 V2）。 */}
+					<div className="max-w-lg break-all text-right text-xs leading-5 text-(--color-foreground-tertiary)">
 						复权：{effectiveAdjustment} · experimental：{includeExperimental ? "开" : "关"}
 						<br />
 						{query.data
@@ -386,7 +390,11 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 						</span>
 					)}
 					{overlayShown && (
-						<span className="text-xs text-(--color-foreground-muted)">叠加线来源未绑定；CSV 仅含 K 线</span>
+						// 导出范围说明（P4 裁决）：叠加线/净值线只在图上，不入 CSV——
+						// 不是"线没画出来"或来源缺失；线本身的身份见图例与覆盖说明。
+						<span className="text-xs text-(--color-foreground-muted)">
+							CSV 导出仅含 K 线；叠加线（MA/轨道/净值）不入导出，身份见图例
+						</span>
 					)}
 				</div>
 
@@ -488,7 +496,7 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 							identity={{
 								// P4（issue 628）：叠加限制随身份进导出——NAV 不入 CSV，
 								// 其覆盖限制（状态/库尾/测量时点）随 dataSourceName 携带。
-								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线来源未绑定" : ""}${isEtf && toggles.nav ? `；etf_nav ${navCoverage ? `${navCoverage.status}(库内至 ${navCoverage.measured_end ?? "?"}, 测量 ${navCoverage.measured_at})` : "覆盖未知"}` : ""}`,
+								dataSourceName: `K线 ${query.data?.sources.join(", ") ?? ""}${overlayShown ? "；叠加线不入 CSV 导出" : ""}${isEtf && toggles.nav ? `；etf_nav ${navCoverage ? `${navCoverage.status}(库内至 ${navCoverage.measured_end ?? "?"}, 测量 ${navCoverage.measured_at})` : "覆盖未知"}` : ""}`,
 								// Exports carry the actual chart cutoff: the bars
 								// always come from the server's current decision
 								// clock, so a drill timestamp would claim a
