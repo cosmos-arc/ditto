@@ -242,6 +242,8 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			delete state["etfAllocationPending"];
 			window.history.replaceState(state, "", url);
 			void queryClient.invalidateQueries({ queryKey: ["etf-allocation-versions", result.allocationId] });
+			// 已保存配置下拉来自列表缓存：新配置必须立即可找回。
+			void queryClient.invalidateQueries({ queryKey: ["etf-allocation-list"] });
 		},
 	});
 	const review = useMutation({
@@ -270,6 +272,8 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			window.history.replaceState(state, "");
 			reviewRetry.current = null;
 			setConfirmingReject(false);
+			// 审查状态变化要让「已保存配置」下拉的标签同步更新。
+			void queryClient.invalidateQueries({ queryKey: ["etf-allocation-list"] });
 		},
 	});
 	const paperScope = saved

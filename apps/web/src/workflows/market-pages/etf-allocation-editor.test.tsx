@@ -500,3 +500,92 @@ it("labels manual weights and execution outcomes with business tickers", async (
 	await user.click(screen.getByRole("button", { name: "按已批准意图模拟成交" }));
 	expect(await screen.findByText(/工具 510300：filled/)).toBeInTheDocument();
 });
+
+it("keeps the saved-allocation dropdown fresh after save and review", async () => {
+	const user = userEvent.setup();
+	const listedIds: string[] = [];
+	let stored: Record<string, unknown> | null = null;
+	server.use(
+		http.get("/api/v1/portfolio/etf-allocations", () =>
+			HttpResponse.json({
+				data: listedIds.map((allocationId) => ({
+					version_id: stored && stored["allocation_id"] === allocationId ? stored["version_id"] : "stale-version",
+					allocation_id: allocationId,
+					parent_version_id: null,
+					asof: "2026-09-01",
+					knowledge_cutoff: "2026-09-01T09:00:00Z",
+					source_snapshot_id: "snapshot:recorded:etf",
+					mode: "equal",
+					weights: { "1": "0.80000000" },
+					cash_weight: "0.2",
+					max_position_weight: "1",
+					tracking_exposure: { "000300.SH": "0.80000000" },
+					reason: "broad exposure",
+					rule_version: "etf-allocation-v1",
+					paper_status: "research_only",
+					review_status: stored?.["review_status"] ?? "research_only",
+					created_at: "2026-09-01T09:00:00Z",
+				})),
+			}),
+		),
+		http.get("/api/v1/portfolio/etf-allocations/:id/versions", () =>
+			HttpResponse.json({ data: stored ? [stored] : [] }),
+		),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions", async ({ params }) => {
+			stored = {
+				version_id: "version-one",
+				allocation_id: String(params["id"]),
+				parent_version_id: null,
+				asof: "2026-09-01",
+				knowledge_cutoff: "2026-09-01T09:00:00Z",
+				source_snapshot_id: "snapshot:recorded:etf",
+				mode: "equal",
+				weights: { "1": "0.80000000" },
+				cash_weight: "0.2",
+				max_position_weight: "1",
+				tracking_exposure: { "000300.SH": "0.80000000" },
+				reason: "broad exposure",
+				rule_version: "etf-allocation-v1",
+				paper_status: "research_only",
+				review_status: "research_only",
+				created_at: "2026-09-01T09:00:00Z",
+			};
+			if (!listedIds.includes(String(params["id"]))) listedIds.push(String(params["id"]));
+			return HttpResponse.json({ data: stored }, { status: 201 });
+		}),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/review", async ({ request }) => {
+			const body = (await request.json()) as { action: string };
+			stored = { ...stored, review_status: body.action === "submit" ? "review_pending" : "review_approved" };
+			return HttpResponse.json({ data: stored });
+		}),
+	);
+	render(
+		<ETFAllocationEditor
+			items={[candidate]}
+			asof="2026-09-01"
+			cutoff="2026-09-01T09:00:00Z"
+			cutoffInput="2026-09-01T17:00:00"
+			snapshot="snapshot:recorded:etf"
+		/>,
+		{ wrapper: wrapper() },
+	);
+	await user.click(screen.getByRole("checkbox", { name: /沪深300 ETF/ }));
+	await user.clear(screen.getByLabelText("单仓上限"));
+	await user.type(screen.getByLabelText("单仓上限"), "1");
+	await user.type(screen.getByLabelText("配置理由"), "broad exposure");
+	await user.type(screen.getByLabelText("配置名称"), "dropdown-freshness");
+	await user.click(screen.getByRole("button", { name: "保存候选版本" }));
+	await screen.findByText(/已保存 version-one/);
+	// 保存后下拉立即列出并选中新配置（列表缓存已失效）。
+	const dropdown = await screen.findByLabelText("已保存配置");
+	expect(dropdown).toHaveValue("dropdown-freshness");
+	expect(screen.getByRole("option", { name: /dropdown-freshness · .* · research_only/ })).toBeInTheDocument();
+	await user.type(screen.getByLabelText("审查人"), "operator");
+	await user.type(screen.getByLabelText("审查理由"), "checked");
+	await user.click(screen.getByRole("button", { name: "提交审查" }));
+	await screen.findByRole("button", { name: "研究审查通过" });
+	await user.click(screen.getByRole("button", { name: "研究审查通过" }));
+	await screen.findByText(/· review_approved ·/);
+	// 审查状态变化同步到下拉标签。
+	expect(screen.getByRole("option", { name: /dropdown-freshness · .* · review_approved/ })).toBeInTheDocument();
+});

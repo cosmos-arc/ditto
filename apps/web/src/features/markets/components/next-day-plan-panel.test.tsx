@@ -178,3 +178,51 @@ it("requires the anchor or a hand-filled date before saving", async () => {
 	fireEvent.change(screen.getByLabelText("观察日期"), { target: { value: "2026-11-10" } });
 	expect(screen.getByRole("button", { name: "保存理由与次日计划" })).toBeEnabled();
 });
+
+it("drops candidates that left the watchlist from the save payload", async () => {
+	const user = userEvent.setup();
+	const posted: unknown[] = [];
+	server.use(
+		http.get("/api/v1/market/next-day-plans", () => HttpResponse.json({ data: [] })),
+		http.post("/api/v1/market/next-day-plans", async ({ request }) => {
+			posted.push(await request.json());
+			return HttpResponse.json({ data: storedPlan }, { status: 201 });
+		}),
+	);
+	const view = renderPanel();
+	await user.click(await screen.findByRole("checkbox", { name: /标的600779/ }));
+	await user.click(screen.getByRole("checkbox", { name: /标的510888/ }));
+	await user.type(screen.getByLabelText("600779 候选理由"), "回踩");
+	await user.type(screen.getByLabelText("510888 候选理由"), "跟随");
+	await user.type(screen.getByLabelText("次日计划", { exact: true }), "计划");
+	// 自选在保存前移除了 600779：不可见候选不得静默进入保存载荷。
+	view.rerender(<NextDayPlanPanel ids={[510888]} resolveEntry={resolveEntry} defaultObservationDate="2026-11-10" />);
+	expect(screen.getByRole("button", { name: "保存理由与次日计划" })).toBeEnabled();
+	await user.click(screen.getByRole("button", { name: "保存理由与次日计划" }));
+	await screen.findByText(/已保存 next-day-plan/);
+	const body = posted[0] as {
+		candidate_notes: Array<{ instrument_id: number }>;
+	};
+	expect(body.candidate_notes.map((note) => note.instrument_id)).toEqual([510888]);
+});
+
+it("trims padded reasons and plan text before submission", async () => {
+	const user = userEvent.setup();
+	const posted: unknown[] = [];
+	server.use(
+		http.get("/api/v1/market/next-day-plans", () => HttpResponse.json({ data: [] })),
+		http.post("/api/v1/market/next-day-plans", async ({ request }) => {
+			posted.push(await request.json());
+			return HttpResponse.json({ data: storedPlan }, { status: 201 });
+		}),
+	);
+	renderPanel();
+	await user.click(await screen.findByRole("checkbox", { name: /标的600779/ }));
+	await user.type(screen.getByLabelText("600779 候选理由"), "  回踩半年线  ");
+	await user.type(screen.getByLabelText("次日计划", { exact: true }), "  计划正文  ");
+	await user.click(screen.getByRole("button", { name: "保存理由与次日计划" }));
+	await screen.findByText(/已保存 next-day-plan/);
+	const body = posted[0] as { candidate_notes: Array<{ reason: string }>; next_day_plan: string };
+	expect(body.candidate_notes[0]?.reason).toBe("回踩半年线");
+	expect(body.next_day_plan).toBe("计划正文");
+});

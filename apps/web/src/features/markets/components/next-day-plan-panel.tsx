@@ -26,15 +26,19 @@ export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate }: 
 		if (!dateTouched && defaultObservationDate) setObservationDate(defaultObservationDate);
 	}, [defaultObservationDate, dateTouched]);
 	const plans = useQuery({ queryKey: PLANS_KEY, queryFn: () => listNextDayPlans() });
+	// 自选可能已移除某对象：待存候选以当前自选交集为准，被移除的勾选
+	// 不再静默进入保存载荷（其行已不可见，用户无从核对理由）。
+	const activeSelected = selected.filter((id) => ids.includes(id));
 	const save = useMutation({
 		mutationFn: () =>
 			recordNextDayPlan({
 				observationDate,
-				candidateNotes: selected.map((id) => ({
+				candidateNotes: activeSelected.map((id) => ({
 					instrumentId: id,
-					reason: reasons[id] ?? "",
+					reason: (reasons[id] ?? "").trim(),
 				})),
-				nextDayPlan: planText,
+				// 服务端拒绝 padded 文本：提交前 trim，保证一次重试即可成功。
+				nextDayPlan: planText.trim(),
 			}),
 		onSuccess: () => {
 			void queryClient.invalidateQueries({ queryKey: PLANS_KEY });
@@ -42,8 +46,8 @@ export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate }: 
 	});
 	const canSave =
 		/^\d{4}-\d{2}-\d{2}$/u.test(observationDate) &&
-		selected.length > 0 &&
-		selected.every((id) => (reasons[id] ?? "").trim().length > 0) &&
+		activeSelected.length > 0 &&
+		activeSelected.every((id) => (reasons[id] ?? "").trim().length > 0) &&
 		planText.trim().length > 0 &&
 		!save.isPending;
 	return (

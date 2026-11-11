@@ -59,7 +59,8 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await workspace.getByLabel("审查理由").fill("approved recorded target");
 	await workspace.getByRole("button", { name: "提交审查" }).click();
 	await workspace.getByRole("button", { name: "研究审查通过" }).click();
-	await expect(workspace.getByText(/review_approved/)).toBeVisible();
+	// 限定已保存段落的状态行：失效刷新后的「已保存配置」option 也含该状态。
+	await expect(workspace.getByText(/· review_approved ·/)).toBeVisible();
 	await workspace.getByLabel("Paper 账户").selectOption(fixture.account_id);
 	await workspace.getByLabel("下一交易日").fill("2026-09-02");
 	await workspace.getByLabel("Paper 授权人").fill("browser operator");

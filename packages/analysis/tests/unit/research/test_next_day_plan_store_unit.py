@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterator
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import orjson
 import pytest
@@ -91,6 +92,48 @@ def test_a_retry_keeps_one_identity_regardless_of_recording_time(
     listed = store.list_recent(limit=10)
     assert len(listed) == 1
     assert listed[0].created_at == first.created_at
+
+
+def test_a_sequential_retry_returns_the_first_recorded_entry(
+    store: SQLiteNextDayPlanStore,
+) -> None:
+    """顺序重试：save(较晚 created_at 的同内容) 返回首存条目而非报错。"""
+    first = _plan()
+    retried = _plan(created_at=datetime(2026, 11, 10, 15, 41, tzinfo=UTC))
+
+    store.save(first)
+    returned = store.save(retried)
+
+    assert returned == first
+    assert returned.created_at == first.created_at
+    assert len(store.list_recent(limit=10)) == 1
+
+
+def test_a_concurrent_same_content_writer_converges_on_the_stored_entry(
+    tmp_path: Path,
+) -> None:
+    """并发交错：get 与 INSERT 之间对手已提交同内容写入，重放收敛首存。"""
+    pool_a = SQLitePool(str(tmp_path / "metadata.sqlite"))
+    client_a = SQLiteClient(pool_a)
+    store_a = SQLiteNextDayPlanStore(client_a)
+    store_a.init_schema()
+    pool_b = SQLitePool(str(tmp_path / "metadata.sqlite"))
+    client_b = SQLiteClient(pool_b)
+    store_b = SQLiteNextDayPlanStore(client_b)
+    try:
+        first = _plan()
+        store_a.save(first)
+        # 竞态窗口：B 的 get 已见过 None（此刻才注入对手提交已可见），
+        # B 走 INSERT 路径撞上 A 已提交的同内容行（ON CONFLICT DO NOTHING）。
+        retried = _plan(created_at=datetime(2026, 11, 10, 15, 41, tzinfo=UTC))
+        with patch.object(store_b, "get", return_value=None):
+            returned = store_b.save(retried)
+        assert returned == first
+        assert returned.created_at == first.created_at
+        assert len(store_a.list_recent(limit=10)) == 1
+    finally:
+        pool_b.close_all()
+        pool_a.close_all()
 
 
 def test_get_returns_none_for_an_unknown_plan(store: SQLiteNextDayPlanStore) -> None:

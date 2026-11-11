@@ -135,14 +135,31 @@ class SQLiteNextDayPlanStore:
             ),
         )
         row = self._sqlite_client.fetchone(_GET_PAYLOAD, (value.plan_id,))
-        if row is None or str(row["payload_json"]) != encoded:
+        if row is None:
+            self._sqlite_client.rollback()
+            raise NextDayPlanIntegrityError(
+                "next-day plan row vanished before verification",
+                details={"plan_id": value.plan_id},
+            )
+        # A concurrent writer with the same canonical record may have committed
+        # between our miss and the INSERT (ON CONFLICT DO NOTHING). Compare the
+        # canonical content of the stored row — not its embedded created_at —
+        # so an exact replay converges on the first-recorded entry instead of
+        # being rejected as a content conflict; a truly different payload or a
+        # tampered row still fails closed here.
+        try:
+            stored = _decode(str(row["payload_json"]), expected_plan_id=value.plan_id)
+        except NextDayPlanIntegrityError:
+            self._sqlite_client.rollback()
+            raise
+        if stored.canonical_payload != value.canonical_payload:
             self._sqlite_client.rollback()
             raise NextDayPlanIntegrityError(
                 "next-day plan identity already owns different content",
                 details={"plan_id": value.plan_id},
             )
         self._sqlite_client.commit()
-        return value
+        return stored
 
     def get(self, plan_id: str) -> NextDayPlan | None:
         """Read and authenticate one exact plan."""
