@@ -98,13 +98,19 @@ export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate }: 
 					placeholder="明天开盘要验证什么、执行什么"
 				/>
 			</label>
-			<button type="button" disabled={!canSave} onClick={() => save.mutate()}>
+			<button
+				type="button"
+				disabled={!canSave}
+				onClick={() => save.mutate()}
+				className="rounded-md border border-(--color-border-subtle) px-2 py-1 hover:bg-(--color-interaction-hover-subtle-bg) disabled:cursor-not-allowed disabled:opacity-60"
+			>
 				{save.isPending ? "保存中…" : "保存理由与次日计划"}
 			</button>
 			{save.isError && <p role="alert">保存失败：{String(save.error)}；草稿已保留，可重试。</p>}
 			{save.isSuccess && (
-				<p className="break-all">
-					已保存 {save.data.planId}（观察日 {save.data.observationDate}）。
+				<p>
+					已保存 <span className="break-all font-mono">{save.data.planId}</span>
+					<span className="whitespace-nowrap">（观察日 {save.data.observationDate}）。</span>
 				</p>
 			)}
 			<PlansList

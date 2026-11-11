@@ -199,7 +199,7 @@ it("drops candidates that left the watchlist from the save payload", async () =>
 	view.rerender(<NextDayPlanPanel ids={[510888]} resolveEntry={resolveEntry} defaultObservationDate="2026-11-10" />);
 	expect(screen.getByRole("button", { name: "保存理由与次日计划" })).toBeEnabled();
 	await user.click(screen.getByRole("button", { name: "保存理由与次日计划" }));
-	await screen.findByText(/已保存 next-day-plan/);
+	await screen.findByText(/next-day-plan:sha256:first/);
 	const body = posted[0] as {
 		candidate_notes: Array<{ instrument_id: number }>;
 	};
@@ -221,7 +221,7 @@ it("trims padded reasons and plan text before submission", async () => {
 	await user.type(screen.getByLabelText("600779 候选理由"), "  回踩半年线  ");
 	await user.type(screen.getByLabelText("次日计划", { exact: true }), "  计划正文  ");
 	await user.click(screen.getByRole("button", { name: "保存理由与次日计划" }));
-	await screen.findByText(/已保存 next-day-plan/);
+	await screen.findByText(/next-day-plan:sha256:first/);
 	const body = posted[0] as { candidate_notes: Array<{ reason: string }>; next_day_plan: string };
 	expect(body.candidate_notes[0]?.reason).toBe("回踩半年线");
 	expect(body.next_day_plan).toBe("计划正文");

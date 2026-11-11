@@ -398,8 +398,8 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			<p>
 				保存仅生成研究候选；审查批准只确认精确版本，Paper 还需单独校验交易资格。保存或批准不会改变 Paper、Manual 账本。
 			</p>
-			<label>
-				配置名称{" "}
+			<label className="block">
+				<span className="whitespace-nowrap">配置名称</span>{" "}
 				<input
 					aria-label="配置名称"
 					value={allocationId}
@@ -416,8 +416,8 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 				</button>
 			)}
 			{reopenList.data && reopenList.data.length > 0 && (
-				<label>
-					已保存配置{" "}
+				<label className="block">
+					<span className="whitespace-nowrap">已保存配置</span>{" "}
 					<select
 						aria-label="已保存配置"
 						value={reopenList.data.some((item) => item.allocationId === allocationId) ? allocationId : ""}
@@ -449,8 +449,8 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 			)}
 			{versions.isLoading && <p>正在读取已保存版本…</p>}
 			{versions.data && (
-				<label>
-					已保存版本{" "}
+				<label className="block">
+					<span className="whitespace-nowrap">已保存版本</span>{" "}
 					<select
 						aria-label="已保存版本"
 						value={versionId}
@@ -705,24 +705,26 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 									onChange={(event) => setPaperReason(event.target.value)}
 								/>
 							</label>
-							<button
-								type="button"
-								disabled={
-									!paperAccounts.data?.some((account) => account.account_id === paperAccountId) ||
-									!paperTradeDate ||
-									!paperActor.trim() ||
-									!paperReason.trim() ||
-									authorizePaper.isPending
-								}
-								onClick={() => authorizePaper.mutate()}
-							>
-								{authorizePaper.isPending ? "授权中…" : "授权此版本进入 Paper"}
-							</button>
-							{authorizationId && (
-								<button type="button" disabled={handoffPaper.isPending} onClick={() => handoffPaper.mutate()}>
-									{handoffPaper.isPending ? "交接中…" : "创建 Paper 会话"}
+							<div className="flex flex-wrap items-center gap-2">
+								<button
+									type="button"
+									disabled={
+										!paperAccounts.data?.some((account) => account.account_id === paperAccountId) ||
+										!paperTradeDate ||
+										!paperActor.trim() ||
+										!paperReason.trim() ||
+										authorizePaper.isPending
+									}
+									onClick={() => authorizePaper.mutate()}
+								>
+									{authorizePaper.isPending ? "授权中…" : "授权此版本进入 Paper"}
 								</button>
-							)}
+								{authorizationId && (
+									<button type="button" disabled={handoffPaper.isPending} onClick={() => handoffPaper.mutate()}>
+										{handoffPaper.isPending ? "交接中…" : "创建 Paper 会话"}
+									</button>
+								)}
+							</div>
 							{paperRetry.current?.handoffKey && (
 								<a
 									href={`/portfolio/paper?account_id=${encodeURIComponent(paperRetry.current.accountId)}&session_id=${encodeURIComponent(paperRetry.current.sessionId)}`}
@@ -733,13 +735,17 @@ export function ETFAllocationEditor({ items, asof, cutoff, cutoffInput, snapshot
 							{authorizePaper.isError && <p role="alert">授权失败：{String(authorizePaper.error)}</p>}
 							{handoffPaper.isError && (
 								<p role="alert">
-									交接失败：{String(handoffPaper.error)}。<a href="#etf-tool-selection">返回工具选择</a>
+									交接失败：{String(handoffPaper.error)}。
+									<a className="text-(--color-accent) hover:underline" href="#etf-tool-selection">
+										返回工具选择
+									</a>
 								</p>
 							)}
 							{paperSession && (
 								<p>
 									Paper 会话 {paperSession.sessionId} 已创建。
 									<a
+										className="text-(--color-accent) hover:underline"
 										href={`/portfolio/paper?account_id=${encodeURIComponent(paperSession.accountId)}&session_id=${encodeURIComponent(paperSession.sessionId)}`}
 									>
 										查看 Paper 账户
