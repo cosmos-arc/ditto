@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
-from ditto_analysis.research.plans import NextDayPlan, PlanCandidateNote
 from ditto_analysis.storage.sqlite.research import SQLiteNextDayPlanStore
 from ditto_application.processes.markets.record_next_day_plan import RecordNextDayPlan
 from ditto_application.queries.next_day_plans import NextDayPlanQueryService
 from ditto_apps.api.routes.market import router
 from ditto_apps.middleware import configure_exception_handlers
-from ditto_apps.registry.next_day_plan import AnalysisNextDayPlanStoreAdapter
+from ditto_apps.registry.next_day_plan import (
+    AnalysisNextDayPlanFactory,
+    AnalysisNextDayPlanStoreAdapter,
+)
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -35,7 +37,7 @@ def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
         @provide
         def record_process(self) -> RecordNextDayPlan:
             return RecordNextDayPlan(
-                factory=_Factory(),
+                factory=AnalysisNextDayPlanFactory(),
                 recorder=AnalysisNextDayPlanStoreAdapter(store),
                 clock=_clock,
             )
@@ -49,27 +51,6 @@ def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
     setup_dishka(container=make_async_container(TestProvider()), app=app)
     app.include_router(router, prefix="/api/v1")
     return app, pool
-
-
-class _Factory:
-    """Production factory shape bound straight to the Analysis domain."""
-
-    def create(self, material: object) -> NextDayPlan:
-        from dataclasses import asdict
-
-        from ditto_application.next_day_plan_contracts import NextDayPlanMaterial
-
-        assert isinstance(material, NextDayPlanMaterial)
-        payload = asdict(material)
-        return NextDayPlan(
-            observation_date=date.fromisoformat(payload["observation_date"]),
-            candidate_notes=tuple(
-                PlanCandidateNote(instrument_id=i, reason=r)
-                for i, r in payload["candidate_notes"]
-            ),
-            next_day_plan=payload["next_day_plan"],
-            created_at=payload["created_at"],
-        )
 
 
 def _body() -> dict[str, object]:
