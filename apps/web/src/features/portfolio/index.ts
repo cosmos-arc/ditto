@@ -4,6 +4,7 @@ export {
 	type ETFAllocationVersion,
 	executeETFPaper,
 	handoffETFPaper,
+	listETFAllocations,
 	listETFAllocationVersions,
 	reviewETFAllocationVersion,
 	saveETFAllocationVersion,

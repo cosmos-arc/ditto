@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
@@ -84,6 +84,55 @@ def _request() -> ETFAllocationRequest:
         manual_weights={},
         reason="broad exposure",
     )
+
+
+def test_list_allocations_returns_latest_version_per_allocation(
+    tmp_path: Path,
+) -> None:
+    """Saved allocations reopen by business identity without a known URL."""
+    pool = SQLitePool(str(tmp_path / "allocation.sqlite"))
+    writer = SQLiteStrategyArtifactWriter(pool)
+    writer.init_schema()
+    metadata = MagicMock(spec=MetadataQueryFacade)
+    metadata.list_etf_candidates.return_value = [_candidate(1), _candidate(2)]
+    service = ETFAllocationCommand(
+        metadata, StrategyArtifactService(SQLiteStrategyArtifactReader(pool), writer)
+    )
+    try:
+        assert service.list_allocations() == []
+        first = service.save(_request())
+        second = service.save(
+            replace(
+                _request(),
+                idempotency_key="two",
+                parent_version_id=first.version_id,
+                reason="revised exposure",
+            )
+        )
+        other = service.save(
+            replace(_request(), allocation_id="other", idempotency_key="three")
+        )
+        # A non-allocation target artifact must not leak into the reopen list.
+        writer.save(
+            StrategyArtifactRecord(
+                artifact_id="unrelated-target",
+                strategy_id="plain-strategy",
+                run_id="run",
+                artifact_type=ArtifactKind.TARGET_PORTFOLIO,
+                file_path="",
+                metadata={"kind": "model_portfolio"},
+                status="draft",
+                created_at=datetime.now(UTC).isoformat(),
+            )
+        )
+        allocations = service.list_allocations()
+        assert {item.allocation_id for item in allocations} == {"demo", "other"}
+        by_id = {item.allocation_id: item for item in allocations}
+        assert by_id["demo"].version_id == second.version_id
+        assert by_id["demo"].reason == "revised exposure"
+        assert by_id["other"].version_id == other.version_id
+    finally:
+        pool.close_all()
 
 
 def test_save_revise_restore_and_reject_invalid_weights(tmp_path: Path) -> None:
@@ -411,9 +460,12 @@ def test_paper_handoff_requires_separate_exact_authorization_and_current_facts(
             investable_instrument_ids=frozenset({1}),
             signal_ledger_hash="ledger-before",
             next_trading_day=request.intended_trade_date,
+            tickers={2: "510302.SH"},
         )
-        with pytest.raises(AppConflictError, match="not investable"):
+        # The refusal names the restricted tool by its business ticker.
+        with pytest.raises(AppConflictError) as refusal:
             handoff.handoff(request)
+        assert "510302.SH" in str(refusal.value)
         packages.publish.assert_not_called()
         facts.resolve.return_value = replace(
             facts.resolve.return_value, investable_instrument_ids=frozenset({1, 2})
@@ -628,6 +680,8 @@ def test_paper_handoff_fact_visibility_excludes_future_publication(
     )
     metadata.list_etf_candidates.return_value = [at_cutoff]
     assert facts.resolve(request).investable_instrument_ids == frozenset({1})
+    # Real facts carry the business ticker for refusal messages.
+    assert facts.resolve(request).tickers == {1: candidate.ticker}
     future = replace(
         candidate,
         fields={

@@ -120,7 +120,12 @@ class ETFPaperHandoff:
                 "ETF tools are not investable; choose alternatives: "
                 + str(
                     {
-                        item: facts.unavailable_reasons.get(item)
+                        # Name the restricted tool by its business ticker when
+                        # the reference candidates carried one; fall back to the
+                        # internal id only for unidentified references.
+                        facts.tickers.get(item, item): facts.unavailable_reasons.get(
+                            item
+                        )
                         or ("restricted_or_invalid",)
                         for item in sorted(blocked)
                     }

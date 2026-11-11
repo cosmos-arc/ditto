@@ -15,9 +15,11 @@ export type {
 	MarketCatalogQuery,
 	MarketContextQuery,
 	MarketQuoteSnapshot,
+	WatchlistEntryFn,
 	WatchlistQuoteFn,
+	WatchlistSearchFn,
 } from "./components/market-view-contracts";
 export { MarketsPage } from "./components/markets-page";
-export type { WatchlistEntryFn, WatchlistSearchFn } from "./components/watchlist-page";
+export { NextDayPlanPanel } from "./components/next-day-plan-panel";
 export { WatchlistPage } from "./components/watchlist-page";
 export { useMacroEvidence } from "./hooks";

@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { capturedRequest, requestPath } from "@/test/request";
-import { executeETFPaper, fetchETFAllocationReview, listETFAllocationVersions } from "../etf-allocations";
+import {
+	executeETFPaper,
+	fetchETFAllocationReview,
+	listETFAllocations,
+	listETFAllocationVersions,
+} from "../etf-allocations";
 
 const version = (allocationId: string, overrides: Record<string, unknown> = {}) => ({
 	version_id: "version-one",
@@ -55,6 +60,22 @@ describe("listETFAllocationVersions", () => {
 		);
 
 		await expect(listETFAllocationVersions("demo")).rejects.toThrow("ETF 配置版本身份或审查状态无效");
+	});
+});
+
+describe("listETFAllocations", () => {
+	it("returns the newest saved version of every allocation", async () => {
+		const fetch = fetchMock([version("demo"), version("other")]);
+		vi.stubGlobal("fetch", fetch);
+
+		await expect(listETFAllocations()).resolves.toHaveLength(2);
+		expect(requestPath(capturedRequest(fetch.mock.calls))).toBe("/api/v1/portfolio/etf-allocations");
+	});
+
+	it("rejects a listing entry that claims Paper authority", async () => {
+		vi.stubGlobal("fetch", fetchMock([version("demo", { paper_status: "paper_authorized" })]));
+
+		await expect(listETFAllocations()).rejects.toThrow("ETF 配置版本身份或审查状态无效");
 	});
 });
 

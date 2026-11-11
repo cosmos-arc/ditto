@@ -13,6 +13,7 @@ __all__ = [
     "ExperimentSchemaError",
     "ExperimentSpecError",
     "ExperimentStateTransitionError",
+    "NextDayPlanIntegrityError",
     "ResearchCaseIntegrityError",
     "ResearchDatasetError",
 ]
@@ -28,6 +29,10 @@ class ResearchDatasetError(AnalysisError):
 
 class ResearchCaseIntegrityError(AnalysisError):
     """持久化研究用例的身份与载荷不一致（append-only 证据被破坏）。"""
+
+
+class NextDayPlanIntegrityError(AnalysisError):
+    """持久化次日计划的身份与载荷不一致（append-only 记录被破坏）。"""
 
 
 class ExperimentIdentityError(AnalysisError):
