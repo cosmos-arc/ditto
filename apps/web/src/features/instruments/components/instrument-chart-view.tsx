@@ -327,7 +327,7 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 						{drill.runId.trim() ? (
 							<a
 								href={`/research/backtests/${encodeURIComponent(drill.runId)}`}
-								className="rounded-(--radius-sm) border border-(--color-border-primary) px-2 py-1 font-medium text-(--color-foreground-secondary) underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+								className="font-medium text-(--color-accent) underline underline-offset-2 hover:text-(--brand-accent-hover) focus-visible:outline-2 focus-visible:outline-offset-2"
 							>
 								返回回测 {drill.runId}
 							</a>
@@ -445,20 +445,25 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 				{(stale || missingSessions.length > 0) && (
 					<div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 px-3 py-2.5 text-sm">
 						{stale && (
-							<span className="inline-flex items-center gap-1.5 text-xs text-(--color-foreground-tertiary)">
+							<span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-(--color-foreground-tertiary)">
 								<StaleIndicator isStale />
 								最新价格日 {query.data?.latest_price_date ?? "—"} ·{" "}
 								{query.data?.stale_reason === "missing_expected_session" ? "交易日价格缺失" : "当前没有可见价格"}
 							</span>
 						)}
 						{missingSessions.length > 0 && (
-							<span
-								className="tabular-nums text-xs text-(--color-foreground-muted)"
+							// 长缺口（数百日）收敛为摘要行：默认折叠，主图优先；
+							// 展开后仍是完整逐日清单，不删证据
+							<details
+								className="text-xs text-(--color-foreground-muted)"
 								data-testid={`chart-gaps-${id}`}
 								data-state="bars-partial"
 							>
-								缺失交易日 {missingSessions.join("、")}
-							</span>
+								<summary className="cursor-pointer list-none underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2">
+									缺失交易日 {missingSessions.length} 天（展开查看）
+								</summary>
+								<span className="tabular-nums break-words">{missingSessions.join("、")}</span>
+							</details>
 						)}
 					</div>
 				)}

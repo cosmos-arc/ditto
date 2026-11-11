@@ -59,7 +59,7 @@ export function BacktestTrades({ jobId }: BacktestTradesProps) {
 					<span>Instrument</span>
 					<span>Direction</span>
 					<span>Entry → Exit</span>
-					<span>Quantity</span>
+					<span className="text-right">Quantity</span>
 					<span className="text-right">PnL</span>
 					<span className="text-right">证据</span>
 				</div>
@@ -101,12 +101,12 @@ export function BacktestTrades({ jobId }: BacktestTradesProps) {
 									{trade.exitDate} @ {trade.exitPrice.toFixed(2)}
 								</p>
 							</div>
-							<span className="font-data">{trade.quantity.toLocaleString("en-US")}</span>
+							<span className="text-right font-data tabular-nums">{trade.quantity.toLocaleString("en-US")}</span>
 							<span
-								className={`text-right font-data ${trade.pnl >= 0 ? "text-(--color-system-healthy)" : "text-(--color-system-down)"}`}
+								className={`text-right font-data tabular-nums ${trade.pnl >= 0 ? "text-(--color-system-healthy)" : "text-(--color-system-down)"}`}
 							>
 								{trade.pnl >= 0 ? "+" : ""}
-								{trade.pnl.toLocaleString("en-US")}
+								{trade.pnl.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
 							</span>
 							<span className="text-right">
 								<button
@@ -177,7 +177,10 @@ function TradeEvidenceDrawer({
 					["Entry", `${trade.entryDate} @ ${trade.entryPrice.toFixed(4)}`],
 					["Exit", `${trade.exitDate} @ ${trade.exitPrice.toFixed(4)}`],
 					["Quantity", trade.quantity.toLocaleString("en-US")],
-					["PnL", `${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toLocaleString("en-US")}`],
+					[
+						"PnL",
+						`${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`,
+					],
 					["as_of", asOf || "未报告"],
 				]}
 			/>

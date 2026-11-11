@@ -202,7 +202,14 @@ describe("InstrumentChartView", () => {
 		expect(screen.getByTestId("cockpit-stub")).toBeInTheDocument();
 		if (gap) {
 			expect(screen.getByText(/当前没有可见价格/)).toBeInTheDocument();
-			expect(screen.getByText("缺失交易日 2026-03-10")).toBeInTheDocument();
+			// 长缺口收敛为摘要行：默认折叠（主图优先），展开后仍见完整逐日清单
+			const gaps = screen.getByTestId("chart-gaps-1000001");
+			expect(gaps).toHaveTextContent("缺失交易日 1 天（展开查看）");
+			// 折叠态：日期在 DOM 中但不可见（text.content 断言会穿透折叠，用可见性）
+			expect(within(gaps).getByText("2026-03-10")).not.toBeVisible();
+			const user = userEvent.setup();
+			await user.click(within(gaps).getByText("缺失交易日 1 天（展开查看）"));
+			expect(within(gaps).getByText("2026-03-10")).toBeVisible();
 		} else {
 			expect(screen.queryByText(/当前没有可见价格/)).not.toBeInTheDocument();
 			expect(screen.queryByTestId("chart-gaps-1000001")).not.toBeInTheDocument();

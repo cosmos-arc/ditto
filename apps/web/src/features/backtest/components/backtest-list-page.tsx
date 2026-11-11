@@ -172,11 +172,15 @@ export function BacktestListPage({ createForm }: { readonly createForm?: ReactNo
 							)}
 							<div className="grid grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2 text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
 								<span className="sr-only">加入对比</span>
-								<span>Run</span>
-								<span>Strategy version</span>
-								<span>Status</span>
-								<span>Progress</span>
-								<span>Started</span>
+								{/* 与数据行同构的嵌套网格：表头五列与行内五列用同一模板解析，
+							    避免两层网格各自按内容 min-content 解析导致列错位 */}
+								<div className="col-span-5 grid w-full grid-cols-[minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem]">
+									<span className="min-w-0 truncate">Run</span>
+									<span className="min-w-0 truncate">Strategy version</span>
+									<span>Status</span>
+									<span>Progress</span>
+									<span>Started</span>
+								</div>
 							</div>
 							{query.error ? (
 								<div className="flex flex-col items-start gap-2 p-4 text-xs text-(--color-led-danger)">
@@ -227,8 +231,10 @@ export function BacktestListPage({ createForm }: { readonly createForm?: ReactNo
 															: "hover:bg-(--color-interaction-hover-subtle-bg)"
 													}`}
 												>
-													<span className="truncate font-data font-medium text-(--color-foreground)">{run.runId}</span>
-													<span className="truncate font-data text-(--color-foreground-secondary)">
+													<span className="min-w-0 truncate font-data font-medium text-(--color-foreground)">
+														{run.runId}
+													</span>
+													<span className="min-w-0 truncate font-data text-(--color-foreground-secondary)">
 														{run.strategyId} · v{run.strategyVersion || "—"}
 													</span>
 													<StatusBadge label={run.status} variant={statusVariant(run.status)} size="sm" />
