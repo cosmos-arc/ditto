@@ -558,6 +558,25 @@ def main() -> int:
                 ),
             )
 
+            # A seeded 120-row instrument catalog drives name/code search,
+            # durable watchlist reopen, and explicit unknown/delisted states
+            # through the production UI, API, and browser persistence.
+            _run_fixture_acceptance(
+                root,
+                node,
+                api_port,
+                environment,
+                acceptance=_FixtureAcceptance(
+                    command=_fixture_api_command(
+                        "tests.system.fixtures.watchlist_journey_app:app", api_port
+                    ),
+                    prefix="ditto-system-watchlist-journey-",
+                    spec="watchlist-journey.spec.ts",
+                    web_root=web_root,
+                    web_port=web_port,
+                ),
+            )
+
             _run_fixture_acceptance(
                 root,
                 node,

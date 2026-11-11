@@ -1,42 +1,38 @@
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
+import { ApiError } from "@/api/errors";
 import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
-import { ErrorState } from "@/lib/error-boundary";
 import { LOCAL_WATCHLIST_STORAGE_KEY, readLocalWatchlist } from "@/lib/local-watchlist";
 import { WatchlistOverlay, type WatchlistOverlayId } from "./market-page-overlays";
-import type { MarketCatalogQuery } from "./market-view-contracts";
+import type { MarketCatalog, MarketCatalogInstrument } from "./market-view-contracts";
 
 const watchlistActions = [
 	{ id: "add-instrument", label: "添加标的" },
 	{ id: "bulk-delete", label: "批量删除" },
 ] as const;
 
-export function WatchlistPage({ catalog }: { readonly catalog: MarketCatalogQuery }) {
+/** 名称/代码检索由 workflow 注入（按 offset 分页），markets 能力不依赖 instruments 能力。 */
+export type WatchlistSearchFn = (term: string, offset: number) => Promise<MarketCatalog>;
+/** 自选对象按精确身份解析（现有单对象解析），由 workflow 注入。 */
+export type WatchlistEntryFn = (instrumentId: number) => Promise<MarketCatalogInstrument>;
+
+export function WatchlistPage({
+	resolveEntry,
+	searchCatalog,
+}: {
+	readonly resolveEntry: WatchlistEntryFn;
+	readonly searchCatalog: WatchlistSearchFn;
+}) {
 	const [ids, setIds] = useState<number[]>(readLocalWatchlist);
-	const [draftId, setDraftId] = useState("");
-	const [feedback, setFeedback] = useState<string | null>(null);
 	const [activeOverlay, setActiveOverlay] = useState<WatchlistOverlayId | null>(null);
 
 	useEffect(() => {
 		localStorage.setItem(LOCAL_WATCHLIST_STORAGE_KEY, JSON.stringify(ids));
 	}, [ids]);
 
-	const rows = (catalog.data?.items ?? []).filter((item) => ids.includes(item.instrument_id));
-
-	function addInstrument() {
-		const id = Number(draftId);
-		if (!Number.isInteger(id) || id <= 0) {
-			setFeedback("请输入正整数内部 ID");
-			return;
-		}
-		if (!catalog.data?.items.some((item) => item.instrument_id === id)) {
-			setFeedback("当前 metadata 目录中没有该标的");
-			return;
-		}
-		setIds((current) => (current.includes(id) ? current : [...current, id]));
-		setDraftId("");
-		setFeedback(null);
+	function addInstrument(instrumentId: number): void {
+		setIds((current) => (current.includes(instrumentId) ? current : [...current, instrumentId]));
 		setActiveOverlay(null);
 	}
 
@@ -74,7 +70,7 @@ export function WatchlistPage({ catalog }: { readonly catalog: MarketCatalogQuer
 							</div>
 							<div className="flex min-w-0 flex-col justify-center px-4">
 								<span className="text-xs text-(--color-foreground-tertiary)">下一步</span>
-								<span className="mt-1 truncate text-sm">添加内部 ID 建立浏览器清单</span>
+								<span className="mt-1 truncate text-sm">按名称或代码检索并保存自选</span>
 							</div>
 						</section>
 						<main
@@ -86,54 +82,23 @@ export function WatchlistPage({ catalog }: { readonly catalog: MarketCatalogQuer
 							<Panel className="m-4" data-info-unit="watchlist-main">
 								<PanelHeader title="本地 Watchlist" subtitle={`${ids.length} symbols`} />
 								<PanelBody>
-									{catalog.isLoading && <LoadingSkeleton variant="table" rows={5} />}
-									{catalog.isError && <ErrorState onRetry={() => void catalog.refetch()} />}
-									{feedback && (
-										<p className="m-3 rounded-md bg-(--color-risk-warning)/10 px-3 py-2 text-sm text-(--color-risk-warning)">
-											{feedback}
-										</p>
-									)}
-									{!catalog.isLoading && !catalog.isError && ids.length === 0 && (
+									{ids.length === 0 && (
 										<div className="p-12 text-center">
 											<p className="font-medium">尚未添加标的</p>
 											<p className="mt-1 text-sm text-(--color-foreground-tertiary)">
-												输入 metadata 内部 ID 建立本地监控清单。
+												使用「添加标的」按名称或代码检索真实 metadata 目录。
 											</p>
 										</div>
 									)}
-									{rows.length > 0 && (
+									{ids.length > 0 && (
 										<div className="divide-y divide-(--color-border-subtle)">
-											{rows.map((item) => (
-												<div
-													key={item.instrument_id}
-													data-info-level="l3"
-													data-info-unit="watchlist-row"
-													className="grid grid-cols-[minmax(0,1fr)_8rem_6rem_auto] items-center gap-3 px-4 py-3 text-sm"
-												>
-													<div>
-														<a
-															href={`/instruments/${item.instrument_id}`}
-															className="font-medium hover:text-(--color-accent)"
-														>
-															{item.name}
-														</a>
-														<p className="font-mono text-xs text-(--color-foreground-tertiary)">
-															ID {item.instrument_id}
-														</p>
-													</div>
-													<span className="font-mono">
-														{item.ticker} · {item.exchange}
-													</span>
-													<span className="text-(--color-foreground-tertiary)">{item.asset_class}</span>
-													<button
-														type="button"
-														aria-label={`移除 ${item.name}`}
-														onClick={() => setIds((current) => current.filter((id) => id !== item.instrument_id))}
-														className="rounded-md border border-(--color-border-subtle) px-2 py-1 text-xs hover:bg-(--color-interaction-hover-subtle-bg)"
-													>
-														移除
-													</button>
-												</div>
+											{ids.map((id) => (
+												<WatchlistEntryRow
+													key={id}
+													instrumentId={id}
+													resolveEntry={resolveEntry}
+													onRemove={() => setIds((current) => current.filter((entry) => entry !== id))}
+												/>
 											))}
 										</div>
 									)}
@@ -147,6 +112,10 @@ export function WatchlistPage({ catalog }: { readonly catalog: MarketCatalogQuer
 						<PanelHeader title="保存与证据边界" />
 						<PanelBody className="space-y-3 p-(--density-panel-padding) text-sm leading-6 text-(--color-foreground-secondary)">
 							<p>此清单仅保存在当前浏览器，不会同步到服务端或其他设备。</p>
+							<p>
+								每个对象重开时按 instrument_id
+								精确身份重新解析；目录中已不存在或已退出的对象会明确标注，不会静默消失或被替换。
+							</p>
 							<p>公开 Watchlist 写接口尚不存在；价格、信号、新闻与策略暴露也不会用静态值替代。</p>
 						</PanelBody>
 					</Panel>
@@ -160,35 +129,234 @@ export function WatchlistPage({ catalog }: { readonly catalog: MarketCatalogQuer
 					setActiveOverlay(null);
 				}}
 				onClose={() => setActiveOverlay(null)}
-				addForm={
-					<div className="space-y-4">
-						<label className="grid gap-1 text-xs text-(--color-foreground-tertiary)">
-							标的内部 ID
-							<input
-								aria-label="标的内部 ID"
-								inputMode="numeric"
-								value={draftId}
-								onChange={(event) => setDraftId(event.currentTarget.value)}
-								className="rounded-md border border-(--color-border-primary) bg-(--color-surface-1) px-3 py-2 text-sm text-(--color-foreground)"
-								placeholder="例如 1000001"
-							/>
-						</label>
-						{feedback && (
-							<p role="alert" className="text-xs text-(--color-risk-warning-fg)">
-								{feedback}
-							</p>
-						)}
-						<button
-							type="button"
-							onClick={addInstrument}
-							disabled={catalog.isLoading}
-							className="w-full rounded-md bg-(--color-accent) px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-						>
-							确认添加
-						</button>
-					</div>
-				}
+				addForm={<WatchlistSearchForm savedIds={ids} searchCatalog={searchCatalog} onAdd={addInstrument} />}
 			/>
 		</>
+	);
+}
+
+function WatchlistEntryRow({
+	instrumentId,
+	onRemove,
+	resolveEntry,
+}: {
+	readonly instrumentId: number;
+	readonly onRemove: () => void;
+	readonly resolveEntry: WatchlistEntryFn;
+}) {
+	const entry = useQuery({
+		queryKey: ["watchlist-entry", instrumentId],
+		queryFn: () => resolveEntry(instrumentId),
+		retry: false,
+	});
+
+	if (entry.isError) {
+		const unknown = entry.error instanceof ApiError && entry.error.status === 404;
+		return (
+			<div
+				data-info-level="l3"
+				data-info-unit="watchlist-row"
+				data-row-state={unknown ? "unknown" : "error"}
+				className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+			>
+				<div>
+					{unknown ? (
+						<p>
+							目录中未找到标的 <span className="font-mono">ID {instrumentId}</span>
+						</p>
+					) : (
+						<p>
+							标的 <span className="font-mono">ID {instrumentId}</span> 解析失败（网络或服务错误）
+						</p>
+					)}
+					<p className="mt-1 text-xs text-(--color-foreground-tertiary)">
+						{unknown ? "该对象不会从清单中静默消失；可移除或保留待目录恢复。" : "该对象保留在清单中，可重试解析。"}
+					</p>
+				</div>
+				<div className="flex shrink-0 items-center gap-2">
+					{!unknown && (
+						<button
+							type="button"
+							onClick={() => void entry.refetch()}
+							className="rounded-md border border-(--color-border-subtle) px-2 py-1 text-xs hover:bg-(--color-interaction-hover-subtle-bg)"
+						>
+							重试
+						</button>
+					)}
+					<button
+						type="button"
+						aria-label={`移除 未知标的 ${instrumentId}`}
+						onClick={onRemove}
+						className="rounded-md border border-(--color-border-subtle) px-2 py-1 text-xs hover:bg-(--color-interaction-hover-subtle-bg)"
+					>
+						移除
+					</button>
+				</div>
+			</div>
+		);
+	}
+
+	if (entry.data === undefined) {
+		return (
+			<div data-info-level="l3" data-info-unit="watchlist-row" className="px-4 py-3 text-sm">
+				<span className="text-(--color-foreground-tertiary)">正在按精确身份解析 ID {instrumentId}…</span>
+			</div>
+		);
+	}
+
+	const instrument = entry.data;
+	return (
+		<div
+			data-info-level="l3"
+			data-info-unit="watchlist-row"
+			data-row-state={instrument.is_active ? "active" : "delisted"}
+			className="grid grid-cols-[minmax(0,1fr)_8rem_6rem_auto] items-center gap-3 px-4 py-3 text-sm"
+		>
+			<div>
+				<a href={`/instruments/${instrument.instrument_id}`} className="font-medium hover:text-(--color-accent)">
+					{instrument.name}
+				</a>
+				<p className="font-mono text-xs text-(--color-foreground-tertiary)">ID {instrument.instrument_id}</p>
+			</div>
+			<span className="font-mono">
+				{instrument.ticker} · {instrument.exchange}
+			</span>
+			<span className="flex items-center gap-1 text-(--color-foreground-tertiary)">
+				{instrument.asset_class}
+				{instrument.is_active ? null : (
+					<span className="rounded bg-(--color-risk-warning)/10 px-1 py-0.5 text-xs text-(--color-risk-warning)">
+						已退出
+					</span>
+				)}
+			</span>
+			<button
+				type="button"
+				aria-label={`移除 ${instrument.name}`}
+				onClick={onRemove}
+				className="rounded-md border border-(--color-border-subtle) px-2 py-1 text-xs hover:bg-(--color-interaction-hover-subtle-bg)"
+			>
+				移除
+			</button>
+		</div>
+	);
+}
+
+function WatchlistSearchForm({
+	onAdd,
+	savedIds,
+	searchCatalog,
+}: {
+	readonly onAdd: (instrumentId: number) => void;
+	readonly savedIds: readonly number[];
+	readonly searchCatalog: WatchlistSearchFn;
+}) {
+	const [draft, setDraft] = useState("");
+	const [term, setTerm] = useState("");
+	const results = useInfiniteQuery({
+		queryKey: ["watchlist-search", term],
+		queryFn: ({ pageParam }) => searchCatalog(term, pageParam),
+		initialPageParam: 0,
+		getNextPageParam: (lastPage, allPages) => {
+			const loaded = allPages.reduce((count, page) => count + page.items.length, 0);
+			return loaded < lastPage.total && lastPage.items.length > 0 ? loaded : undefined;
+		},
+		enabled: term.length > 0,
+		retry: false,
+	});
+	const items = results.data?.pages.flatMap((page) => page.items) ?? [];
+	const total = results.data?.pages.at(0)?.total ?? 0;
+
+	function submit(event: React.FormEvent): void {
+		event.preventDefault();
+		const next = draft.trim();
+		if (next === term) {
+			// 同值重提交：React 状态 bailout 后仍要真实重取（错误态恢复路径）。
+			void results.refetch();
+			return;
+		}
+		setTerm(next);
+	}
+
+	return (
+		<div className="space-y-4">
+			<form className="grid gap-1" onSubmit={submit}>
+				<label className="grid gap-1 text-xs text-(--color-foreground-tertiary)">
+					搜索代码或名称
+					<input
+						aria-label="搜索代码或名称"
+						value={draft}
+						onChange={(event) => setDraft(event.currentTarget.value)}
+						className="rounded-md border border-(--color-border-primary) bg-(--color-surface-1) px-3 py-2 text-sm text-(--color-foreground)"
+						placeholder="例如 贵州茅台 / 600519 / 510300.SH"
+					/>
+				</label>
+				<button
+					type="submit"
+					disabled={draft.trim().length === 0}
+					className="w-full rounded-md bg-(--color-accent) px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+				>
+					检索
+				</button>
+			</form>
+			{term.length > 0 && results.isLoading && (
+				<p className="text-xs text-(--color-foreground-tertiary)">正在检索 metadata 目录…</p>
+			)}
+			{term.length > 0 && results.isError && (
+				<p role="alert" className="text-xs text-(--color-risk-warning-fg)">
+					检索失败：{results.error instanceof Error ? results.error.message : "未知错误"}。清单未修改，可重试。
+				</p>
+			)}
+			{term.length > 0 && !results.isLoading && !results.isError && items.length === 0 && (
+				<p role="alert" className="text-xs text-(--color-foreground-tertiary)">
+					没有匹配的标的；请调整名称或代码后重试。
+				</p>
+			)}
+			{term.length > 0 && !results.isLoading && !results.isError && items.length > 0 && (
+				<>
+					<p className="text-xs text-(--color-foreground-tertiary)" data-testid="watchlist-search-evidence">
+						共 {total} 项 · 已加载 {items.length}
+					</p>
+					<ul className="grid gap-2" aria-label="候选结果">
+						{items.map((candidate) => (
+							<li
+								key={candidate.instrument_id}
+								className="flex items-center justify-between gap-3 rounded-md border border-(--color-border-subtle) px-3 py-2"
+							>
+								<div className="min-w-0">
+									<p className="truncate text-sm font-medium">{candidate.name}</p>
+									<p className="truncate font-mono text-xs text-(--color-foreground-tertiary)">
+										{candidate.ticker} · {candidate.exchange} · {candidate.asset_class}
+										{candidate.is_active ? "" : " · 已退出"}
+									</p>
+								</div>
+								<button
+									type="button"
+									aria-label={`加入自选 ${candidate.name}`}
+									disabled={savedIds.includes(candidate.instrument_id)}
+									onClick={() => {
+										onAdd(candidate.instrument_id);
+										setDraft("");
+										setTerm("");
+									}}
+									className="shrink-0 rounded-md border border-(--color-border-subtle) px-2 py-1 text-xs hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-50"
+								>
+									{savedIds.includes(candidate.instrument_id) ? "已在自选" : "加入自选"}
+								</button>
+							</li>
+						))}
+					</ul>
+					{results.hasNextPage && (
+						<button
+							type="button"
+							onClick={() => void results.fetchNextPage()}
+							disabled={results.isFetchingNextPage}
+							className="w-full rounded-md border border-(--color-border-subtle) px-3 py-2 text-xs hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-50"
+						>
+							{results.isFetchingNextPage ? "正在加载…" : "加载更多"}
+						</button>
+					)}
+				</>
+			)}
+		</div>
 	);
 }

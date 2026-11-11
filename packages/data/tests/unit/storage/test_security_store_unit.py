@@ -677,6 +677,111 @@ class TestInstrumentReader:
         assert result.height == 101
         assert result.filter(pl.col("list_date").is_not_null()).height == 1
 
+    def test_find_securities_with_search(self) -> None:
+        """Search matches name, bare ticker, or source ticker substring."""
+        rows = [
+            (100000001, "600000", "600000.SH", "浦发银行"),
+            (100000002, "000001", "000001.SZ", "平安银行"),
+            (200000001, "510300", "510300.SH", "沪深300ETF"),
+        ]
+        for instrument_id, ticker, source_ticker, name in rows:
+            self.client.execute(
+                """INSERT INTO instrument (
+                    instrument_id, ticker, name, exchange, asset_class, list_date
+                )
+                VALUES (?, ?, ?, 'SSE', 'stock', '1999-11-10')""",
+                [instrument_id, ticker, name],
+            )
+            self.client.execute(
+                """INSERT INTO instrument_mapping
+                (instrument_id, source, source_ticker, effective_from)
+                VALUES (?, 'tushare', ?, '1999-11-10')""",
+                [instrument_id, source_ticker],
+            )
+        self.client.commit()
+
+        # 名称子串
+        assert self.reader.find_securities(SecurityQuery(search="银行"))[
+            "instrument_id"
+        ].to_list() == [100000001, 100000002]
+        # 裸代码前缀
+        assert self.reader.find_securities(SecurityQuery(search="6000"))[
+            "instrument_id"
+        ].to_list() == [100000001]
+        # 源代码完整形式
+        assert self.reader.find_securities(SecurityQuery(search="510300.SH"))[
+            "instrument_id"
+        ].to_list() == [200000001]
+        # 无命中
+        assert self.reader.find_securities(SecurityQuery(search="不存在")).is_empty()
+
+    def test_find_securities_search_treats_like_wildcards_literally(self) -> None:
+        """Search escapes LIKE wildcards so `%`/`_` match literally."""
+        self.client.execute(
+            """INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100000001, '600000', '浦发银行', 'SSE', 'stock', '1999-11-10')"""
+        )
+        self.client.commit()
+
+        assert self.reader.find_securities(SecurityQuery(search="%")).is_empty()
+        assert self.reader.find_securities(SecurityQuery(search="_")).is_empty()
+
+    def test_find_securities_orders_by_instrument_id(self) -> None:
+        """Enumeration order is deterministic regardless of insertion order."""
+        # 乱序插入：无 ORDER BY 时 SQLite 按 rowid（插入序）返回降序。
+        for instrument_id in (100000003, 100000001, 100000002):
+            self.client.execute(
+                """INSERT INTO instrument (
+                    instrument_id, ticker, name, exchange, asset_class, list_date
+                )
+                VALUES (?, ?, ?, 'SSE', 'stock', '1999-11-10')""",
+                [instrument_id, f"60000{instrument_id % 10}", f"证券{instrument_id}"],
+            )
+        self.client.commit()
+
+        result = self.reader.find_securities(SecurityQuery(asset_class="stock"))
+
+        assert result["instrument_id"].to_list() == [100000001, 100000002, 100000003]
+
+    def test_find_securities_search_matches_alias_mapping_rows(self) -> None:
+        """Search reaches non-primary (alias) mapping rows, not only the best row."""
+        self.client.execute(
+            """INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100000001, '001872', '北交所改名样本', 'SZSE',
+                    'stock', '1990-01-01')"""
+        )
+        # 老码为 is_primary=0 的别名映射，新码为主映射（择优单行 JOIN 只带主码）。
+        self.client.execute(
+            """INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker,
+             effective_from, effective_to, is_primary)
+            VALUES
+                (100000001, 'tushare', '000022.SZ', '1990-01-01', '2018-12-25', 0),
+                (100000001, 'tushare', '001872.SZ', '2018-12-25', NULL, 1)"""
+        )
+        # 其他来源独有代码：默认 source 检索不应命中。
+        self.client.execute(
+            """INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from, is_primary)
+            VALUES (100000001, 'other', 'OTHERONLY.SZ', '1990-01-01', 1)"""
+        )
+        self.client.commit()
+
+        # 别名老码可检索（与 source_tickers 宽 JOIN 语义对齐）。
+        assert self.reader.find_securities(SecurityQuery(search="000022.SZ"))[
+            "instrument_id"
+        ].to_list() == [100000001]
+        # 主码仍可检索。
+        assert self.reader.find_securities(SecurityQuery(search="001872.SZ"))[
+            "instrument_id"
+        ].to_list() == [100000001]
+        # 其他 source 的映射不进入默认（tushare）检索。
+        assert self.reader.find_securities(SecurityQuery(search="OTHERONLY")).is_empty()
+
     def test_find_securities_with_pit_and_min_list_days(self) -> None:
         """Security query applies source PIT and minimum listing age together."""
         for instrument_id, ticker, source_ticker, list_date in [

@@ -128,6 +128,7 @@ _SECURITY_QUERY_FILTER_NAMES = frozenset(
         "is_active",
         "asof",
         "min_list_days",
+        "search",
     }
 )
 
@@ -426,4 +427,5 @@ def _security_query_from_filters(filters: dict[str, object]) -> SecurityQuery:
         is_active=cast(bool | None, filters.get("is_active", True)),
         asof=cast(str | None, filters.get("asof")),
         min_list_days=cast(int | None, filters.get("min_list_days")),
+        search=cast(str | None, filters.get("search")),
     )

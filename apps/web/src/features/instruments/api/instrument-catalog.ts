@@ -8,6 +8,7 @@ export type InstrumentCatalogFilter = {
 	readonly isActive?: boolean;
 	readonly limit?: number;
 	readonly offset?: number;
+	readonly search?: string;
 };
 
 export type InstrumentCatalog = {
@@ -24,6 +25,7 @@ export async function fetchInstrumentCatalog(filter: InstrumentCatalogFilter = {
 				...(filter.assetClass ? { asset_class: filter.assetClass } : {}),
 				...(filter.exchange ? { exchange: filter.exchange } : {}),
 				...(filter.isActive === undefined ? {} : { is_active: filter.isActive }),
+				...(filter.search ? { search: filter.search } : {}),
 				limit,
 				offset,
 			},

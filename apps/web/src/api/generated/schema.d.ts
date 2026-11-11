@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: acf557fb00c50ddbe97ff2968c8e33656aa8b8ba9f9385bce9187b92cf38de90
+ * Schema SHA-256: 937ffb89cccc15081a336bcc34f01b8e4c9b23e905bdec4dcde38a98574a35e2
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -2419,6 +2419,7 @@ export interface paths {
          *         asset_class: 资产类别过滤 (可选)
          *         exchange: 交易所过滤 (可选)
          *         is_active: 活跃状态过滤 (可选)
+         *         search: 名称/代码子串检索 (可选，默认不过滤)
          *         pagination: 分页参数
          *         facade: MetadataQueryFacade 依赖注入
          *
@@ -26431,6 +26432,7 @@ export interface operations {
                 asset_class?: components["schemas"]["AssetClass"] | null;
                 exchange?: string | null;
                 is_active?: boolean | null;
+                search?: string | null;
                 /** @description 每页数量 */
                 limit?: number;
                 /** @description 偏移量 */

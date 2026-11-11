@@ -21,7 +21,7 @@ describe("market information hierarchy", () => {
 		await screen.findByText("贵州茅台");
 		expect(document.querySelector("[data-info-unit='market-boundary']")).toBeInTheDocument();
 		expect(document.querySelector("[data-info-unit='instrument-directory']")).toBeInTheDocument();
-		expect(document.querySelectorAll("[data-info-unit='instrument-row']")).toHaveLength(4);
+		expect(document.querySelectorAll("[data-info-unit='instrument-row']")).toHaveLength(5);
 	});
 
 	it("annotates A-share coverage and identity rows", async () => {
