@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 6521149171741ff699791bd8c315db696c7c3e946687d7f66302c481dfd4cb4b
+ * Schema SHA-256: 7d4d9f56463c77df1a21f4f693a633f15111ce02f5050747b84f8a58ca0e8d57
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -1047,6 +1047,26 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "get /api/v1/selections/research-cases": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/selections/research-cases/{case_id}": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "get /api/v1/selections/runs": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -1068,6 +1088,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/selections/runs/{run_id}": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/selections/runs/{run_id}/research-cases": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -2537,6 +2567,18 @@ export const operationRequestContracts = {
       "path": ["snapshot_id"],
     },
   },
+  "get /api/v1/selections/research-cases": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["limit"],
+    },
+  },
+  "get /api/v1/selections/research-cases/{case_id}": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["case_id"],
+    },
+  },
   "get /api/v1/selections/runs": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
@@ -2553,6 +2595,13 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["run_id"],
+    },
+  },
+  "get /api/v1/selections/runs/{run_id}/research-cases": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["run_id"],
+      "query": ["limit"],
     },
   },
   "get /api/v1/source/{source}/{dataset}": {

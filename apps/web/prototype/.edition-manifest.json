@@ -43,7 +43,10 @@
     },
     "note": "Gate score and release UX score are separate. Do not compare manifest near-10 scores with release UX heuristic score. Numeric page scores were not manually inflated after remediation."
   },
-  "reactOnlyRoutes": [],
+  "reactOnlyRoutes": [
+    { "route": "/research/cases" },
+    { "route": "/research/cases/$id" }
+  ],
   "stateCoverageAppliedAt": "2026-04-02",
   "iterationCompletedAt": "2026-04-05",
   "iterationV2CompletedAt": "2026-04-05",

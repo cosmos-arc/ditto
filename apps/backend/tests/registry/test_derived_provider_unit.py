@@ -11,7 +11,11 @@ from ditto_application.processes.materialization.orchestrator import (
 )
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.source import SourceDataPort
-from ditto_application.research_case_contracts import ResearchCaseFactory
+from ditto_application.research_case_contracts import (
+    ResearchCaseFactory,
+    ResearchCaseReader,
+    ResearchCaseRecorder,
+)
 from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.infra import NotificationProvider
 from ditto_data.di import (
@@ -121,6 +125,14 @@ class _ProtocolAdapterProvider(Provider):
     @provide
     def research_case_factory(self) -> ResearchCaseFactory:
         return MagicMock(spec=ResearchCaseFactory)
+
+    @provide
+    def research_case_recorder(self) -> ResearchCaseRecorder:
+        return MagicMock(spec=ResearchCaseRecorder)
+
+    @provide
+    def research_case_reader(self) -> ResearchCaseReader:
+        return MagicMock(spec=ResearchCaseReader)
 
     @provide
     def source_data_port(self) -> SourceDataPort:
@@ -239,6 +251,7 @@ class TestStorageProviderWiring:
             "research_campaign_reader_port",
             "research_campaign_writer",
             "research_campaign_writer_port",
+            "research_case_store",
         }
         assert expected == provide_methods
 

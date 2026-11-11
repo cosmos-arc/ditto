@@ -145,15 +145,24 @@ function ResearchCaseCreation({ run }: { readonly run: SelectionRun }) {
 				</p>
 			)}
 			{view && (
-				<p
-					role="status"
-					className="break-all rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) p-2"
-				>
-					<span className="font-mono">{view.caseId}</span>
-					<span className="ml-2 text-(--color-foreground-tertiary)">
-						{view.degraded ? `降级 · 缺输入：${view.missingInputs || "未声明"}` : "就绪"}
-					</span>
-				</p>
+				<div className="space-y-2">
+					<p
+						role="status"
+						className="break-all rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-1) p-2"
+					>
+						<span className="font-mono">{view.caseId}</span>
+						<span className="ml-2 text-(--color-foreground-tertiary)">
+							{view.degraded ? `降级 · 缺输入：${view.missingInputs || "未声明"}` : "就绪"}
+						</span>
+					</p>
+					{/* 交接已持久化：研究入口可重开该用例，不需要 Agent 或复制 ID。 */}
+					<a
+						className="inline-block rounded-(--radius-sm) border border-(--color-border-subtle) px-2 py-1.5 hover:bg-(--color-interaction-hover-subtle-bg)"
+						href={`/research/cases/${encodeURIComponent(view.caseId)}`}
+					>
+						在研究中打开
+					</a>
+				</div>
 			)}
 		</div>
 	);
@@ -172,26 +181,33 @@ export function SelectionRunDetail({
 				title="SelectionRun 证据"
 				subtitle={run ? `${run.asset_kind} · ${run.status}` : "exact run required"}
 			/>
-			<PanelBody className="space-y-5 overflow-y-auto p-4">
+			{/* 运行身份常驻面板顶部（不进滚动流）：滚动容器首块在无等待截图下
+				有 paint 丢失前科（视觉门 V1'），固定区不受滚动重绘影响。 */}
+			{run && (
+				<div data-info-unit="selection-identity" className="shrink-0 border-b border-(--color-border-subtle) px-4 py-3">
+					<section aria-label="运行身份" className="space-y-2">
+						<p className="break-all font-mono text-xs leading-5 text-(--color-foreground-secondary)">
+							{compactIdentity(run.run_id)}
+						</p>
+						<dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+							<dt className="text-(--color-foreground-tertiary)">as of</dt>
+							<dd>{new Date(run.as_of).toLocaleString("zh-CN")}</dd>
+							<dt className="text-(--color-foreground-tertiary)">spec</dt>
+							<dd>
+								{run.spec_id} · v{run.spec_version}
+							</dd>
+							<dt className="text-(--color-foreground-tertiary)">seed</dt>
+							<dd className="font-mono">{run.seed}</dd>
+							<dt className="text-(--color-foreground-tertiary)">universe</dt>
+							<dd className="break-all font-mono">{run.universe_snapshot_id}</dd>
+						</dl>
+					</section>
+				</div>
+			)}
+			<PanelBody className="space-y-5 overflow-y-auto p-4" reveal={false}>
 				{run ? (
 					<>
-						<section aria-label="运行身份" className="space-y-2">
-							<p className="font-mono text-xs text-(--color-foreground-secondary)">{compactIdentity(run.run_id)}</p>
-							<dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-								<dt className="text-(--color-foreground-tertiary)">as of</dt>
-								<dd>{new Date(run.as_of).toLocaleString("zh-CN")}</dd>
-								<dt className="text-(--color-foreground-tertiary)">spec</dt>
-								<dd>
-									{run.spec_id} · v{run.spec_version}
-								</dd>
-								<dt className="text-(--color-foreground-tertiary)">seed</dt>
-								<dd className="font-mono">{run.seed}</dd>
-								<dt className="text-(--color-foreground-tertiary)">universe</dt>
-								<dd className="break-all font-mono">{run.universe_snapshot_id}</dd>
-							</dl>
-						</section>
-
-						<section aria-labelledby="selection-lineage" className="border-t border-(--color-border-subtle) pt-4">
+						<section aria-labelledby="selection-lineage" className="pt-1">
 							<h3
 								id="selection-lineage"
 								className="text-xs font-semibold tracking-wide text-(--color-foreground-secondary)"
@@ -283,6 +299,26 @@ export function SelectionRunDetail({
 							<p>{truthLabel(diff.data_changed, "数据快照已变化", "数据快照未变化")}</p>
 							<p>{truthLabel(diff.industry_rotation_changed, "行业轮动已变化", "行业轮动未变化")}</p>
 							<p>{truthLabel(diff.spec_changed, "SelectionSpec 已变化", "SelectionSpec 未变化")}</p>
+							<p>
+								{diff.added_candidate_ids.length > 0 && (
+									<span className="block">
+										新增入选 <span className="font-mono">{diff.added_candidate_ids.join("、")}</span>
+									</span>
+								)}
+								{diff.removed_candidate_ids.length > 0 && (
+									<span className="block">
+										退出候选 <span className="font-mono">{diff.removed_candidate_ids.join("、")}</span>
+									</span>
+								)}
+								{diff.added_candidate_ids.length === 0 && diff.removed_candidate_ids.length === 0 && (
+									<span className="text-(--color-foreground-tertiary)">名单未变化</span>
+								)}
+							</p>
+							{diff.exclusion_changes.map((change) => (
+								<p key={change.instrument_id} className="font-mono">
+									{change.instrument_id} · {change.before_reason ?? "入选"} → {change.after_reason ?? "入选"}
+								</p>
+							))}
 							{diff.rank_changes.map((change) => (
 								<p key={change.instrument_id} className="font-mono">
 									{change.instrument_id} · {change.before_rank} → {change.after_rank}

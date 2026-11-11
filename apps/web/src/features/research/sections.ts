@@ -18,6 +18,7 @@ export const RESEARCH_SECTIONS: readonly ResearchSection[] = [
 	{ label: "实验", path: "/research/experiments" },
 	{ label: "回测", path: "/research/backtests" },
 	{ label: "策略", path: "/research/strategies" },
+	{ label: "用例", path: "/research/cases" },
 	{ label: "Agent Lab", path: "/research/agent" },
 	{ label: "审查", path: "/research/reviews" },
 ] as const;

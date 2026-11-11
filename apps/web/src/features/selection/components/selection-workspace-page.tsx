@@ -4,6 +4,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { CatalogLayout } from "@/features/shell";
 import { ErrorState } from "@/lib/error-boundary";
+import { sessionCalendarDate } from "@/lib/iso-calendar-date";
 import { StaleIndicator } from "@/lib/stale-indicator";
 import { compareSelectionRuns, createSelectionRun, getSelectionRun, listSelectionRuns, selectionKeys } from "../api";
 import { SelectionRunDetail } from "./selection-run-detail";
@@ -19,23 +20,43 @@ function shortRunId(value: string): string {
 
 export function SelectionWorkspacePage({
 	initialSpecId = DEFAULT_SELECTION_SPEC_ID,
+	initialRunId,
+	initialTab,
 	onSpecIdChange,
+	onRunIdChange,
+	onTabChange,
 }: {
 	/** 从 URL/导航携带的 spec 身份：刷新或返回后恢复运行历史范围。 */
 	readonly initialSpecId?: string | undefined;
+	/** 从 URL/研究用例带回的固定运行身份：重开旧证据而不是自动选最新。 */
+	readonly initialRunId?: string | undefined;
+	/** 从 URL 恢复的结果视图（候选/排除）。 */
+	readonly initialTab?: ResultsTab | undefined;
 	readonly onSpecIdChange?: (specId: string) => void;
+	readonly onRunIdChange?: (runId: string | undefined) => void;
+	readonly onTabChange?: (tab: ResultsTab) => void;
 }) {
 	const queryClient = useQueryClient();
 	const [specId, setSpecId] = useState(initialSpecId);
-	const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-	// 同路由 search 变化（浏览器返回/前进、站内链接切换 ?spec=）不重挂载
+	const [selectedRunId, setSelectedRunId] = useState<string | null>(initialRunId ?? null);
+	// 用户显式放弃固定运行（未找到）后回到自动选择，直到宿主给出新身份。
+	const [dismissedRunId, setDismissedRunId] = useState<string | null>(null);
+	const pinnedRunId = initialRunId !== undefined && initialRunId !== dismissedRunId ? initialRunId : undefined;
+	// 同路由 search 变化（浏览器返回/前进、站内链接切换 ?spec=/?run=）不重挂载
 	// 组件：受控跟随宿主传入的身份；用户清空输入框时宿主回 undefined，
 	// 保留清空状态而不是重置回默认（issue 740 F4）。
 	useEffect(() => {
 		if (initialSpecId !== undefined) setSpecId(initialSpecId);
 	}, [initialSpecId]);
+	useEffect(() => {
+		setSelectedRunId(initialRunId ?? null);
+		if (initialRunId !== undefined) setDismissedRunId(null);
+	}, [initialRunId]);
 	const [compareIds, setCompareIds] = useState<readonly string[]>([]);
-	const [tab, setTab] = useState<ResultsTab>("candidates");
+	const [tab, setTab] = useState<ResultsTab>(initialTab === "exclusions" ? "exclusions" : "candidates");
+	useEffect(() => {
+		setTab(initialTab === "exclusions" ? "exclusions" : "candidates");
+	}, [initialTab]);
 	const [feedback, setFeedback] = useState<string | null>(null);
 	const normalizedSpecId = specId.trim();
 
@@ -45,10 +66,13 @@ export function SelectionWorkspacePage({
 		enabled: normalizedSpecId.length > 0,
 		staleTime: 30_000,
 	});
+	// 自动选中只在无固定运行时发生：URL 显式重开一条运行时，历史缺失或
+	// GET 失败都保持诚实状态，绝不静默换成最新运行（旧证据不偷换）。
 	useEffect(() => {
+		if (pinnedRunId !== undefined) return;
 		const first = history.data?.[0];
 		if (first && !history.data?.some((run) => run.run_id === selectedRunId)) setSelectedRunId(first.run_id);
-	}, [history.data, selectedRunId]);
+	}, [history.data, pinnedRunId, selectedRunId]);
 
 	const exactRun = useQuery({
 		queryKey: selectionKeys.run(selectedRunId ?? "none"),
@@ -56,6 +80,14 @@ export function SelectionWorkspacePage({
 		enabled: selectedRunId !== null,
 		staleTime: Number.POSITIVE_INFINITY,
 	});
+	// 重开一条固定运行时同步 spec 家族：历史与反馈跟随该运行的条件身份。
+	useEffect(() => {
+		const loadedSpec = exactRun.data?.spec_id;
+		if (loadedSpec && loadedSpec !== specId) {
+			setSpecId(loadedSpec);
+			onSpecIdChange?.(loadedSpec);
+		}
+	}, [exactRun.data?.spec_id, onSpecIdChange, specId]);
 
 	const comparison = useMutation({
 		mutationFn: (ids: readonly [string, string]) => compareSelectionRuns(ids[0], ids[1]),
@@ -64,7 +96,7 @@ export function SelectionWorkspacePage({
 		mutationFn: createSelectionRun,
 		onSuccess: async (receipt) => {
 			commitSpecId(receipt.selection_run.spec_id);
-			setSelectedRunId(receipt.selection_run.run_id);
+			commitRunId(receipt.selection_run.run_id);
 			// 保存的条件（SelectionSpec，用户命名的可重跑身份）与固定结果
 			// （SelectionRun，内容寻址身份）分别展示；live 车道的知识截止
 			// 按发起时刻签发，重复提交各得一个固定身份。
@@ -81,6 +113,16 @@ export function SelectionWorkspacePage({
 		onSpecIdChange?.(next);
 	}
 
+	function commitRunId(next: string): void {
+		setSelectedRunId(next);
+		onRunIdChange?.(next);
+	}
+
+	function selectTab(next: ResultsTab): void {
+		setTab(next);
+		onTabChange?.(next);
+	}
+
 	function toggleCompare(runId: string): void {
 		setCompareIds((current) => {
 			if (current.includes(runId)) return current.filter((value) => value !== runId);
@@ -91,6 +133,9 @@ export function SelectionWorkspacePage({
 
 	const run = exactRun.data ?? null;
 	const currentItems = tab === "candidates" ? run?.candidates : run?.exclusions;
+	const pinnedRunMissing = pinnedRunId !== undefined && exactRun.isError;
+	// 观察日随运行决策时点冻结：下钻图表以此日为锚，重开旧运行仍是旧观察日。
+	const runObserveDate = run ? sessionCalendarDate(run.as_of) : null;
 
 	return (
 		<CatalogLayout
@@ -149,6 +194,28 @@ export function SelectionWorkspacePage({
 							{createRun.error.message}
 						</p>
 					)}
+					{pinnedRunMissing && pinnedRunId !== undefined && (
+						<div role="alert" className="border-b border-(--color-border-subtle) px-4 py-3 text-xs leading-5">
+							<p className="font-medium text-(--color-risk-critical-fg)">未找到该固定运行</p>
+							<p className="mt-1 break-all font-mono text-(--color-foreground-tertiary)">{pinnedRunId}</p>
+							<p className="mt-1 text-(--color-foreground-tertiary)">
+								运行历史只保存已创建的固定结果；链接可能指向从未创建的运行，也可能是后端暂不可达。不会自动替换为最新运行。
+							</p>
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								className="mt-2"
+								onClick={() => {
+									setDismissedRunId(pinnedRunId);
+									setSelectedRunId(null);
+									onRunIdChange?.(undefined);
+								}}
+							>
+								回到该 spec 最新运行
+							</Button>
+						</div>
+					)}
 
 					<section aria-labelledby="selection-history" className="border-b border-(--color-border-subtle) px-4 py-3">
 						<div className="mb-2 flex items-center justify-between">
@@ -182,11 +249,7 @@ export function SelectionWorkspacePage({
 											checked={compareIds.includes(item.run_id)}
 											onChange={() => toggleCompare(item.run_id)}
 										/>
-										<button
-											type="button"
-											className="min-w-0 flex-1 text-left"
-											onClick={() => setSelectedRunId(item.run_id)}
-										>
+										<button type="button" className="min-w-0 flex-1 text-left" onClick={() => commitRunId(item.run_id)}>
 											<span className="block font-mono text-xs font-medium">{shortRunId(item.run_id)}</span>
 											<span className="mt-1 block text-[11px] text-(--color-foreground-tertiary)">
 												{new Date(item.as_of).toLocaleString("zh-CN")} · {item.candidates.length} in /{" "}
@@ -219,7 +282,7 @@ export function SelectionWorkspacePage({
 									variant={tab === "candidates" ? "secondary" : "ghost"}
 									role="tab"
 									aria-selected={tab === "candidates"}
-									onClick={() => setTab("candidates")}
+									onClick={() => selectTab("candidates")}
 								>
 									入选 {run?.candidates.length ?? 0}
 								</Button>
@@ -229,7 +292,7 @@ export function SelectionWorkspacePage({
 									variant={tab === "exclusions" ? "secondary" : "ghost"}
 									role="tab"
 									aria-selected={tab === "exclusions"}
-									onClick={() => setTab("exclusions")}
+									onClick={() => selectTab("exclusions")}
 								>
 									排除 {run?.exclusions.length ?? 0}
 								</Button>
@@ -266,12 +329,19 @@ export function SelectionWorkspacePage({
 												<td className="px-3 py-3">
 													<a
 														className="font-medium hover:text-(--color-accent)"
-														href={`/instruments/${encodeURIComponent(candidate.instrument_id)}?tab=technical&selectionRunId=${encodeURIComponent(run.run_id)}`}
+														href={`/instruments/${encodeURIComponent(candidate.instrument_id)}?tab=chart&selectionRunId=${encodeURIComponent(run.run_id)}${runObserveDate ? `&observeDate=${runObserveDate}` : ""}`}
 													>
 														{candidate.instrument_name}
 													</a>
 													<span className="mt-1 block font-mono text-[11px] text-(--color-foreground-tertiary)">
-														{candidate.instrument_id}
+														{candidate.instrument_id}{" "}
+														<a
+															aria-label={`技术证据 ${candidate.instrument_id}`}
+															className="underline decoration-dotted underline-offset-2 hover:text-(--color-accent)"
+															href={`/instruments/${encodeURIComponent(candidate.instrument_id)}?tab=technical&selectionRunId=${encodeURIComponent(run.run_id)}`}
+														>
+															技术证据
+														</a>
 													</span>
 												</td>
 												<td className="px-3 py-3 font-mono text-sm">{candidate.score.toFixed(4)}</td>
@@ -305,7 +375,7 @@ export function SelectionWorkspacePage({
 											<h3 className="font-medium">
 												<a
 													className="hover:text-(--color-accent)"
-													href={`/instruments/${encodeURIComponent(item.instrument_id)}?tab=technical&selectionRunId=${encodeURIComponent(run.run_id)}`}
+													href={`/instruments/${encodeURIComponent(item.instrument_id)}?tab=chart&selectionRunId=${encodeURIComponent(run.run_id)}${runObserveDate ? `&observeDate=${runObserveDate}` : ""}`}
 												>
 													{item.instrument_name}
 												</a>{" "}

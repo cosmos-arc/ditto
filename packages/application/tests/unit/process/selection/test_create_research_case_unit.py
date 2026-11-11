@@ -48,6 +48,14 @@ class _Factory:
         return ResearchCase(**asdict(material))
 
 
+class _Recorder:
+    def __init__(self) -> None:
+        self.saved: list[ResearchCaseView] = []
+
+    def save(self, case: ResearchCaseView) -> None:
+        self.saved.append(case)
+
+
 def _run() -> SelectionRun:
     from datetime import UTC, datetime
 
@@ -94,7 +102,7 @@ def _run() -> SelectionRun:
 
 def test_create_research_case_preserves_exact_selection_lineage() -> None:
     run = _run()
-    process = CreateResearchCaseFromSelection(_Reader(run), _Factory())
+    process = CreateResearchCaseFromSelection(_Reader(run), _Factory(), _Recorder())
 
     case = process.create(
         CreateResearchCaseRequest(
@@ -116,13 +124,43 @@ def test_create_research_case_preserves_exact_selection_lineage() -> None:
     assert case.knowledge_cutoff == run.knowledge_cutoff
 
 
+def test_create_research_case_persists_the_handed_off_case() -> None:
+    run = _run()
+    recorder = _Recorder()
+    process = CreateResearchCaseFromSelection(_Reader(run), _Factory(), recorder)
+
+    case = process.create(
+        CreateResearchCaseRequest(run.run_id, "Persist the hypothesis for research.")
+    )
+
+    # 交接是持久的：创建即在 append-only 存储落一条内容寻址用例，
+    # 之后的读取不依赖创建时所在的页面或会话。
+    assert [item.case_id for item in recorder.saved] == [case.case_id]
+
+
+def test_create_research_case_replay_re_saves_the_same_identity() -> None:
+    run = _run()
+    recorder = _Recorder()
+    process = CreateResearchCaseFromSelection(_Reader(run), _Factory(), recorder)
+
+    first = process.create(
+        CreateResearchCaseRequest(run.run_id, "One replayable case.")
+    )
+    second = process.create(
+        CreateResearchCaseRequest(run.run_id, "One replayable case.")
+    )
+
+    assert first.case_id == second.case_id
+    assert [item.case_id for item in recorder.saved] == [first.case_id, second.case_id]
+
+
 def test_create_research_case_allows_live_lane_knowledge_after_as_of() -> None:
     # #583：活体日频车道 knowledge 晚于 as_of 的已保存运行可建 ResearchCase——
     # 因果序只保留 publication ≤ knowledge，重放车道由上游钉死。
     from datetime import timedelta
 
     run = replace(_run(), knowledge_cutoff=_run().as_of + timedelta(days=1))
-    process = CreateResearchCaseFromSelection(_Reader(run), _Factory())
+    process = CreateResearchCaseFromSelection(_Reader(run), _Factory(), _Recorder())
 
     case = process.create(
         CreateResearchCaseRequest(run.run_id, "Live-lane case with current knowledge.")
@@ -135,8 +173,9 @@ def test_create_research_case_fails_closed_for_missing_blocked_or_excluded_input
     None
 ):
     run = _run()
-    process = CreateResearchCaseFromSelection(_Reader(run), _Factory())
-    missing = CreateResearchCaseFromSelection(_Reader(None), _Factory())
+    recorder = _Recorder()
+    process = CreateResearchCaseFromSelection(_Reader(run), _Factory(), recorder)
+    missing = CreateResearchCaseFromSelection(_Reader(None), _Factory(), _Recorder())
 
     with pytest.raises(AppProcessError) as missing_error:
         missing.create(CreateResearchCaseRequest(run.run_id, "Test one hypothesis."))
@@ -149,9 +188,9 @@ def test_create_research_case_fails_closed_for_missing_blocked_or_excluded_input
         missing_inputs=("bars",),
     )
     with pytest.raises(AppProcessError) as blocked_error:
-        CreateResearchCaseFromSelection(_Reader(blocked_run), _Factory()).create(
-            CreateResearchCaseRequest(blocked_run.run_id, "Test one hypothesis.")
-        )
+        CreateResearchCaseFromSelection(
+            _Reader(blocked_run), _Factory(), _Recorder()
+        ).create(CreateResearchCaseRequest(blocked_run.run_id, "Test one hypothesis."))
     assert blocked_error.value.details["reason"] == "selection_run_blocked"
 
     with pytest.raises(AppProcessError) as candidate_error:
@@ -163,3 +202,5 @@ def test_create_research_case_fails_closed_for_missing_blocked_or_excluded_input
             )
         )
     assert candidate_error.value.details["reason"] == "research_case_candidate_invalid"
+    # 失败路径不落任何持久化用例：读取面不会看到失败的交接。
+    assert recorder.saved == []

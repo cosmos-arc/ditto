@@ -84,19 +84,26 @@ export function PanelHeader({ title, subtitle, count, actions }: PanelHeaderProp
 
 interface PanelBodyProps extends HTMLAttributes<HTMLDivElement> {
 	children: ReactNode;
+	/** 频繁切换内容的证据面板可关闭入场动画（动画层在无等待截图下有纹理竞态）。 */
+	reveal?: boolean;
 }
 
 /**
  * PanelBody -- flex-1 content region with overflow-y scroll.
- * Applies scroll-reveal entrance animation to content.
+ * Applies scroll-reveal entrance animation to content unless opted out.
  */
-export function PanelBody({ className, children, ...rest }: PanelBodyProps) {
+export function PanelBody({ className, children, reveal = true, ...rest }: PanelBodyProps) {
 	const { ref, isVisible } = useScrollReveal();
 
 	return (
 		<div
-			ref={ref}
-			className={["flex-1 overflow-y-auto overflow-x-hidden", "reveal-up", isVisible && "is-visible", className]
+			ref={reveal ? ref : undefined}
+			className={[
+				"flex-1 overflow-y-auto overflow-x-hidden",
+				reveal && "reveal-up",
+				reveal && isVisible && "is-visible",
+				className,
+			]
 				.filter(Boolean)
 				.join(" ")}
 			{...rest}

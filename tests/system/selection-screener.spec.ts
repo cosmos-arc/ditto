@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 function requiredEnvironment(name: string): string {
 	const value = process.env[name]?.trim();
@@ -20,6 +20,8 @@ const SPEC_ID = "screener-fixture";
 // 的知识截止由服务端按发起时刻签发，不能固定为过去时刻；同一策略条件
 // 重复提交会各得一个固定运行身份（知识时刻不同），结果集一致。
 const AS_OF = "2026-11-10T15:00";
+const STOCK_A_ID = "1420001";
+const STOCK_B_ID = "1420002";
 
 test.describe.serial("visual conditions and factor weights produce saved fixed runs (#740)", () => {
 	test("factor catalog loads with readable unit, lookback, and group metadata", async ({ page }) => {
@@ -201,5 +203,159 @@ test.describe.serial("visual conditions and factor weights produce saved fixed r
 				.then((r) => r.json())
 				.then((p) => (p.data as unknown[]).length),
 		).toBe(1);
+	});
+});
+
+/** 填写并提交一次固定运行；返回完整 run 身份（URL 携带）。 */
+async function createFixedRun(page: Page, topK: string): Promise<string> {
+	await page.goto(`${webOrigin}/markets/screener`);
+	await expect(page.getByRole("button", { name: "添加条件组" })).toBeVisible();
+
+	await page.getByLabel("spec_id").fill("screener-fixture-handoff");
+	await page.getByLabel("top_k（入选数量）").fill(topK);
+	await page.getByLabel("最小日均成交额（元）").fill("0");
+	await page.getByLabel("决策时点 as_of").fill(AS_OF);
+	await page.getByRole("button", { name: "添加条件组" }).click();
+	await page.getByLabel("条件组 1 因子 1").selectOption("momentum_1m");
+	await page.getByLabel("条件组 1 算子 1").selectOption("gte");
+	await page.getByLabel("条件组 1 阈值 1").fill("0.5");
+	await page.getByRole("button", { name: "创建运行" }).click();
+
+	await expect(page).toHaveURL(/run=selection-run%3Asha256%3A[0-9a-f]{64}/, { timeout: 15_000 });
+	const encoded = page.url().match(/run=([^&]+)/)?.[1];
+	if (!encoded) throw new Error("run identity missing from URL");
+	return decodeURIComponent(encoded);
+}
+
+async function candidatesOf(runId: string): Promise<string[]> {
+	return await fetch(`${apiOrigin}/api/v1/selections/runs/${encodeURIComponent(runId)}`, {
+		headers: API_HEADERS,
+	})
+		.then((response) => response.json())
+		.then(
+			(payload) =>
+				(payload.data as { candidates: { instrument_id: number }[] }).candidates.map(
+					(item) => String(item.instrument_id),
+				),
+		);
+}
+
+test.describe.serial("reopen fixed runs and hand off to research (#741)", () => {
+	let firstRunId = "";
+	let secondRunId = "";
+
+	test("candidate drilldown carries object, source, and observe date and returning restores the run", async ({
+		page,
+	}) => {
+		firstRunId = await createFixedRun(page, "2");
+
+		// 候选主链接进图表并锚定运行决策日（对象、来源、观察日随链接携带）。
+		const candidateLink = page.getByRole("link", { name: STOCK_A });
+		await expect(candidateLink).toHaveAttribute(
+			"href",
+			`/instruments/${STOCK_A_ID}?tab=chart&selectionRunId=${encodeURIComponent(firstRunId)}&observeDate=2026-11-10`,
+		);
+		await candidateLink.click();
+		await expect(page).toHaveURL(
+			new RegExp(`/instruments/${STOCK_A_ID}\\?tab=chart&selectionRunId=`),
+		);
+		const anchorChip = page.getByTestId(`observe-anchor-${STOCK_A_ID}`);
+		await expect(anchorChip).toHaveAttribute("data-state", "observe-anchor");
+		await expect(anchorChip).toContainText("2026-11-10");
+
+		// 返回恢复：URL 仍带固定运行身份，候选名单回到该运行的证据。
+		await page.goBack();
+		await expect(page).toHaveURL(new RegExp(`run=${encodeURIComponent(firstRunId)}`));
+		await expect(page.getByRole("link", { name: STOCK_A })).toBeVisible();
+		await expect(page.getByRole("link", { name: STOCK_B })).toBeVisible();
+
+		// 排除视图切到 URL（?tab=），刷新后恢复（返回位置的一部分）。
+		await page.getByRole("tab", { name: /排除 1/ }).click();
+		await expect(page).toHaveURL(/tab=exclusions/);
+		await page.reload();
+		await expect(page.locator("article").filter({ hasText: STOCK_C })).toContainText(
+			"factor_condition_unsatisfied",
+		);
+	});
+
+	test("a later run never rewrites the frozen one and comparisons explain membership drift", async ({
+		page,
+	}) => {
+		secondRunId = await createFixedRun(page, "1");
+		expect(secondRunId).not.toBe(firstRunId);
+
+		// 冻结证据：第一次运行的候选在第二次创建后原样（不偷换、不改写）。
+		expect(await candidatesOf(firstRunId)).toEqual([STOCK_A_ID, STOCK_B_ID]);
+		expect(await candidatesOf(secondRunId)).toEqual([STOCK_A_ID]);
+
+		// 比较名单变化：退出候选与 why-out 迁移可见。两次运行 as_of 相同、
+		// 历史按 run 身份字典序排列，按身份勾选保证 before=第一次运行。
+		const shortLabel = (runId: string) =>
+			`加入运行对比 ${runId.split(":sha256:")[1]?.slice(0, 12)}`;
+		await page.getByRole("checkbox", { name: shortLabel(secondRunId) }).check();
+		await page.getByRole("checkbox", { name: shortLabel(firstRunId) }).check();
+		await page.getByRole("button", { name: "比较 2 个运行" }).click();
+		await expect(page.getByText(/退出候选/)).toContainText(STOCK_B_ID);
+		await expect(page.getByText(`${STOCK_B_ID} · 入选 → below_top_k`)).toBeVisible();
+
+		// 旧结果缺失时不偷换最新：指向从未创建的运行得到诚实错误。
+		const missing = `selection-run:sha256:${"f".repeat(64)}`;
+		await page.goto(
+			`${webOrigin}/markets/screener?spec=screener-fixture-handoff&run=${encodeURIComponent(missing)}`,
+		);
+		await expect(page.getByText("未找到该固定运行")).toBeVisible();
+		await expect(page.getByText(missing)).toBeVisible();
+		await expect(page.getByText("exact run required")).toBeVisible();
+	});
+
+	test("hand off to a research case and reopen it without any agent", async ({ page }) => {
+		// 从固定运行直接进入（不依赖前序页面的会话状态）。
+		await page.goto(
+			`${webOrigin}/markets/screener?spec=screener-fixture-handoff&run=${encodeURIComponent(firstRunId)}`,
+		);
+		await expect(page.getByRole("link", { name: STOCK_A })).toBeVisible();
+
+		const objective = "验证强动量候选在次月的持续性";
+		await page.getByRole("textbox", { name: "研究假设 objective" }).fill(objective);
+		await page.getByRole("button", { name: "创建研究用例" }).click();
+		const openLink = page.getByRole("link", { name: "在研究中打开" });
+		await expect(openLink).toBeVisible();
+
+		// 研究入口保留对象、日期、来源与选择（关闭 Agent 主线仍成立）。
+		await openLink.click();
+		await expect(page).toHaveURL(/\/research\/cases\/research-case%3Asha256%3A/);
+		await expect(page.getByRole("heading", { name: objective })).toBeVisible();
+		const roster = page.getByLabel("候选名单");
+		await expect(roster.getByRole("link", { name: STOCK_A })).toHaveAttribute(
+			"href",
+			`/instruments/${STOCK_A_ID}?tab=chart&observeDate=2026-11-10&selectionRunId=${encodeURIComponent(firstRunId)}`,
+		);
+		await expect(roster.getByText(STOCK_B)).toBeVisible();
+		const temporal = page.getByLabel("时间身份");
+		await expect(temporal).toContainText("2026/11/10");
+		await expect(temporal).toContainText("knowledge cutoff");
+
+		// 返回筛选：带固定运行身份重开（返回恢复筛选上下文）；入口在页头
+		// 首屏可达（页长时底部入口被推出视口折叠线）。
+		await page.getByRole("link", { name: "← 回到该运行的筛选工作面" }).click();
+		await expect(page).toHaveURL(new RegExp(`run=${encodeURIComponent(firstRunId)}`));
+		await expect(page.getByRole("link", { name: STOCK_B })).toBeVisible();
+
+		// 用例列表重开持久化交接：刷新后再次读取仍然存在。
+		await page.goto(`${webOrigin}/research/cases`);
+		const caseRow = page.locator("tr").filter({ hasText: objective });
+		await expect(caseRow).toBeVisible();
+
+		// 键盘可达：聚焦用例行链接后 Enter 同样进入详情（真实键盤动作）。
+		await caseRow.getByRole("link", { name: objective }).focus();
+		await expect(caseRow.getByRole("link", { name: objective })).toBeFocused();
+		await page.keyboard.press("Enter");
+		await expect(page).toHaveURL(/\/research\/cases\/research-case%3Asha256%3A/);
+		await expect(page.getByRole("heading", { name: objective })).toBeVisible();
+
+		// 持久化重读：回到列表刷新后用例仍在。
+		await page.goto(`${webOrigin}/research/cases`);
+		await page.reload();
+		await expect(page.locator("tr").filter({ hasText: objective })).toBeVisible();
 	});
 });

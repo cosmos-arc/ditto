@@ -6,6 +6,7 @@ export { FactorListPage } from "./components/factor-list-page";
 export { FactorOverview } from "./components/factor-overview";
 export { FactorPage } from "./components/factor-page";
 export { RegimePage } from "./components/regime-page";
+export { ResearchCaseDetailPage, ResearchCaseListPage } from "./components/research-case-pages";
 export { ResearchPage } from "./components/research-page";
 export { ResearchSubNav } from "./components/research-sub-nav";
 export {

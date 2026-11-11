@@ -13,6 +13,7 @@ __all__ = [
     "ExperimentSchemaError",
     "ExperimentSpecError",
     "ExperimentStateTransitionError",
+    "ResearchCaseIntegrityError",
     "ResearchDatasetError",
 ]
 
@@ -23,6 +24,10 @@ class AnalysisError(DittoError):
 
 class ResearchDatasetError(AnalysisError):
     """研究数据集操作错误。"""
+
+
+class ResearchCaseIntegrityError(AnalysisError):
+    """持久化研究用例的身份与载荷不一致（append-only 证据被破坏）。"""
 
 
 class ExperimentIdentityError(AnalysisError):
