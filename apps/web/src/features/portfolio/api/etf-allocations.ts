@@ -77,6 +77,11 @@ function toVersion(value: VersionDTO): ETFAllocationVersion {
 	};
 }
 
+export async function listETFAllocations(): Promise<ETFAllocationVersion[]> {
+	const result = await apiClient.get("/api/v1/portfolio/etf-allocations", {});
+	return result.map(toVersion);
+}
+
 export async function listETFAllocationVersions(allocationId: string): Promise<ETFAllocationVersion[]> {
 	const result = await apiClient.get("/api/v1/portfolio/etf-allocations/{allocation_id}/versions", {
 		params: { path: { allocation_id: allocationId } },

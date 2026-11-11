@@ -117,6 +117,28 @@ class ETFAllocationCommand:
             and record.metadata.get("kind") == "etf_allocation"
         ]
 
+    def list_allocations(self) -> list[ETFAllocationVersion]:
+        """Reopen saved allocations by business identity, newest version first."""
+        latest: dict[str, ETFAllocationVersion] = {}
+        for record in self._artifacts.list_artifacts():
+            if (
+                record.artifact_type is not ArtifactKind.TARGET_PORTFOLIO
+                or record.metadata.get("kind") != "etf_allocation"
+            ):
+                continue
+            version = _version(record)
+            current = latest.get(version.allocation_id)
+            if current is None or (version.created_at, version.version_id) > (
+                current.created_at,
+                current.version_id,
+            ):
+                latest[version.allocation_id] = version
+        return sorted(
+            latest.values(),
+            key=lambda item: (item.created_at, item.allocation_id),
+            reverse=True,
+        )
+
     def save(self, request: ETFAllocationRequest) -> ETFAllocationVersion:
         """Persist an exact revision or return its durable retry result."""
         _check_request(request)

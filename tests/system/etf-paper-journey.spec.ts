@@ -28,16 +28,26 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await expect(
 		workspace.getByRole("checkbox", { name: /沪深300ETF-Paper验收/ }),
 	).toBeVisible();
+	// 用户故事 15：暴露、成本与价格/NAV 各自日期口径清楚，缺失如实说明。
+	const candidate = workspace.locator("details", { hasText: "沪深300ETF-Paper验收" });
+	await candidate.locator("summary").click();
+	await expect(candidate.getByText("跟踪指数")).toBeVisible();
+	await expect(
+		candidate.getByText(/2026-09-01 · 披露 2026-09-01T08:00:00Z/).first(),
+	).toBeVisible();
+	await expect(candidate.getByText("原始收盘价")).toBeVisible();
+	await expect(candidate.getByText(/缺失（/).first()).toBeVisible();
+	await candidate.locator("summary").click();
 	await workspace
 		.getByRole("checkbox", { name: /沪深300ETF-Paper验收/ })
 		.check();
 	await workspace.getByLabel("现金比例").fill("0.5");
 	await workspace.getByLabel("配置理由").fill("recorded acceptance target");
 	await workspace.getByLabel("权重模式").selectOption("manual");
-	await workspace.getByLabel("ETF 2000101 权重").fill("0.8");
+	await workspace.getByLabel("ETF 510300 权重").fill("0.8");
 	await workspace.getByRole("button", { name: "保存候选版本" }).click();
 	await expect(workspace.getByRole("alert")).toContainText("保存失败");
-	await expect(workspace.getByLabel("ETF 2000101 权重")).toHaveValue("0.8");
+	await expect(workspace.getByLabel("ETF 510300 权重")).toHaveValue("0.8");
 	await workspace.getByLabel("权重模式").selectOption("equal");
 	await workspace.getByRole("button", { name: "保存候选版本" }).click();
 	await expect(workspace.getByText(/已保存 etf-allocation-/)).toBeVisible();
@@ -73,7 +83,7 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await expect(workspace.getByRole("alert")).toContainText("Paper 执行失败");
 	await workspace.getByLabel("执行日证据截止时间").fill("2026-09-03T16:00");
 	await workspace.getByRole("button", { name: "按已批准意图模拟成交" }).click();
-	await expect(workspace.getByText(/工具 2000101：filled/)).toBeVisible();
+	await expect(workspace.getByText(/工具 510300：filled/)).toBeVisible();
 	const ledger = await request.get(
 		`${apiOrigin}/api/v1/paper/accounts/${fixture.account_id}/ledger?as_of=2026-09-02`,
 	);
@@ -105,7 +115,7 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
 	await review.getByLabel("复盘账本日期").fill("2026-09-02");
 	await expect(review.getByText(/Paper 模拟成交账本/)).toBeVisible();
-	await expect(review.getByText(/#2000101：实际/)).toBeVisible();
+	await expect(review.getByText(/510300：实际/)).toBeVisible();
 	await expect(review.getByText(/缺少同日价格证据，无法计算实际权重/)).toBeVisible();
 	const now = new Date();
 	const reviewDay = new Date(now.getTime() + 86_400_000).toISOString().slice(0, 10);
@@ -139,16 +149,16 @@ test("approved ETF target fills once through the real Paper ledger", async ({
 	expect(valuationData.data.actual_exposure).toEqual({});
 	expect(valuationData.data.unknown_exposure_instrument_ids).toContain(2000101);
 	const valued = review.getByRole("region", { name: "ETF 目标与实际估值" });
-	await expect(valued.getByText(/ETF #2000101：目标/)).toBeVisible();
+	await expect(valued.getByText(/ETF 510300：目标/)).toBeVisible();
 	await expect(valued.getByText(/已知同指数实际暴露：未知/)).toBeVisible();
-	await expect(valued.getByText(/指数归属未知的实际持仓：2000101/)).toBeVisible();
+	await expect(valued.getByText(/指数归属未知的实际持仓：510300/)).toBeVisible();
 	await expect(valued.getByText(/目标现金 .*实际现金 .*现金差异/)).toBeVisible();
 	await expect(page.getByTestId("history-comparison-submit")).toBeDisabled();
 	await page.reload();
 	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
 	await expect(review.getByLabel("复盘账户")).toHaveValue(`paper:${fixture.account_id}`);
 	await expect(review.getByLabel("复盘账本日期")).toHaveValue(reviewDay);
-	await expect(valued.getByText(/ETF #2000101：目标/)).toBeVisible();
+	await expect(valued.getByText(/ETF 510300：目标/)).toBeVisible();
 	await page.goBack();
 	await expect(review.getByLabel("复盘配置版本")).toHaveValue(versionId ?? "");
 	await review.getByRole("link", { name: "返回 ETF 配置" }).click();
@@ -194,6 +204,9 @@ test("restricted ETF cannot enter Paper and returns to tool selection", async ({
 		"not investable; choose alternatives",
 	);
 	await expect(workspace.getByRole("alert")).toContainText("restricted_or_invalid");
+	// The refusal names the restricted tool by its business ticker.
+	await expect(workspace.getByRole("alert")).toContainText("510301");
+	await expect(workspace.getByRole("alert")).not.toContainText("2000102");
 	await expect(
 		workspace.getByRole("link", { name: "返回工具选择" }),
 	).toHaveAttribute("href", "#etf-tool-selection");
@@ -250,4 +263,42 @@ test("independent ETF inputs survive handoff and execution", async ({ request })
 	expect(await post(`${base}/paper-executions`, "execute", execution)).toEqual(first);
 	const persisted = await request.get(`${apiOrigin}/system-fixture/etf-paper/composed-rule-identity`);
 	expect(await persisted.json()).toEqual({ rule_snapshot_id: fixture.execution_reference, rule_cutoff: "2026-09-03T08:00:00+00:00" });
+});
+
+test("saved allocation reopens from the business list without a kept URL", async ({
+	page,
+	request,
+}) => {
+	const fixtureResponse = await request.get(
+		`${apiOrigin}/system-fixture/etf-paper`,
+	);
+	expect(fixtureResponse.ok()).toBe(true);
+	const fixture = (await fixtureResponse.json()) as { signal_reference: string };
+	await page.goto("/markets");
+	const workspace = page.locator('[data-info-unit="etf-candidates"]');
+	await workspace.getByLabel("研究日期").fill("2026-09-01");
+	await workspace.getByLabel("知识截止").fill("2026-09-01T17:00");
+	await workspace.getByLabel("来源快照").selectOption(fixture.signal_reference);
+	await workspace.getByLabel("指数暴露").fill("000300.SH");
+	await workspace
+		.getByRole("checkbox", { name: /沪深300ETF-Paper验收/ })
+		.check();
+	await workspace.getByLabel("配置名称").fill("etf-find-back");
+	await workspace.getByLabel("现金比例").fill("0.5");
+	await workspace.getByLabel("配置理由").fill("reopen from business list");
+	await workspace.getByRole("button", { name: "保存候选版本" }).click();
+	await expect(workspace.getByText(/已保存 etf-allocation-/)).toBeVisible();
+	expect(new URL(page.url()).searchParams.get("etfAllocation")).toBe(
+		"etf-find-back",
+	);
+	// 离开工作面后不带任何 URL 身份重新进入，仅凭业务列表找回配置。
+	await page.goto("/markets");
+	const reopened = page.locator('[data-info-unit="etf-candidates"]');
+	await reopened.getByLabel("已保存配置").selectOption("etf-find-back");
+	await expect(reopened.getByLabel("配置名称")).toHaveValue("etf-find-back");
+	expect(await reopened.getByLabel("已保存版本").inputValue()).toBeTruthy();
+	await expect(reopened.getByText(/目标权重 510300:/)).toBeVisible();
+	await expect(reopened.getByLabel("配置理由")).toHaveValue(
+		"reopen from business list",
+	);
 });

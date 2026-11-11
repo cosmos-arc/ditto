@@ -162,6 +162,9 @@ class LiveETFPaperHandoffFacts:
             investable_instrument_ids=frozenset(investable),
             signal_ledger_hash=ledger_hash(account.events),
             unavailable_reasons=unavailable,
+            tickers={
+                candidate.instrument_id: candidate.ticker for candidate in candidates
+            },
             next_trading_day=_next_trading_day(
                 snapshots=self._snapshots,
                 payloads=self._payloads,

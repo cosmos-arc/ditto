@@ -283,3 +283,220 @@ it("asks for confirmation before the terminal reject transition", async () => {
 	await screen.findByText(/· rejected ·/);
 	expect(actions).toEqual(["submit", "reject"]);
 });
+
+it("reopens a saved allocation from the business list without a known URL", async () => {
+	const user = userEvent.setup();
+	let listFails = true;
+	server.use(
+		http.get("/api/v1/portfolio/etf-allocations", () => {
+			if (listFails) return HttpResponse.json({ error: { code: "TEMPORARY" } }, { status: 503 });
+			return HttpResponse.json({
+				data: [
+					{
+						version_id: "version-demo",
+						allocation_id: "demo",
+						parent_version_id: null,
+						asof: "2026-09-01",
+						knowledge_cutoff: "2026-09-01T09:00:00Z",
+						source_snapshot_id: "snapshot:recorded:etf",
+						mode: "equal",
+						weights: { "1": "0.80000000" },
+						cash_weight: "0.2",
+						max_position_weight: "1",
+						tracking_exposure: { "000300.SH": "0.80000000" },
+						reason: "broad exposure",
+						rule_version: "etf-allocation-v1",
+						paper_status: "research_only",
+						review_status: "research_only",
+						created_at: "2026-09-01T09:00:00Z",
+					},
+				],
+			});
+		}),
+		http.get("/api/v1/portfolio/etf-allocations/:id/versions", ({ params }) =>
+			HttpResponse.json({
+				data:
+					params["id"] === "demo"
+						? [
+								{
+									version_id: "version-demo",
+									allocation_id: "demo",
+									parent_version_id: null,
+									asof: "2026-09-01",
+									knowledge_cutoff: "2026-09-01T09:00:00Z",
+									source_snapshot_id: "snapshot:recorded:etf",
+									mode: "equal",
+									weights: { "1": "0.80000000" },
+									cash_weight: "0.2",
+									max_position_weight: "1",
+									tracking_exposure: { "000300.SH": "0.80000000" },
+									reason: "broad exposure",
+									rule_version: "etf-allocation-v1",
+									paper_status: "research_only",
+									review_status: "research_only",
+									created_at: "2026-09-01T09:00:00Z",
+								},
+							]
+						: [],
+			}),
+		),
+	);
+	render(
+		<ETFAllocationEditor
+			items={[candidate]}
+			asof="2026-09-01"
+			cutoff="2026-09-01T09:00:00Z"
+			cutoffInput="2026-09-01T17:00:00"
+			snapshot="snapshot:recorded:etf"
+		/>,
+		{ wrapper: wrapper() },
+	);
+	const retry = await screen.findByRole("button", { name: "已保存配置读取失败，重试" });
+	listFails = false;
+	await user.click(retry);
+	const reopen = await screen.findByLabelText("已保存配置");
+	await user.selectOptions(reopen, "demo");
+	expect(screen.getByLabelText("配置名称")).toHaveValue("demo");
+	expect(await screen.findByLabelText("已保存版本")).toHaveValue("version-demo");
+	// Business tickers replace internal instrument ids in the saved weights.
+	expect(await screen.findByText(/目标权重/)).toHaveTextContent("510300");
+	expect(screen.getByText(/目标权重/).textContent).not.toContain("#1");
+	expect(screen.getByText(/目标权重/).textContent).not.toContain(": 1");
+});
+
+it("labels manual weights and execution outcomes with business tickers", async () => {
+	const user = userEvent.setup();
+	let stored: Record<string, unknown> | null = null;
+	server.use(
+		http.get("/api/v1/portfolio/etf-allocations", () => HttpResponse.json({ data: [] })),
+		http.get("/api/v1/portfolio/etf-allocations/:id/versions", () =>
+			HttpResponse.json({ data: stored ? [stored] : [] }),
+		),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions", async ({ params }) => {
+			stored = {
+				version_id: "version-one",
+				allocation_id: String(params["id"]),
+				parent_version_id: null,
+				asof: "2026-09-01",
+				knowledge_cutoff: "2026-09-01T09:00:00Z",
+				source_snapshot_id: "snapshot:recorded:etf",
+				mode: "manual",
+				weights: { "1": "0.80000000" },
+				cash_weight: "0.2",
+				max_position_weight: "1",
+				tracking_exposure: { "000300.SH": "0.80000000" },
+				reason: "broad exposure",
+				rule_version: "etf-allocation-v1",
+				paper_status: "research_only",
+				review_status: "research_only",
+				created_at: "2026-09-01T09:00:00Z",
+			};
+			return HttpResponse.json({ data: stored }, { status: 201 });
+		}),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/review", async ({ request }) => {
+			const body = (await request.json()) as { action: string };
+			stored = { ...stored, review_status: body.action === "submit" ? "review_pending" : "review_approved" };
+			return HttpResponse.json({ data: stored });
+		}),
+		http.get("/api/v1/paper/accounts", () =>
+			HttpResponse.json({
+				data: {
+					accounts: [
+						{
+							account_id: "paper-a",
+							account_kind: "paper",
+							account_name: "模拟账户",
+							currency: "CNY",
+							opened_at: "2026-09-01T00:00:00Z",
+						},
+					],
+				},
+			}),
+		),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/paper-authorizations", () =>
+			HttpResponse.json(
+				{ data: { version_id: "version-one", authorization_id: "version-one:paper:receipt" } },
+				{ status: 201 },
+			),
+		),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/paper-handoffs", async ({ request }) => {
+			const body = (await request.json()) as { account_id: string; session_id: string; intended_trade_date: string };
+			return HttpResponse.json(
+				{
+					data: {
+						action: "start",
+						status: "created",
+						session: {
+							account_id: body.account_id,
+							session_id: body.session_id,
+							strategy_id: `etf-allocation:${new URLSearchParams(window.location.search).get("etfAllocation")}`,
+							trade_date: body.intended_trade_date,
+							status: "running",
+							revision: 1,
+							created_at: "2026-09-01T09:00:00Z",
+							updated_at: "2026-09-01T09:00:00Z",
+							pause_reason: null,
+						},
+					},
+				},
+				{ status: 201 },
+			);
+		}),
+		http.post("/api/v1/portfolio/etf-allocations/:id/versions/:versionId/paper-executions", () =>
+			HttpResponse.json(
+				{
+					data: {
+						outcomes: [
+							{
+								intent_id: "intent-1",
+								instrument_id: 1,
+								status: "filled",
+								reason: null,
+								execution_id: "execution-1",
+								ledger_event_id: "event-1",
+							},
+						],
+					},
+				},
+				{ status: 201 },
+			),
+		),
+	);
+	render(
+		<ETFAllocationEditor
+			items={[candidate]}
+			asof="2026-09-01"
+			cutoff="2026-09-01T09:00:00Z"
+			cutoffInput="2026-09-01T17:00:00"
+			snapshot="snapshot:recorded:etf"
+		/>,
+		{ wrapper: wrapper() },
+	);
+	await user.click(screen.getByRole("checkbox", { name: /沪深300 ETF/ }));
+	await user.selectOptions(screen.getByLabelText("权重模式"), "manual");
+	// Manual weight inputs are addressed by business ticker, not internal id.
+	await user.clear(screen.getByLabelText("ETF 510300 权重"));
+	await user.type(screen.getByLabelText("ETF 510300 权重"), "0.8");
+	await user.clear(screen.getByLabelText("单仓上限"));
+	await user.type(screen.getByLabelText("单仓上限"), "1");
+	await user.type(screen.getByLabelText("配置理由"), "broad exposure");
+	await user.click(screen.getByRole("button", { name: "保存候选版本" }));
+	expect(await screen.findByText(/目标权重 510300: 0.80000000/)).toBeInTheDocument();
+	await user.type(screen.getByLabelText("审查人"), "operator");
+	await user.type(screen.getByLabelText("审查理由"), "checked");
+	await user.click(screen.getByRole("button", { name: "提交审查" }));
+	await screen.findByRole("button", { name: "研究审查通过" });
+	await user.click(screen.getByRole("button", { name: "研究审查通过" }));
+	await screen.findByText(/· review_approved ·/);
+	await user.selectOptions(await screen.findByLabelText("Paper 账户"), "paper-a");
+	fireEvent.change(screen.getByLabelText("下一交易日"), { target: { value: "2026-09-02" } });
+	await user.type(screen.getByLabelText("Paper 授权人"), "operator");
+	await user.type(screen.getByLabelText("Paper 授权理由"), "approved for Paper");
+	await user.click(screen.getByRole("button", { name: "授权此版本进入 Paper" }));
+	await user.click(await screen.findByRole("button", { name: "创建 Paper 会话" }));
+	fireEvent.change(await screen.findByLabelText("执行日证据截止时间"), { target: { value: "2026-09-02T17:00" } });
+	await user.type(screen.getByLabelText("执行日 ETF 参考快照 ID"), "reference-snapshot");
+	await user.type(screen.getByLabelText("执行日 ETF 行情快照 ID"), "bar-snapshot");
+	await user.click(screen.getByRole("button", { name: "按已批准意图模拟成交" }));
+	expect(await screen.findByText(/工具 510300：filled/)).toBeInTheDocument();
+});

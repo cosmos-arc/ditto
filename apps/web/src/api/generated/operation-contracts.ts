@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 7d4d9f56463c77df1a21f4f693a633f15111ce02f5050747b84f8a58ca0e8d57
+ * Schema SHA-256: e9317e781ca3d5b2dafcc05ceedf901974867a495cb5f9c6ace2e06d4dacbb90
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -818,6 +818,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/portfolio/comparison": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/portfolio/etf-allocations": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -2432,6 +2442,11 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["as_of", "knowledge_cutoff", "manual_account_id", "model_portfolio_id", "paper_account_id", "paper_session_id", "publication_cutoff", "source_snapshot_ids", "strategy_id", "valuation_snapshot_id"],
+    },
+  },
+  "get /api/v1/portfolio/etf-allocations": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
     },
   },
   "get /api/v1/portfolio/etf-allocations/{allocation_id}/versions": {
