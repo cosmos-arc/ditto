@@ -211,6 +211,7 @@ export function mapBacktestReport(dto: BacktestReportResponse): BacktestReport {
 		finalNav: dto.final_nav,
 		dividendStatement: dividends
 			? {
+					currency: dividends.currency,
 					policy: dividends.policy,
 					conversions: (dividends.conversions ?? []).map((conversion) => ({
 						eventId: conversion.event_id,

@@ -113,7 +113,7 @@ export function BacktestCompareOverlay({ onClose, open }: { readonly onClose: ()
 					facts={[
 						["已选择", `${runIds.length} 个 run`],
 						["Run identities", runIds.join(" · ") || "尚未选择"],
-						["对比口径", "nav₀ 归一净值叠加 + 已发布 report 指标"],
+						["对比口径", "先核对资产池/币种/时间样本/收益定义/费用；同口径才 nav₀ 归一叠加"],
 					]}
 				/>
 				<p className="text-xs text-(--color-foreground-tertiary)">{comparisonLifetime}</p>

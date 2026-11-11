@@ -87,6 +87,7 @@ export interface BacktestFeeStatement {
 }
 
 export interface BacktestDividendStatement {
+	readonly currency: "CNY";
 	readonly policy: string;
 	readonly conversions: readonly {
 		readonly eventId: string;
