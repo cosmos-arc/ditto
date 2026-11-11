@@ -11,7 +11,6 @@ import {
 } from "../api";
 import { toAssembledRunView } from "../assembled-run";
 
-
 // 镜像服务端 math.isclose(total, 1.0, abs_tol=1e-12)：默认 rel_tol=1e-9 主导有效容差。
 const WEIGHT_SUM_TOLERANCE = 1e-9;
 
@@ -316,8 +315,8 @@ export function SelectionRunInput({
 					事实，可先组装预览；数据不完整时服务端会拒绝创建。
 				</p>
 				<p className="max-w-3xl text-[11px] leading-4 text-(--color-foreground-tertiary)">
-					因子值口径：截面分数秩 (0,1]，秩越高截面排名越靠前（{entries[0]?.value_unit ?? "截面分数秩"}）
-					；因子值缺失的标的按缺证据排除（missing_data），不会静默参与排名。
+					因子值口径：截面分数秩
+					(0,1]，秩越高截面排名越靠前；因子值缺失的标的按缺证据排除（missing_data），不会静默参与排名。
 				</p>
 				<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
 					<div className="grid gap-1 text-xs">

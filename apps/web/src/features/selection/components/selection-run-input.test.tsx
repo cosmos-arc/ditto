@@ -54,6 +54,18 @@ describe("SelectionRunInput factor conditions (#740)", () => {
 		expect(createdBody?.factor_weights).toEqual([{ name: "momentum_1m", weight: 1 }]);
 	});
 
+	it("states the unit convention once without duplicating the catalog clause (#740 V1)", async () => {
+		render(<SelectionRunInput busy={false} onRun={() => {}} />, { wrapper: wrapper() });
+
+		// 全局口径只保留一处完整表述：不再内联重复目录的 value_unit 子句。
+		await waitFor(() =>
+			expect(
+				screen.getByText(/因子值口径：截面分数秩 \(0,1\]，秩越高截面排名越靠前；因子值缺失的标的按缺证据排除/),
+			).toBeInTheDocument(),
+		);
+		expect(screen.queryByText(/截面分数秩 \(0,1\]; 秩越高/)).not.toBeInTheDocument();
+	});
+
 	it("supports OR rows within a group and multiple AND groups", async () => {
 		const user = userEvent.setup();
 		let submitted: AssembleSelectionRunBody | undefined;

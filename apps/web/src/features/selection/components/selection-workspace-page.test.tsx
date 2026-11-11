@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
@@ -43,6 +43,17 @@ describe("SelectionWorkspacePage", () => {
 		expect(screen.getByRole("textbox", { name: "SelectionSpec ID" })).toHaveValue("a-share-stock-discovery");
 	});
 
+	it("shows an explained empty state for candidates/exclusions before any run exists (#740 V2)", async () => {
+		server.use(http.get("/api/v1/selections/runs", () => HttpResponse.json({ data: [] })));
+		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
+
+		await expect(screen.findByText("该 spec 尚无已保存运行。")).resolves.toBeInTheDocument();
+		// 候选/排除区给出同等解释与下一步，而不是留白。
+		await expect(
+			screen.findByText(/该 spec 尚无已选中的运行。在上方配置筛选条件与因子权重并点击「创建运行」/),
+		).resolves.toBeInTheDocument();
+	});
+
 	it("renders saved SelectionRuns with exact candidates, factors, exclusions, and Agent context", async () => {
 		const user = userEvent.setup();
 		render(<SelectionWorkspacePage />, { wrapper: wrapper() });
@@ -60,6 +71,13 @@ describe("SelectionWorkspacePage", () => {
 			"href",
 			"/instruments/600001?tab=technical&selectionRunId=selection-run%3Asha256%3A1111111111111111111111111111111111111111111111111111111111111111",
 		);
+
+		// 证据面板的运行身份与状态行/RUN HISTORY 同长（12 位摘要）：
+		// 同一 run 身份跨面板必须一致（#740 V3）。
+		const identity = within(screen.getByLabelText("运行身份")).getAllByText(
+			/selection-run · /,
+		)[0] as HTMLElement;
+		expect(identity).toHaveTextContent(`selection-run · ${"1".repeat(12)}`);
 
 		const memo = screen.getByRole("link", { name: "生成 SelectionMemo" });
 		expect(memo).toHaveAttribute("data-context-type", "selection");

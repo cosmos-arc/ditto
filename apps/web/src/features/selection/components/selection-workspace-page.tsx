@@ -237,6 +237,12 @@ export function SelectionWorkspacePage({
 						</div>
 						{exactRun.isLoading && <LoadingSkeleton variant="table" rows={5} />}
 						{exactRun.isError && <ErrorState onRetry={() => void exactRun.refetch()} />}
+						{!run && !exactRun.isLoading && !exactRun.isError && (
+							<p className="py-8 text-center text-sm text-(--color-foreground-tertiary)">
+								该 spec
+								尚无已选中的运行。在上方配置筛选条件与因子权重并点击「创建运行」；创建后会在此展示候选、排除与贡献证据。
+							</p>
+						)}
 						{run && currentItems?.length === 0 && (
 							<p className="py-8 text-center text-sm text-(--color-foreground-tertiary)">
 								此运行没有{tab === "candidates" ? "入选候选" : "排除记录"}。
