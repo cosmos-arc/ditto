@@ -1,4 +1,5 @@
 export type { FactorDiagnosticsScope } from "./api/factor-diagnostics";
+export { proposeStrategyTemplateDraft } from "./api/strategy-templates";
 export { ExperimentCreatePage } from "./components/experiment-create-page";
 export { ExperimentDetailPage } from "./components/experiment-detail-page";
 export { ExperimentListPage } from "./components/experiment-list-page";
@@ -7,6 +8,13 @@ export { FactorOverview } from "./components/factor-overview";
 export { FactorPage } from "./components/factor-page";
 export { RegimePage } from "./components/regime-page";
 export { ResearchCaseDetailPage, ResearchCaseListPage } from "./components/research-case-pages";
+export {
+	ResearchCaseStrategyHandoff,
+	type ResearchCaseStrategyHandoffProps,
+	type StrategyHandoffCreateResult,
+	type StrategyHandoffCreateTarget,
+	type StrategyHandoffTemplateOption,
+} from "./components/research-case-strategy-handoff";
 export { ResearchPage } from "./components/research-page";
 export { ResearchSubNav } from "./components/research-sub-nav";
 export {

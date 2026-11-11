@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 7d4d9f56463c77df1a21f4f693a633f15111ce02f5050747b84f8a58ca0e8d57
+ * Schema SHA-256: 14e07a589a452c6756d3c001fca8f32f33dac6350b2bb7ba63298e91955a9d93
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -1137,6 +1137,16 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "get /api/v1/strategies/templates": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "get /api/v1/strategies/{strategy_id}": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -1770,6 +1780,16 @@ export const operationResponseContracts = {
   },
   "post /api/v1/selections/runs/{run_id}/research-cases": {
     "201": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "post /api/v1/selections/runs/{run_id}/strategy-template-drafts": {
+    "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
     "404": ["application/json"],
@@ -2622,6 +2642,11 @@ export const operationRequestContracts = {
       "query": ["limit", "offset"],
     },
   },
+  "get /api/v1/strategies/templates": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+    },
+  },
   "get /api/v1/strategies/{strategy_id}": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
@@ -2979,6 +3004,12 @@ export const operationRequestContracts = {
     },
   },
   "post /api/v1/selections/runs/{run_id}/research-cases": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["run_id"],
+    },
+  },
+  "post /api/v1/selections/runs/{run_id}/strategy-template-drafts": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["run_id"],

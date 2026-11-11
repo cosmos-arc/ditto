@@ -60,6 +60,9 @@ from ditto_application.contracts import (
 from ditto_application.exceptions import AppError, AppQueryError
 from ditto_application.mutation_idempotency import canonical_resource_id
 from ditto_application.queries.strategy import StrategyQueryFacade
+from ditto_application.queries.strategy_templates import (
+    StrategyTemplateCatalogQuery,
+)
 from fastapi import APIRouter, Depends, Path, Query
 
 from ditto_apps.api.deps import paginate, pagination_params
@@ -92,6 +95,8 @@ from ditto_apps.models.strategy import (
     StrategyResponse,
     StrategySpecValidateRequest,
     StrategySpecValidationResponse,
+    StrategyTemplateCatalogEntryResponse,
+    StrategyTemplateParamConstraintResponse,
     StrategyVersionDetailResponse,
     StrategyVersionDiffResponse,
     StrategyVersionResponse,
@@ -317,6 +322,38 @@ async def list_strategies(
     """列出策略."""
     specs = await run_blocking(facade.list_specs)
     return paginate([to_strategy_response(s) for s in specs], pagination)
+
+
+@router.get(
+    "/templates",
+    response_model=APIResponse[list[StrategyTemplateCatalogEntryResponse]],
+    operation_id="strategies_list_templates",
+)
+@inject
+async def list_strategy_templates(
+    catalog: Annotated[StrategyTemplateCatalogQuery, FromComponent()],
+) -> APIResponse[list[StrategyTemplateCatalogEntryResponse]]:
+    """List the committed research templates strategy authoring may start from."""
+    entries = await run_blocking(catalog.list_entries)
+    return APIResponse(
+        data=[
+            StrategyTemplateCatalogEntryResponse(
+                template_id=entry.template_id,
+                display_name=entry.display_name,
+                asset_class=entry.asset_class,
+                description=entry.description,
+                universe=entry.universe,
+                benchmark=entry.benchmark,
+                default_frequency=entry.default_frequency,
+                required_datasets=list(entry.required_datasets),
+                param_constraints=[
+                    StrategyTemplateParamConstraintResponse.model_validate(item)
+                    for item in entry.param_constraints
+                ],
+            )
+            for entry in entries
+        ]
+    )
 
 
 @router.get(

@@ -1054,3 +1054,23 @@ class TestDiffStrategyVersion:
             await _call_diff("s1", 99, mock_query_facade)
 
         assert exc_info.value.status_code == 404
+
+
+async def test_router_registers_templates_read_before_path_capture() -> None:
+    """The template catalog has its own read-only operation, not a strategy id."""
+    matches = [
+        route
+        for route in router.routes
+        if isinstance(route, APIRoute)
+        and route.path == "/strategies/templates"
+        and "GET" in (route.methods or ())
+    ]
+    assert len(matches) == 1
+    assert matches[0].operation_id == "strategies_list_templates"
+    # 注册顺序必须先于 /{strategy_id}，否则 "templates" 被当成策略 ID 捕获。
+    strategy_capture = [
+        route
+        for route in router.routes
+        if isinstance(route, APIRoute) and route.path == "/strategies/{strategy_id}"
+    ]
+    assert router.routes.index(matches[0]) < router.routes.index(strategy_capture[0])

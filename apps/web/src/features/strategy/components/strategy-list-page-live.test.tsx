@@ -81,6 +81,8 @@ describe("StrategyListPage governed catalog", () => {
 		vi.stubEnv("VITE_USE_MOCK", "false");
 		server.use(
 			http.get("/api/v1/strategies", () => HttpResponse.json({ data: STRATEGIES })),
+			// server.use 前插的 :id 覆盖会捕获字面段 templates，这里显式补回目录。
+			http.get("/api/v1/strategies/templates", () => HttpResponse.json({ data: [] })),
 			http.get("/api/v1/strategies/:id", ({ params }) => {
 				const item = STRATEGIES.find((strategy) => strategy.strategy_id === params["id"]) ?? STRATEGIES[0];
 				return HttpResponse.json({ data: item });

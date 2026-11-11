@@ -18,6 +18,48 @@ import {
  * （`/api/strategies/*` 无 v1、`/api/factor-library`）与旧 fixture 已随 factor-browser 一并清理。
  */
 export const strategyHandlers: RequestHandler[] = [
+	// 注册在 /:id 之前：路径参数模式会捕获 "templates" 字面段。
+	http.get("/api/v1/strategies/templates", () =>
+		HttpResponse.json({
+			data: [
+				{
+					template_id: "stock_selection",
+					display_name: "股票多因子选股",
+					asset_class: "stock",
+					description: "按因子权重合成分数选股并定期调仓。",
+					universe: "csi_a_share",
+					benchmark: "000300.SH",
+					default_frequency: "M",
+					required_datasets: ["stock_daily", "adj_factor", "balance_sheet", "income_statement"],
+					param_constraints: [
+						{ name: "top_k", dtype: "int", min_value: 1, max_value: 50, step: 1, allowed_values: [] },
+					],
+				},
+				{
+					template_id: "etf_rotation",
+					display_name: "ETF 轮动",
+					asset_class: "etf",
+					description: "按动量合成分数在 ETF 池内轮动持有前几名。",
+					universe: "csi_etf_broad",
+					benchmark: "000300.SH",
+					default_frequency: "M",
+					required_datasets: ["etf_daily"],
+					param_constraints: [],
+				},
+				{
+					template_id: "etf_trend_swing",
+					display_name: "ETF 趋势",
+					asset_class: "etf",
+					description: "按趋势信号进出 ETF 并以移动止损保护利润。",
+					universe: "csi_etf_broad",
+					benchmark: "000300.SH",
+					default_frequency: "W",
+					required_datasets: ["etf_daily"],
+					param_constraints: [],
+				},
+			],
+		}),
+	),
 	http.get("/api/v1/strategies", () =>
 		HttpResponse.json({
 			data: mockStrategyList,

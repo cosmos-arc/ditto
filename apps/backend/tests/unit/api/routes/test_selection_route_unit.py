@@ -55,7 +55,12 @@ from ditto_apps.registry.research_case import AnalysisResearchCaseFactory
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.industry_rotation.contracts import IndustryRotationSnapshot
 from ditto_strategy.industry_rotation.service import IndustryRotationService
-from ditto_strategy.selection.contracts import SelectionRun
+from ditto_strategy.selection.contracts import (
+    EtfSelectionSpec,
+    SelectionRun,
+    StockSelectionSpec,
+    canonical_spec_hash,
+)
 from ditto_strategy.selection.pipeline import SelectionPipeline
 from packages.application.tests.integration.snapshot_readiness_support import (
     ready_selection,
@@ -70,12 +75,24 @@ class _Store:
     def __init__(self) -> None:
         self.saved: dict[str, SelectionRun] = {}
         self.saved_rotations: dict[str, IndustryRotationSnapshot] = {}
+        self.saved_policies: dict[str, object] = {}
 
     def save(self, value: SelectionRun) -> None:
         self.saved.setdefault(value.run_id, value)
 
     def save_rotation(self, value: IndustryRotationSnapshot) -> None:
         self.saved_rotations.setdefault(value.snapshot_id, value)
+
+    def save_policy(self, value: StockSelectionSpec | EtfSelectionSpec) -> None:
+        self.saved_policies.setdefault(canonical_spec_hash(value), value)
+
+    def policy_by_hash(
+        self, spec_hash: str
+    ) -> StockSelectionSpec | EtfSelectionSpec | None:
+        value = self.saved_policies.get(spec_hash)
+        if isinstance(value, StockSelectionSpec | EtfSelectionSpec):
+            return value
+        return None
 
     def get(self, run_id: str) -> SelectionRun | None:
         return self.saved.get(run_id)
@@ -205,6 +222,7 @@ def _facade(store: _Store, readiness, history) -> SelectionWorkspaceFacade:
             selection_pipeline=SelectionPipeline(),
             rotation_writer=store,
             run_writer=store,
+            policy_writer=store,
         ),
         readiness=readiness,
         historical_universe=history,
@@ -519,3 +537,155 @@ def test_assemble_handler_maps_process_errors(gate) -> None:
         asyncio.run(handler(body=_assembly_body(), process=process))
 
     assert error.value.error_code == "ASSEMBLY_CUTOFF_BACKDATED"
+
+
+def test_propose_strategy_template_draft_returns_saveable_spec_and_gaps() -> None:
+    from ditto_application.processes.strategy.template_handoff import (
+        ProposeStrategyTemplateDraft,
+    )
+    from ditto_apps.api.routes.selection import propose_strategy_template_draft
+    from ditto_apps.models.selection import StrategyTemplateHandoffBody
+    from ditto_strategy.selection.contracts import (
+        SelectionFactorValue,
+        SelectionFactorWeight,
+        SelectionInputBundle,
+        SelectionInstrumentInput,
+        SelectionLimitState,
+        StockSelectionSpec,
+        canonical_spec_hash,
+    )
+
+    spec = StockSelectionSpec(
+        spec_id="stock-core",
+        spec_version="1",
+        top_k=2,
+        min_average_turnover=20_000_000.0,
+        min_listing_days=120,
+        factor_weights=(
+            SelectionFactorWeight("momentum_1m", 0.6),
+            SelectionFactorWeight("value_pe", 0.4),
+        ),
+    )
+    run = SelectionPipeline().run(
+        SelectionInputBundle(
+            as_of=_AS_OF,
+            knowledge_cutoff=_AS_OF,
+            publication_cutoff=_AS_OF,
+            universe_snapshot_id="universe:sha256:abc",
+            industry_rotation_snapshot_id=None,
+            source_snapshot_ids=("market-a",),
+            spec=spec,
+            seed=17,
+            instruments=(
+                SelectionInstrumentInput(
+                    instrument_id=InstrumentId(600001),
+                    instrument_name="Instrument 600001",
+                    industry_id="801010",
+                    factor_values=(
+                        SelectionFactorValue("momentum_1m", 1.0),
+                        SelectionFactorValue("value_pe", 0.2),
+                    ),
+                    average_turnover=100_000_000.0,
+                    is_st=False,
+                    is_suspended=False,
+                    listing_days=500,
+                    limit_state=SelectionLimitState.NORMAL,
+                    tracking_error=None,
+                ),
+                SelectionInstrumentInput(
+                    instrument_id=InstrumentId(600002),
+                    instrument_name="Instrument 600002",
+                    industry_id="801010",
+                    factor_values=(
+                        SelectionFactorValue("momentum_1m", 0.4),
+                        SelectionFactorValue("value_pe", 0.9),
+                    ),
+                    average_turnover=100_000_000.0,
+                    is_st=False,
+                    is_suspended=False,
+                    listing_days=500,
+                    limit_state=SelectionLimitState.NORMAL,
+                    tracking_error=None,
+                ),
+            ),
+        )
+    )
+    store = _Store()
+    store.saved[run.run_id] = run
+    store.saved_policies[canonical_spec_hash(spec)] = spec
+    cases = _CaseStore()
+    process = ProposeStrategyTemplateDraft(
+        run_reader=store,
+        policy_reader=store,
+        case_reader=cases,
+    )
+    handler = _original(propose_strategy_template_draft)
+
+    with patch(
+        "ditto_apps.api.routes.selection.asyncio.to_thread",
+        side_effect=_inline_to_thread,
+    ):
+        response = asyncio.run(
+            handler(
+                run_id=run.run_id,
+                body=StrategyTemplateHandoffBody(template_id="stock_selection"),
+                process=process,
+            )
+        )
+
+    proposal = response.data
+    assert proposal.template_id == "stock_selection"
+    assert proposal.spec_json["signal_expressions"] == ["momentum_1m", "value_pe"]
+    assert {item.source for item in proposal.unconverted} >= {
+        "filter_groups",
+        "min_average_turnover",
+    }
+    assert proposal.lineage["selection_run_id"] == run.run_id
+    assert proposal.lineage["as_of"] == _AS_OF.isoformat()
+
+
+def test_propose_strategy_template_draft_maps_not_found_and_mismatch() -> None:
+    from ditto_application.processes.strategy.template_handoff import (
+        ProposeStrategyTemplateDraft,
+    )
+    from ditto_apps.api.routes.selection import propose_strategy_template_draft
+    from ditto_apps.models.selection import StrategyTemplateHandoffBody
+
+    store = _Store()
+    process = ProposeStrategyTemplateDraft(
+        run_reader=store,
+        policy_reader=store,
+        case_reader=_CaseStore(),
+    )
+    handler = _original(propose_strategy_template_draft)
+
+    with (
+        patch(
+            "ditto_apps.api.routes.selection.asyncio.to_thread",
+            side_effect=_inline_to_thread,
+        ),
+        pytest.raises(NotFoundError),
+    ):
+        asyncio.run(
+            handler(
+                run_id="selection-run:sha256:" + "0" * 64,
+                body=StrategyTemplateHandoffBody(template_id="stock_selection"),
+                process=process,
+            )
+        )
+
+    with (
+        patch(
+            "ditto_apps.api.routes.selection.asyncio.to_thread",
+            side_effect=_inline_to_thread,
+        ),
+        pytest.raises(UnprocessableEntityError) as mismatch,
+    ):
+        asyncio.run(
+            handler(
+                run_id="selection-run:sha256:" + "0" * 64,
+                body=StrategyTemplateHandoffBody(template_id="no-such-template"),
+                process=process,
+            )
+        )
+    assert mismatch.value.error_code == "unknown_strategy_template"

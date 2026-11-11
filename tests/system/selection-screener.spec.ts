@@ -359,3 +359,53 @@ test.describe.serial("reopen fixed runs and hand off to research (#741)", () => 
 		await expect(page.locator("tr").filter({ hasText: objective })).toBeVisible();
 	});
 });
+
+test.describe.serial("research templates form explicit strategy versions (#744)", () => {
+	test("case handoff converts weights, explains unconverted conditions, and saves a readable version", async ({
+		page,
+	}) => {
+		const browserErrors: string[] = [];
+		page.on("pageerror", (error) => browserErrors.push(error.message));
+
+		// 全程真实链路：筛选 → 固定运行 → 研究用例 → 模板草稿 → 策略版本。
+		const runId = await createFixedRun(page, "2");
+		const objective = "验证动量候选的模板化月度研究";
+		await page.getByRole("textbox", { name: "研究假设 objective" }).fill(objective);
+		await page.getByRole("button", { name: "创建研究用例" }).click();
+		await page.getByRole("link", { name: "在研究中打开" }).click();
+		await expect(page).toHaveURL(/\/research\/cases\/research-case%3Asha256%3A/);
+
+		// 形成策略版本：股票用例只提供股票模板，不把 ETF 模板错配给股票条件。
+		const handoff = page.getByLabel("形成策略版本");
+		await expect(handoff.getByRole("radio", { name: /股票多因子选股/ })).toBeVisible();
+		await expect(handoff.getByRole("radio", { name: /ETF/ })).toHaveCount(0);
+
+		await handoff.getByRole("radio", { name: /股票多因子选股/ }).check();
+		// 提案忠实呈现：权重转入信号表达式（同因子注册表），不可转换条件有解释。
+		await expect(handoff.getByText(/momentum_1mx1/)).toBeVisible();
+		await expect(handoff.getByText(/不能直接转换/)).toBeVisible();
+		await expect(handoff.getByText(/截面分数秩阈值/)).toBeVisible();
+		await expect(handoff.getByText("csi_a_share")).toBeVisible();
+
+		// 修改身份后创建草稿（用户修改与模板共存，创建走真实策略命令）。
+		const stamp = Date.now().toString(36);
+		const strategyId = `handoff-journey-${stamp}`;
+		await handoff.getByLabel("新策略 ID").fill(strategyId);
+		await handoff.getByRole("button", { name: "创建策略草稿" }).click();
+		await expect(handoff.getByText(`已创建策略草稿 ${strategyId} · v1`)).toBeVisible();
+
+		// 版本重读：策略详情按服务端持久化展示同一模板配置与因子权重。
+		await handoff.getByRole("link", { name: "查看策略版本" }).click();
+		await expect(page).toHaveURL(new RegExp(`/research/strategies/${strategyId}`));
+		await expect(page.getByText("因子表达式")).toBeVisible();
+		await expect(page.getByText("momentum_1m")).toBeVisible();
+		await expect(page.getByTestId("strategy-detail-bottom")).toContainText("csi_a_share");
+
+		// 刷新重读：草稿版本仍持久（不依赖创建页面会话）。
+		await page.reload();
+		await expect(page.getByText("momentum_1m")).toBeVisible();
+		await expect(page.getByTestId("strategy-detail-bottom")).toContainText("csi_a_share");
+		expect(browserErrors).toEqual([]);
+		expect(runId).toContain("selection-run:sha256:");
+	});
+});
