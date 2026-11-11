@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import { readFile } from "node:fs/promises";
 import { expect, type Page, test } from "@playwright/test";
 
 function requiredEnvironment(name: string): string {
@@ -67,23 +68,30 @@ test.describe
 			await buyLink.focus();
 			await page.keyboard.press("Enter");
 
-			// 落地标的页 K 线：drill-focus 状态条 + 定位 marker + as_of 水位线一致
-			const chip = page.locator("[data-state='drill-focus']").first();
-			await expect(chip).toBeVisible();
-			expect((await chip.textContent()) ?? "").toContain(RUN_ID);
-			expect((await chip.textContent()) ?? "").toContain("买入");
+		// 落地标的页 K 线：drill-focus 状态条 + 定位 marker + as_of 水位线一致
+		const chip = page.locator("[data-state='drill-focus']").first();
+		await expect(chip).toBeVisible();
+		expect((await chip.textContent()) ?? "").toContain(RUN_ID);
+		expect((await chip.textContent()) ?? "").toContain("买入");
 
-			const host = page.locator("[data-chart-interaction-contract^='instrument-candles-']");
-			await expect(host).toBeVisible();
-			await expect(host).toHaveAttribute("data-chart-marker-times", /\d+/);
-			await expect(host).toHaveAttribute("data-chart-as-of", /\d+/);
-			// 定位生效：目标时点在可视窗口附近（而非 fitContent 的首尾全览）
-			await expect
-				.poll(async () => (await host.getAttribute("data-chart-visible-range")) ?? "")
-				.not.toBe("");
+		const host = page.locator("[data-chart-interaction-contract^='instrument-candles-']");
+		await expect(host).toBeVisible();
+		await expect(host).toHaveAttribute("data-chart-marker-times", /\d+/);
+		await expect(host).toHaveAttribute("data-chart-as-of", /\d+/);
+		// 定位生效：目标时点在可视窗口附近（而非 fitContent 的首尾全览）
+		await expect
+			.poll(async () => (await host.getAttribute("data-chart-visible-range")) ?? "")
+			.not.toBe("");
 
-			expect(browserErrors).toEqual([]);
-		});
+		// 定位标的与日期后可以返回：回程入口把用户带回源运行工作面（键盘可达）
+		const backLink = page.getByRole("link", { name: `返回回测 ${RUN_ID}` });
+		await backLink.focus();
+		await page.keyboard.press("Enter");
+		await expect(page.getByTestId("backtest-detail-meta")).toBeVisible();
+		await expect(page.getByTestId("backtest-detail-identity")).toContainText(RUN_ID);
+
+		expect(browserErrors).toEqual([]);
+	});
 
 		test("sell drill marks the exit date with a below-bar marker", async ({ page }) => {
 			const browserErrors = captureBrowserErrors(page);
@@ -106,12 +114,43 @@ test.describe
 			const host = page.locator("[data-chart-interaction-contract^='instrument-candles-']");
 			await expect(host).toBeVisible();
 			const expectedTime = Date.parse(`${focusMatch![1]}T00:00:00Z`) / 1000;
-			await expect(host).toHaveAttribute("data-chart-marker-times", String(expectedTime));
+		await expect(host).toHaveAttribute("data-chart-marker-times", String(expectedTime));
 
-			await expectNoSeriousAccessibilityViolations(page);
-			expect(browserErrors).toEqual([]);
-		});
+		await expectNoSeriousAccessibilityViolations(page);
+		expect(browserErrors).toEqual([]);
 	});
+
+	test("trades tab exports a CSV with the same rows and identity as the displayed table", async ({ page }) => {
+		const browserErrors = captureBrowserErrors(page);
+		await page.goto(`${webOrigin}/research/backtests/${RUN_ID}`);
+		await page.getByRole("tab", { name: "成交" }).click();
+
+		const tableRows = await page.locator("[data-info-unit='trade-record']").count();
+		expect(tableRows).toBeGreaterThan(0);
+
+		const exportButton = page.getByRole("button", { name: "导出成交 CSV" });
+		await exportButton.focus();
+		const downloaded = page.waitForEvent("download");
+		await page.keyboard.press("Enter");
+		const download = await downloaded;
+		expect(download.suggestedFilename()).toBe(`${RUN_ID}-trades.csv`);
+		const path = await download.path();
+		if (!path) throw new Error("trades CSV download missing");
+		const csv = await readFile(path, "utf8");
+		// 身份注释 + 与表格同值的行：行数（去身份注释与表头）与页面表格行数一致
+		expect(csv).toContain(`# run_id=${RUN_ID}`);
+		const dataRows = csv
+			.split("\n")
+			.filter((line) => line && !line.startsWith("#") && !line.startsWith("trade_date,"));
+		expect(dataRows).toHaveLength(tableRows);
+		// 每行都是日期/instrument 开头的结构化数据（与表格同源同口径）
+		for (const row of dataRows) {
+			expect(row).toMatch(/^\d{4}-\d{2}-\d{2},\d+,(buy|sell|long|short),/);
+		}
+
+		expect(browserErrors).toEqual([]);
+	});
+});
 
 function screenDrawer(page: Page) {
 	return page.locator("[role='dialog'], [data-state='open']").filter({ hasText: "成交证据下钻" }).first();

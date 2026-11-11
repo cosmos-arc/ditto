@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { createElement, type ReactNode } from "react";
@@ -126,6 +126,25 @@ describe("InstrumentChartView", () => {
 		expect(props.asOf?.time).toBe(Date.parse("2026-03-27T00:00:00Z") / 1000);
 		expect(props.asOf?.label).toContain("as_of 2026-03-27");
 		expect(props.asOf?.label).toContain("回测下钻 sys-fx-nav-001");
+	});
+
+	it("下钻状态条提供返回源运行的链接：成交定位标的与日期后可以返回", async () => {
+		const view = render(
+			<InstrumentChartView
+				id="1000001"
+				drill={{ date: "2026-03-09", runId: "sys-fx-nav-001", asOf: "2026-03-27", direction: "sell" }}
+			/>,
+			{ wrapper: createWrapper() },
+		);
+		await screen.findByTestId("cockpit-stub");
+		const chip = await screen.findByTestId("drill-focus-1000001");
+		const back = within(chip).getByRole("link", { name: "返回回测 sys-fx-nav-001" });
+		expect(back).toHaveAttribute("href", "/research/backtests/sys-fx-nav-001");
+		// 无下钻上下文时不出现该入口（不虚构来源）
+		view.unmount();
+		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		expect(screen.queryByRole("link", { name: /返回回测/ })).not.toBeInTheDocument();
 	});
 
 	it("以蜡烛形态喂给图表 shell 并展示 Primary Answer 关键数字", async () => {

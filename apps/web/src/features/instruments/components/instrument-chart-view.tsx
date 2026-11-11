@@ -322,6 +322,16 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 						<span className="font-data text-(--color-foreground-tertiary)">run {drill.runId}</span>
 						<span className="font-data text-(--color-foreground-tertiary)">as_of {drill.asOf || "—"}</span>
 						<span className="text-(--color-foreground-muted)">决策线为源 run as_of；K 线按当前图表来源截止</span>
+						{/* 定位标的与日期后可返回源运行：跨域跳转合同的回程入口。
+						    runId 缺失（旧链接未携带来源）时不虚构返回目标。 */}
+						{drill.runId.trim() ? (
+							<a
+								href={`/research/backtests/${encodeURIComponent(drill.runId)}`}
+								className="rounded-(--radius-sm) border border-(--color-border-primary) px-2 py-1 font-medium text-(--color-foreground-secondary) underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+							>
+								返回回测 {drill.runId}
+							</a>
+						) : null}
 					</div>
 				)}
 
