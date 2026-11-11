@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from ditto_application.processes.selection.assemble_facts import AssembleSelectionFacts
+import pytest
+from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.selection.assemble_facts import resolve_factor_nodes
 from ditto_application.queries.selection_factor_catalog import (
     SelectionFactorCatalogQuery,
 )
+from ditto_features.expression.compiler import ExpressionCompiler
 from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
 
 
@@ -24,6 +27,11 @@ def test_lists_only_assembly_eligible_factors() -> None:
     # fail closed），python 执行器因子没有 expression 面包。
     assert "ep_ttm" not in ids
     assert "relative_strength_60d" not in ids
+    # 装配引擎必拒的配方同样不得出现（#740 F1）：cs_rank 嵌套 ts 算子
+    # 需要 materialized intermediates，引擎按 ASSEMBLY_FACTOR_EXPRESSION_
+    # UNSUPPORTED 拒绝——目录若收录即用户可选中、提交即 422。
+    assert "liquidity" not in ids
+    assert "alpha_001" not in ids
     # 每个因子恰好一个条目，稳定排序。
     assert ids == sorted(ids)
     assert len(ids) == len(set(ids))
@@ -46,35 +54,25 @@ def test_entry_carries_readable_metadata() -> None:
 
 
 def test_eligibility_matches_the_real_assembly_path() -> None:
-    # 行为级单一权威锁定：目录声称合格的每个因子都必须通过真实
-    # AssembleSelectionFacts 的因子解析路径（unknown/python/依赖不可解）。
-    process = AssembleSelectionFacts(
-        provider=None,  # type: ignore[arg-type]
-        history=None,  # type: ignore[arg-type]
-        discover_sources=None,  # type: ignore[arg-type]
-        identities=None,  # type: ignore[arg-type]
-        factors=ALL_FACTOR_SPECS,  # type: ignore[arg-type]
-        snapshots=None,  # type: ignore[arg-type]
-    )
-    visit: dict[str, frozenset[str]] = {}
-
-    def walk(factor_id: str, path: tuple[str, ...]) -> frozenset[str]:
-        if factor_id in visit:
-            return visit[factor_id]
-        assert factor_id not in path
-        spec = process._factor_spec(factor_id)
-        leaves: set[str] = set()
-        for dependency in spec.dependencies:
-            leaves |= process._dependency_leaves(dependency, factor_id, path, walk)
-        visit[factor_id] = frozenset(leaves)
-        return visit[factor_id]
-
+    # 行为级单一权威锁定（#740 F1）：目录声称合格的每个因子都必须通过
+    # 装配引擎真实运行的同一条规划路径（_plan_factors 委托的共享
+    # resolver），杜绝目录收录引擎必拒因子。
+    compiler = ExpressionCompiler()
     for entry in _query().list_entries():
-        process._factor_spec(entry.factor_id)  # unknown/python 拒绝
-        walk(entry.factor_id, ())
+        resolve_factor_nodes(ALL_FACTOR_SPECS.get, compiler, (entry.factor_id,))
+
+    # 引擎必拒的两个代表（cs/ts 嵌套）在 resolver 上如实失败。
+    for rejected in ("liquidity", "alpha_001"):
+        with pytest.raises(AppProcessError) as error:
+            resolve_factor_nodes(ALL_FACTOR_SPECS.get, compiler, (rejected,))
+        assert error.value.details["reason"] == "ASSEMBLY_FACTOR_EXPRESSION_UNSUPPORTED"
 
 
-def test_lookback_comes_from_the_compiled_expression() -> None:
+def test_lookback_composes_across_the_dependency_chain() -> None:
     entries = {entry.factor_id: entry for entry in _query().list_entries()}
     # momentum_3m 是 60 交易日窗口的表达式因子。
     assert entries["momentum_3m"].lookback_trading_days >= 60
+    # 回看沿依赖闭包组合（#740 F3）：volatility_factor = -volatility_20，
+    # volatility_20 = ts_std(returns_1, 20) 又依赖 1 日 returns——组合窗口
+    # 必须计入依赖链，而不是只看自身表达式。
+    assert entries["volatility_factor"].lookback_trading_days >= 21

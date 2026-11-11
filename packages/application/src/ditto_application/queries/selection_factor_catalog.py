@@ -2,13 +2,12 @@
 Eligible factor catalog for the visual screener (#740).
 
 The catalog is the single server-side statement of which governed factors
-can enter selection conditions and weights. Eligibility mirrors what
-``AssembleSelectionFacts`` can actually assemble on the live read model:
-expression factors whose dependency closure resolves entirely onto market
-bar columns. A factor the assembly engine would reject fail-closed
-(financial-statement leaves, python executors, unknown ids) never appears
-as a choosable field, so the visual builder cannot author a run that the
-server must refuse.
+can enter selection conditions and weights. Eligibility is decided by the
+exact resolver the assembly engine runs (:func:`resolve_factor_nodes`):
+a factor the engine would reject fail-closed (financial-statement leaves,
+python executors, unresolvable dependencies, cross-sectional-nested
+time-series recipes) never appears as a choosable field, and the reported
+lookback is the same dependency-composed window the planner uses.
 """
 
 from __future__ import annotations
@@ -17,16 +16,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from ditto_features.expression.compiler import ExpressionCompiler
-from ditto_features.expression.diagnostics import ExpressionCompileError
 from ditto_features.factors.factor_registry import FACTOR_GROUP_LABELS, FACTOR_GROUPS
 from ditto_features.factors.spec import FactorSpec
 
-from ditto_application.exceptions import AppQueryError
-from ditto_application.processes.execution._factor_signal_spec import (
-    build_signal_spec,
-)
+from ditto_application.exceptions import AppProcessError, AppQueryError
 from ditto_application.processes.selection.assemble_facts import (
-    MARKET_BAR_COLUMNS,
+    resolve_factor_nodes,
 )
 
 __all__ = [
@@ -52,29 +47,6 @@ class SelectionFactorCatalogEntry:
     value_unit: str
 
 
-def _closure_leaves(
-    specs: Mapping[str, FactorSpec], factor_id: str, path: frozenset[str]
-) -> frozenset[str] | None:
-    """Resolve one factor's market leaves; None when not assembly-eligible."""
-    spec = specs.get(factor_id)
-    if spec is None or spec.computation_type != "expression":
-        return None
-    if factor_id in path:
-        return None
-    leaves: set[str] = set()
-    for dependency in spec.dependencies:
-        if dependency in specs:
-            nested = _closure_leaves(specs, dependency, path | {factor_id})
-            if nested is None:
-                return None
-            leaves |= nested
-        elif dependency in MARKET_BAR_COLUMNS:
-            leaves.add(dependency)
-        else:
-            return None
-    return frozenset(leaves)
-
-
 class SelectionFactorCatalogQuery:
     """List the factors the visual screener may reference."""
 
@@ -98,25 +70,29 @@ class SelectionFactorCatalogQuery:
             group = group_by_id.get(factor_id)
             if group is None:
                 continue
-            leaves = _closure_leaves(self._factors, factor_id, frozenset())
-            if leaves is None:
-                continue
+            # The same resolver the engine runs at assembly time decides
+            # eligibility and the dependency-composed lookback; any
+            # rejection (unknown/python/dependency/compile/recipe) drops
+            # the factor from the choosable set instead of surfacing a
+            # field the server would refuse (#740 F1/F3).
             try:
-                compiled = self._compiler.compile(
-                    build_signal_spec(
-                        spec.expression, 0, derived_id=factor_id, version=1
-                    )
+                nodes = resolve_factor_nodes(
+                    self._factors.get, self._compiler, (factor_id,)
                 )
-            except ExpressionCompileError:
+            except AppProcessError:
                 continue
+            requested_nodes = [node for node in nodes if node.requested]
+            if len(requested_nodes) != 1:
+                continue
+            node = requested_nodes[0]
             entries.append(
                 SelectionFactorCatalogEntry(
                     factor_id=factor_id,
                     group=group,
                     group_label=FACTOR_GROUP_LABELS.get(group, group),
                     description=spec.description,
-                    lookback_trading_days=max(1, compiled.analysis.lookback),
-                    dependencies=tuple(sorted(leaves)),
+                    lookback_trading_days=max(1, node.lookback),
+                    dependencies=tuple(sorted(node.leaves)),
                     value_unit=VALUE_UNIT_LABEL,
                 )
             )

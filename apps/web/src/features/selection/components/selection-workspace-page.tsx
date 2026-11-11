@@ -28,6 +28,12 @@ export function SelectionWorkspacePage({
 	const queryClient = useQueryClient();
 	const [specId, setSpecId] = useState(initialSpecId);
 	const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+	// 同路由 search 变化（浏览器返回/前进、站内链接切换 ?spec=）不重挂载
+	// 组件：受控跟随宿主传入的身份；用户清空输入框时宿主回 undefined，
+	// 保留清空状态而不是重置回默认（#740 F4）。
+	useEffect(() => {
+		if (initialSpecId !== undefined) setSpecId(initialSpecId);
+	}, [initialSpecId]);
 	const [compareIds, setCompareIds] = useState<readonly string[]>([]);
 	const [tab, setTab] = useState<ResultsTab>("candidates");
 	const [feedback, setFeedback] = useState<string | null>(null);

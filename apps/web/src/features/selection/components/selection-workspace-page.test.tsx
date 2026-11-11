@@ -311,3 +311,24 @@ it("rejects an assembled response whose policy echo drifts from the submitted wi
 	);
 	expect(screen.queryByRole("region", { name: "组装摘要" })).not.toBeInTheDocument();
 });
+
+describe("SelectionWorkspacePage spec identity follows host navigation", () => {
+	it("follows a changed ?spec= on same-route navigation instead of keeping stale state (#740 F4)", async () => {
+		const user = userEvent.setup();
+		const first = render(<SelectionWorkspacePage initialSpecId="spec-alpha" />, { wrapper: wrapper() });
+
+		const input = screen.getByRole("textbox", { name: "SelectionSpec ID" });
+		expect(input).toHaveValue("spec-alpha");
+		await user.type(input, "-typed");
+		expect(input).toHaveValue("spec-alpha-typed");
+
+		// 同路由 search 变化（不重挂载）：宿主身份更新被受控跟随。
+		first.rerender(<SelectionWorkspacePage initialSpecId="spec-beta" />);
+		expect(screen.getByRole("textbox", { name: "SelectionSpec ID" })).toHaveValue("spec-beta");
+
+		// 用户清空输入 → 宿主回 undefined：保留清空状态（不重置默认）。
+		first.rerender(<SelectionWorkspacePage initialSpecId={undefined} />);
+		await user.clear(screen.getByRole("textbox", { name: "SelectionSpec ID" }));
+		expect(screen.getByRole("textbox", { name: "SelectionSpec ID" })).toHaveValue("");
+	});
+});

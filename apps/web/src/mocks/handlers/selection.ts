@@ -224,6 +224,8 @@ function validateAssemblyPolicy(body: AssembleSelectionRunBody): ReturnType<type
 				return HttpResponse.json({ detail: `条件因子不可用：${condition.factor_name}` }, { status: 422 });
 			if (condition.operator !== "gte" && condition.operator !== "lte")
 				return HttpResponse.json({ detail: "条件算子只支持 gte 或 lte" }, { status: 422 });
+			// 镜像生产 ASSEMBLY_CONDITION_VALUE_INVALID（#740 F2）：
+			// 条件阈值定义在截面分数秩 [0,1]，出域值服务端 422。
 			if (!Number.isFinite(condition.value) || condition.value < 0 || condition.value > 1)
 				return HttpResponse.json({ detail: "条件阈值需在 0 到 1 之间（截面分数秩口径）" }, { status: 422 });
 		}

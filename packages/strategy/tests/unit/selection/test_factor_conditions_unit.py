@@ -194,6 +194,30 @@ class TestConditionContractValidation:
         with pytest.raises(StrategySpecError, match="filter group"):
             _spec(((),))
 
+    def test_rejects_threshold_outside_unit_rank_domain(self):
+        # 条件阈值定义在截面分数秩 [0,1] 上：出域值恒真/恒假，拒绝。
+        with pytest.raises(StrategySpecError, match="unit-rank"):
+            _spec(
+                (
+                    (
+                        SelectionFactorCondition(
+                            "momentum", SelectionConditionOperator.GTE, 1.5
+                        ),
+                    ),
+                )
+            )
+        # 负值由有限值下界守卫报出（同一值域的另一半）。
+        with pytest.raises(StrategySpecError, match="finite"):
+            _spec(
+                (
+                    (
+                        SelectionFactorCondition(
+                            "momentum", SelectionConditionOperator.GTE, -0.1
+                        ),
+                    ),
+                )
+            )
+
     def test_rejects_non_finite_threshold(self):
         with pytest.raises(StrategySpecError, match="finite"):
             _spec(

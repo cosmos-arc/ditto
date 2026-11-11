@@ -10,6 +10,7 @@ from dishka.integrations.fastapi import setup_dishka
 from ditto_application.processes.selection.assemble_facts import (
     AssembleSelectionFacts,
     AssembleSelectionFactsRequest,
+    validate_assembly_policy,
 )
 from ditto_application.processes.selection.facade import SelectionWorkspaceFacade
 from ditto_application.processes.selection.run_industry_and_security_selection import (
@@ -77,6 +78,9 @@ async def test_policy_only_create_replays_and_refuses_client_facts(tmp_path):
                 self.requests: list[AssembleSelectionFactsRequest] = []
 
             def assemble(self, request: AssembleSelectionFactsRequest):
+                # 保真替换：策略门（权重/条件/阈值域）在录制前照常执行，
+                # 否则测试会接受真实引擎必拒的请求体。
+                validate_assembly_policy(request)
                 self.requests.append(request)
                 return bound
 
@@ -178,6 +182,26 @@ async def test_policy_only_create_replays_and_refuses_client_facts(tmp_path):
                 },
             )
             assert empty_group.status_code == 422, empty_group.text
+            # 出域阈值（截面分数秩 [0,1]）服务端拒绝（#740 F2），不再
+            # 静默生成零候选运行。
+            out_of_domain = await client.post(
+                "/api/v1/selections/runs",
+                json={
+                    **_POLICY_BODY,
+                    "factor_filter_groups": [
+                        {
+                            "conditions": [
+                                {
+                                    "factor_name": "liquidity",
+                                    "operator": "gte",
+                                    "value": 1.5,
+                                }
+                            ]
+                        }
+                    ],
+                },
+            )
+            assert out_of_domain.status_code == 422, out_of_domain.text
         await container.close()
         pool.close_all()
 

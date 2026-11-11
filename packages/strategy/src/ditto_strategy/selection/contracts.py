@@ -199,11 +199,16 @@ class SelectionFactorCondition:
         object.__setattr__(
             self, "factor_name", _text(self.factor_name, field_name="factor name")
         )
-        object.__setattr__(
-            self,
-            "value",
-            _finite(self.value, field_name="condition value"),
-        )
+        # 条件阈值定义在截面分数秩值域上（(0,1]）：出域阈值要么恒真
+        # 要么恒假，只会制造一个看似有条件、实则无判别力的 spec。
+        threshold = _finite(self.value, field_name="condition value", minimum=0.0)
+        if threshold > 1.0:
+            raise _error(
+                "selection condition value must be a unit-rank threshold "
+                + "in [0, 1]",
+                reason="invalid_selection_condition_value",
+            )
+        object.__setattr__(self, "value", threshold)
 
     def describe(self) -> str:
         """Render the condition for exclusion evidence."""

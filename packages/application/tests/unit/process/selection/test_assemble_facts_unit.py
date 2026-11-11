@@ -1402,6 +1402,22 @@ def test_rejects_empty_condition_group() -> None:
     assert error.value.details["reason"] == "ASSEMBLY_FILTER_GROUP_EMPTY"
 
 
+def test_rejects_condition_value_outside_unit_rank_domain() -> None:
+    # 出域阈值（1.5）在装配前被拒绝（#740 F2）：不再静默生成零候选
+    # ready 运行，而是 422 带理由。
+    process, _, _ = _happy_process()
+    with pytest.raises(AppProcessError) as error:
+        process.assemble(
+            _request(
+                factor_filter_groups=(
+                    (SelectionFactorConditionDraft("reversal_1w", "gte", 1.5),),
+                )
+            )
+        )
+    assert error.value.details["reason"] == "ASSEMBLY_CONDITION_VALUE_INVALID"
+    assert error.value.details["value"] == 1.5
+
+
 def test_rejects_invalid_condition_operator() -> None:
     process, _, _ = _happy_process()
     with pytest.raises(AppProcessError) as error:
