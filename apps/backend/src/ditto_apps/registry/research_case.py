@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import cast
 
-from dishka import FromDishka, Provider, Scope, provide
+from dishka import Provider, Scope, provide
 from ditto_analysis.research.cases import ResearchCase
 from ditto_analysis.storage.sqlite.research import SQLiteResearchCaseStore
 from ditto_application.research_case_contracts import (
@@ -67,14 +67,14 @@ class ResearchCaseCompositionProvider(Provider):
 
     @provide
     def research_case_recorder(
-        self, store: FromDishka[SQLiteResearchCaseStore]
+        self, store: SQLiteResearchCaseStore
     ) -> ResearchCaseRecorder:
         """Bind append-only persistence to the application write port."""
         return AnalysisResearchCaseStoreAdapter(store)
 
     @provide
     def research_case_reader(
-        self, store: FromDishka[SQLiteResearchCaseStore]
+        self, store: SQLiteResearchCaseStore
     ) -> ResearchCaseReader:
         """Bind exact case reads to the application read port."""
         return AnalysisResearchCaseStoreAdapter(store)
