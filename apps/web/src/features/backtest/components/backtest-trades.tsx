@@ -55,7 +55,7 @@ export function BacktestTrades({ jobId }: BacktestTradesProps) {
 	return (
 		<section className="overflow-hidden rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1)">
 			<div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2">
-				<div className="grid grid-cols-[minmax(12rem,1.2fr)_6rem_minmax(12rem,1.4fr)_7rem_8rem_7rem] w-full min-w-[46rem] items-center text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
+				<div className="grid w-full grid-cols-[minmax(12rem,1.2fr)_6rem_minmax(12rem,1.4fr)_7rem_8rem_7rem] items-center text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
 					<span>Instrument</span>
 					<span>Direction</span>
 					<span>Entry → Exit</span>
