@@ -210,6 +210,14 @@ export function ResearchCaseDetailPage({ caseId }: { readonly caseId: string }) 
 								variant={value.selection_status === "ready" ? "healthy" : "warning"}
 							/>
 						</div>
+						{/* 返回动作放页头（视觉门末族）：页变长时底部入口被推出视口折叠线，
+								标题行旁的返回入口在三视口均首屏可达；与候选下钻同链接语言。 */}
+						<a
+							className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-(--color-accent) hover:underline"
+							href={`/markets/screener?run=${encodeURIComponent(value.selection_run_id)}&spec=${encodeURIComponent(run.data?.spec_id ?? "")}`}
+						>
+							← 回到该运行的筛选工作面
+						</a>
 						<section
 							aria-label="用例身份"
 							className="mt-2 space-y-1 font-mono text-[11px] text-(--color-foreground-tertiary)"
@@ -308,14 +316,9 @@ export function ResearchCaseDetailPage({ caseId }: { readonly caseId: string }) 
 					<Panel>
 						<PanelHeader title="继续研究" subtitle="non-agent handoff" />
 						<PanelBody className="space-y-2 p-4 text-xs">
-							<a
-								className="block rounded-(--radius-sm) border border-(--color-border-subtle) p-2 hover:bg-(--color-interaction-hover-subtle-bg)"
-								href={`/markets/screener?run=${encodeURIComponent(value.selection_run_id)}&spec=${encodeURIComponent(run.data?.spec_id ?? "")}`}
-							>
-								回到该运行的筛选工作面
-							</a>
 							<p className="text-(--color-foreground-tertiary)">
-								筛选工作面会按该固定运行恢复候选/排除与运行历史；不需要 Agent 或复制内部 ID。
+								筛选工作面会按该固定运行恢复候选/排除与运行历史；返回入口在页头「← 回到该运行的筛选工作面」；不需要
+								Agent 或复制内部 ID。
 							</p>
 						</PanelBody>
 					</Panel>

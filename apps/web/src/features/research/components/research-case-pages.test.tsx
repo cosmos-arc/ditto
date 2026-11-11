@@ -112,8 +112,13 @@ describe("ResearchCaseDetailPage", () => {
 		expect(within(roster).getByText("宁德时代")).toBeInTheDocument();
 		expect(roster).toHaveTextContent("#1");
 
-		// 返回筛选：带固定运行身份重开（返回恢复筛选上下文）。
-		const backToSelection = screen.getByRole("link", { name: "回到该运行的筛选工作面" });
+		// 返回筛选：带固定运行身份重开（返回恢复筛选上下文）；入口在页头
+		// 区域首屏可达（视觉门末族：底部入口随页长被推出视口折叠线），
+		// 与候选下钻同链接语言，全页仅此一处权威返回动作。
+		const backToSelection = screen.getByRole("link", { name: "← 回到该运行的筛选工作面" });
+		expect(backToSelection.closest('[data-info-unit="research-case-header"]')).not.toBeNull();
+		expect(backToSelection.className).toContain("text-(--color-accent)");
+		expect(backToSelection.className).toContain("hover:underline");
 		expect(backToSelection).toHaveAttribute(
 			"href",
 			`/markets/screener?run=${encodeURIComponent(selectionRunFixtures[0].run_id)}&spec=a-share-stock-discovery`,

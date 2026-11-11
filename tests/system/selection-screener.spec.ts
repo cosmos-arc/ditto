@@ -335,8 +335,9 @@ test.describe.serial("reopen fixed runs and hand off to research (#741)", () => 
 		await expect(temporal).toContainText("2026/11/10");
 		await expect(temporal).toContainText("knowledge cutoff");
 
-		// 返回筛选：带固定运行身份重开（返回恢复筛选上下文）。
-		await page.getByRole("link", { name: "回到该运行的筛选工作面" }).click();
+		// 返回筛选：带固定运行身份重开（返回恢复筛选上下文）；入口在页头
+		// 首屏可达（页长时底部入口被推出视口折叠线）。
+		await page.getByRole("link", { name: "← 回到该运行的筛选工作面" }).click();
 		await expect(page).toHaveURL(new RegExp(`run=${encodeURIComponent(firstRunId)}`));
 		await expect(page.getByRole("link", { name: STOCK_B })).toBeVisible();
 
