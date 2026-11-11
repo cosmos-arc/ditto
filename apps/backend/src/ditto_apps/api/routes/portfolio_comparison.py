@@ -115,6 +115,27 @@ async def get_etf_allocation_review(
 
 
 @router.get(
+    "/etf-allocations",
+    response_model=APIResponse[list[ETFAllocationVersionResponse]],
+    operation_id="portfolio_list_etf_allocations",
+)
+@inject
+async def list_etf_allocations(
+    command: Annotated[ETFAllocationCommand, FromComponent()],
+) -> APIResponse[list[ETFAllocationVersionResponse]]:
+    """Reopen saved ETF research allocations by business identity."""
+    try:
+        versions = await asyncio.to_thread(command.list_allocations)
+    except AppCommandError as exc:
+        raise UnprocessableEntityError(
+            str(exc), error_code="ETF_ALLOCATION_INVALID"
+        ) from exc
+    return APIResponse(
+        data=[ETFAllocationVersionResponse.model_validate(item) for item in versions]
+    )
+
+
+@router.get(
     "/etf-allocations/{allocation_id}/versions",
     response_model=APIResponse[list[ETFAllocationVersionResponse]],
     operation_id="portfolio_list_etf_allocation_versions",

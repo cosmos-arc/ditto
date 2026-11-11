@@ -259,3 +259,62 @@ test.describe.serial("post-market observation to anchored instrument workspace o
 		expect(browserErrors).toEqual([]);
 	});
 });
+
+test("候选理由与次日计划经真实 API 持久化，刷新后按原观察日期重开", async ({
+	page,
+}) => {
+	const anchor = await fetchCalendarAnchor(page);
+
+	// 真实操作加入自选（名称检索 → 保存），不用 API 代替用户动作。
+	await page.goto(`${webOrigin}/markets/watchlist`);
+	await page.getByRole("button", { name: "添加标的" }).click();
+	await page.getByLabel("搜索代码或名称").fill("盘后样本股");
+	await page.getByRole("button", { name: "检索" }).click();
+	await page.getByRole("button", { name: `加入自选 ${STOCK_NAME}` }).click();
+
+	const panel = page.locator('[data-info-unit="watchlist-next-day-plan"]');
+	// 观察日期默认锚定最近完整交易日（calendar 真实摄取结果）。
+	await expect(panel.getByLabel("观察日期")).toHaveValue(anchor);
+	await panel.getByRole("checkbox", { name: new RegExp(STOCK_NAME) }).check();
+	await panel
+		.getByLabel("600779 候选理由")
+		.fill("缩量回踩半年线，次日看是否放量收复");
+	await panel.getByLabel("次日计划", { exact: true }).fill("次日开盘观察 600779 放量，未放量则移出候选");
+	await panel.getByRole("button", { name: "保存理由与次日计划" }).click();
+	await expect(panel.getByText(/已保存 next-day-plan:sha256:/)).toBeVisible();
+	const list = panel.getByRole("region", { name: "已保存理由与次日计划" });
+	await expect(list).toContainText(`观察日 ${anchor}`);
+
+	// 刷新后从服务端重读（不是浏览器暂存），条目与对象关联仍在。
+	await page.reload();
+	const reopened = page.locator('[data-info-unit="watchlist-next-day-plan"]');
+	await expect(reopened.getByRole("region", { name: "已保存理由与次日计划" })).toContainText(
+		`观察日 ${anchor}`,
+	);
+	await reopened.getByRole("button", { name: /展开计划原文/ }).click();
+	await expect(reopened.getByText(/600779：缩量回踩半年线/)).toBeVisible();
+
+	// 修订计划文本 → append-only 新条目；旧条目保留原观察日不被改写。
+	await reopened.getByRole("checkbox", { name: new RegExp(STOCK_NAME) }).check();
+	await reopened
+		.getByLabel("600779 候选理由")
+		.fill("缩量回踩半年线，次日看是否放量收复");
+	await reopened.getByLabel("次日计划", { exact: true }).fill("改为观察 ETF 净值折溢价再决定");
+	await reopened.getByRole("button", { name: "保存理由与次日计划" }).click();
+	const revisionList = reopened.getByRole("region", { name: "已保存理由与次日计划" });
+	await expect(revisionList).toContainText("改为观察 ETF 净值折溢价再决定");
+	await expect(revisionList).toContainText("次日开盘观察 600779 放量，未放量则移出候选");
+	const entries = revisionList.locator("> div");
+	await expect(entries).toHaveCount(2);
+	for (const entry of await entries.all()) {
+		await expect(entry).toContainText(`观察日 ${anchor}`);
+	}
+	// 直接 API 复核：两条计划都以原观察日期持久化，全局日期变化无从写回。
+	const plans = (await (
+		await page.request.get(`${apiOrigin}/api/v1/market/next-day-plans`, {
+			headers: API_HEADERS,
+		})
+	).json()) as { data: Array<{ observation_date: string }> };
+	expect(plans.data).toHaveLength(2);
+	expect(plans.data.every((item) => item.observation_date === anchor)).toBe(true);
+});

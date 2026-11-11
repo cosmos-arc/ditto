@@ -222,6 +222,47 @@ def test_http_allocation_retry_revision_and_restore(tmp_path: Path) -> None:
         pool.close_all()
 
 
+def test_http_list_allocations_reopens_saved_business_identities(
+    tmp_path: Path,
+) -> None:
+    """The allocation list endpoint reopens saved work without a known URL."""
+    path = tmp_path / "allocation-list.sqlite"
+    app, pool = _app(path)
+    try:
+        with TestClient(app) as web:
+            empty = web.get("/api/v1/portfolio/etf-allocations")
+            assert empty.status_code == 200, empty.text
+            assert empty.json()["data"] == []
+            first = web.post(
+                "/api/v1/portfolio/etf-allocations/demo/versions",
+                json=_body(),
+                headers={"Idempotency-Key": "one"},
+            )
+            assert first.status_code == 201, first.text
+            first_version = first.json()["data"]
+            revised = web.post(
+                "/api/v1/portfolio/etf-allocations/demo/versions",
+                json={**_body(), "parent_version_id": first_version["version_id"]},
+                headers={"Idempotency-Key": "two"},
+            )
+            assert revised.status_code == 201, revised.text
+            other = web.post(
+                "/api/v1/portfolio/etf-allocations/other/versions",
+                json=_body(),
+                headers={"Idempotency-Key": "three"},
+            )
+            assert other.status_code == 201, other.text
+            allocations = web.get("/api/v1/portfolio/etf-allocations")
+            assert allocations.status_code == 200, allocations.text
+            data = allocations.json()["data"]
+            assert {item["allocation_id"] for item in data} == {"demo", "other"}
+            by_id = {item["allocation_id"]: item for item in data}
+            assert by_id["demo"]["version_id"] == revised.json()["data"]["version_id"]
+            assert by_id["other"]["version_id"] == other.json()["data"]["version_id"]
+    finally:
+        pool.close_all()
+
+
 def _check_paper_authorization(web: TestClient, endpoint: str, version_id: str) -> None:
     authorization = f"{endpoint}/{version_id}/paper-authorizations"
     authorization_body = {

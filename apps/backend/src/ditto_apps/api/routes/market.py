@@ -4,16 +4,24 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, date, datetime
-from typing import Annotated
+from typing import Annotated, Never
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.exceptions import AppProcessError, AppQueryError
+from ditto_application.exceptions import (
+    AppCommandError,
+    AppProcessError,
+    AppQueryError,
+)
 from ditto_application.processes.experiments.regime_diagnostics_reader import (
     RegimeDiagnosticsReader,
     RegimeDiagnosticsScope,
     RegimeDiagnosticsView,
     RegimeObservation,
+)
+from ditto_application.processes.markets.record_next_day_plan import (
+    RecordNextDayPlan,
+    RecordNextDayPlanRequest,
 )
 from ditto_application.queries.dataset_coverage import DatasetCoverageQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
@@ -30,14 +38,16 @@ from ditto_application.queries.market_context_evidence import (
     MARKET_CONTEXT_DATASETS,
 )
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.next_day_plans import NextDayPlanQueryService
 from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Path, Query, status
 
 from ditto_apps.api.errors import NotFoundError, UnprocessableEntityError
 from ditto_apps.models.common import APIResponse, DataCoverageInfo
 from ditto_apps.models.market import (
     Bar,
     BarsQuery,
+    CreateNextDayPlanBody,
     EtfNavPoint,
     EtfNavQuery,
     EtfNavResponse,
@@ -50,6 +60,8 @@ from ditto_apps.models.market import (
     MarketContextImpactResponse,
     MarketContextMetricResponse,
     MarketContextResponse,
+    NextDayPlanResponse,
+    NextDayPlanSummaryResponse,
     RegimeDiagnosticsResponse,
     RegimeIndicatorResponse,
     RegimeObservationResponse,
@@ -420,3 +432,88 @@ async def post_etf_nav(
             ),
         ),
     )
+
+
+@router.post(
+    "/next-day-plans",
+    response_model=APIResponse[NextDayPlanResponse],
+    status_code=status.HTTP_201_CREATED,
+    operation_id="market_record_next_day_plan",
+)
+@inject
+async def record_next_day_plan(
+    body: CreateNextDayPlanBody,
+    process: Annotated[RecordNextDayPlan, FromComponent()],
+) -> APIResponse[NextDayPlanResponse]:
+    """Append one immutable post-market record of candidate reasons and plan."""
+    try:
+        view = await asyncio.to_thread(
+            process.record,
+            RecordNextDayPlanRequest(
+                observation_date=body.observation_date.isoformat(),
+                candidate_notes=tuple(
+                    (note.instrument_id, note.reason) for note in body.candidate_notes
+                ),
+                next_day_plan=body.next_day_plan,
+            ),
+        )
+    except AppCommandError as exc:
+        raise UnprocessableEntityError(
+            str(exc),
+            error_code=str(exc.details.get("code", "NEXT_DAY_PLAN_INVALID")),
+        ) from exc
+    return APIResponse(data=NextDayPlanResponse.model_validate(view))
+
+
+@router.get(
+    "/next-day-plans",
+    response_model=APIResponse[tuple[NextDayPlanSummaryResponse, ...]],
+    operation_id="market_list_next_day_plans",
+)
+@inject
+async def list_next_day_plans(
+    query: Annotated[NextDayPlanQueryService, FromComponent()],
+    observation_date: Annotated[str | None, Query(min_length=10, max_length=10)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> APIResponse[tuple[NextDayPlanSummaryResponse, ...]]:
+    """Reopen saved post-market plans by their original observation date."""
+    try:
+        summaries = (
+            await asyncio.to_thread(
+                query.list_by_observation, observation_date, limit=limit
+            )
+            if observation_date is not None
+            else await asyncio.to_thread(query.list_recent, limit=limit)
+        )
+    except AppQueryError as exc:
+        _raise_plan_query_error(exc)
+    return APIResponse(
+        data=tuple(
+            NextDayPlanSummaryResponse.model_validate(item) for item in summaries
+        )
+    )
+
+
+@router.get(
+    "/next-day-plans/{plan_id}",
+    response_model=APIResponse[NextDayPlanResponse],
+    operation_id="market_get_next_day_plan",
+)
+@inject
+async def get_next_day_plan(
+    plan_id: Annotated[str, Path(min_length=1)],
+    query: Annotated[NextDayPlanQueryService, FromComponent()],
+) -> APIResponse[NextDayPlanResponse]:
+    """Reopen one exact plan; a fixed record never moves under a later date."""
+    try:
+        view = await asyncio.to_thread(query.get, plan_id)
+    except AppQueryError as exc:
+        _raise_plan_query_error(exc)
+    return APIResponse(data=NextDayPlanResponse.model_validate(view))
+
+
+def _raise_plan_query_error(exc: AppQueryError) -> Never:
+    reason = str(exc.details.get("reason", "NEXT_DAY_PLAN_INVALID"))
+    if reason == "next_day_plan_not_found":
+        raise NotFoundError(str(exc)) from exc
+    raise UnprocessableEntityError(str(exc), error_code=reason) from exc

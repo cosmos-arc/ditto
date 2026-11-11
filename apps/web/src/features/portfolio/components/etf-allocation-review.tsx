@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { fetchETFAllocationReview, listETFAllocationVersions } from "../api/etf-allocations";
 import { fetchManualAccountLedger, fetchManualAccounts } from "../api/manual-accounts";
@@ -27,9 +27,13 @@ function localCutoff(instant: string): string {
 export function ETFAllocationReview({
 	allocationId,
 	onContextChange,
+	resolveInstrument,
 }: {
 	readonly allocationId: string;
 	readonly onContextChange?: (context: { versionId: string; account: string }) => void;
+	// 由组合根注入的业务身份解析（portfolio 能力不依赖 instruments 能力）；
+	// 未注入时诚实回退内部 ID。
+	readonly resolveInstrument?: ((instrumentId: number) => Promise<{ readonly ticker: string } | null>) | undefined;
 }) {
 	const [selected, setSelected] = useState(selection);
 	useEffect(() => {
@@ -122,6 +126,31 @@ export function ETFAllocationReview({
 		enabled: Boolean(version && accountKnown && snapshotIds.length && cutoffInstant),
 		retry: false,
 	});
+	// 业务标签：目标权重、估值差异与账本持仓都按业务代码展示；解析不到时
+	// 回退内部 ID 并保留精确身份可下钻。
+	const referencedIds = [
+		...new Set([
+			...Object.keys(version?.weights ?? {}).map(Number),
+			...(valuation.data?.positions ?? []).map((item) => item.instrumentId),
+			...(snapshot?.positions ?? []).map((position) => position.instrument_id),
+		]),
+	];
+	const identities = useQueries({
+		queries: resolveInstrument
+			? referencedIds.map((id) => ({
+					queryKey: ["etf-review-instrument", id],
+					queryFn: () => resolveInstrument(id),
+					staleTime: 60_000,
+					retry: false,
+				}))
+			: [],
+	});
+	const tickerById = new Map<string, string>();
+	referencedIds.forEach((id, index) => {
+		const identity = identities[index]?.data;
+		if (identity) tickerById.set(String(id), identity.ticker);
+	});
+	const tickerLabel = (id: number) => tickerById.get(String(id)) ?? `#${id}`;
 	return (
 		<section aria-label="ETF 配置复盘" className="space-y-3 rounded border border-(--color-border-subtle) p-4">
 			<h2 className="font-semibold">ETF 配置复盘</h2>
@@ -157,7 +186,7 @@ export function ETFAllocationReview({
 					<ul>
 						{Object.entries(version.weights).map(([id, weight]) => (
 							<li key={id}>
-								ETF #{id}：目标 {weight}
+								ETF {tickerLabel(Number(id))}：目标 {weight}
 							</li>
 						))}
 					</ul>
@@ -258,7 +287,8 @@ export function ETFAllocationReview({
 					<ul>
 						{valuation.data.positions.map((item) => (
 							<li key={item.instrumentId}>
-								ETF #{item.instrumentId}：目标 {item.targetWeight}；实际 {item.actualWeight}；差异 {item.driftBps} bps
+								ETF {tickerLabel(item.instrumentId)}：目标 {item.targetWeight}；实际 {item.actualWeight}；差异{" "}
+								{item.driftBps} bps
 							</li>
 						))}
 					</ul>
@@ -269,7 +299,8 @@ export function ETFAllocationReview({
 							.join("；") || "未知"}
 					</p>
 					<p>
-						指数归属未知的实际持仓：{valuation.data.unknownExposureInstrumentIds.join("、") || "无"}
+						指数归属未知的实际持仓：
+						{valuation.data.unknownExposureInstrumentIds.map(tickerLabel).join("、") || "无"}
 						；其他穿透重叠仍未知。
 					</p>
 				</section>
@@ -296,7 +327,7 @@ export function ETFAllocationReview({
 					<ul>
 						{snapshot.positions.map((position) => (
 							<li key={position.instrument_id}>
-								#{position.instrument_id}：实际 {position.quantity} 份；市值{" "}
+								{tickerLabel(position.instrument_id)}：实际 {position.quantity} 份；市值{" "}
 								{snapshot.valuation_complete ? `${position.market_value} CNY` : "缺价格证据"}
 							</li>
 						))}
