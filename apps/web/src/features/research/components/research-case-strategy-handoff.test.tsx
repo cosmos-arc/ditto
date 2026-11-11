@@ -301,6 +301,32 @@ describe("ResearchCaseStrategyHandoff", () => {
 			expect(exit).toHaveAttribute("href", "/research/strategies/existing-id");
 		});
 
+		it("shows the existing-strategy exit for a duplicate name regardless of status code", async () => {
+			// 回归：后端曾以 400 + 无 conflict 关键词消息呈现同名冲突，出口
+			// 只靠 409/关键词会得到死胡同；判定必须用结构化错误码。
+			const createStrategy = vi.fn(
+				async (_target: StrategyHandoffCreateTarget, _key: string) => {
+					throw new ApiError({
+						status: 400,
+						message: "Strategy already exists: existing-id",
+						payload: null,
+						errorCode: "STRATEGY_ALREADY_EXISTS",
+					});
+				},
+			);
+			renderPanel(createStrategy);
+			const user = userEvent.setup();
+
+			await user.click(screen.getByRole("radio", { name: /股票多因子选股/ }));
+			await screen.findByText(/momentum_1mx0\.6/);
+			await user.clear(screen.getByLabelText("新策略 ID"));
+			await user.type(screen.getByLabelText("新策略 ID"), "existing-id");
+			await user.click(screen.getByRole("button", { name: "创建策略草稿" }));
+
+			const exit = await screen.findByRole("link", { name: /查看已存在策略 existing-id/ });
+			expect(exit).toHaveAttribute("href", "/research/strategies/existing-id");
+		});
+
 		it("distinguishes pending, error, and truly-empty catalog states", () => {
 			const { rerender } = renderPanel(async () => ({ strategyId: "c", version: 1 }), {
 				catalogState: { state: "pending" },

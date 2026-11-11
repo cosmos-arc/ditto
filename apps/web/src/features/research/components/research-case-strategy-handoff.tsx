@@ -171,9 +171,13 @@ export function ResearchCaseStrategyHandoff({
 		},
 	});
 	const created = create.data;
+	// 冲突判定用后端结构化错误码（同名已存在/版本冲突/幂等键复用），
+	// 不依赖错误消息关键词（历史缺陷：消息不含 conflict 时得到 400 死胡同）。
 	const conflict =
 		create.error instanceof ApiError &&
 		(create.error.status === 409 ||
+			create.error.errorCode === "STRATEGY_ALREADY_EXISTS" ||
+			create.error.errorCode === "STRATEGY_VERSION_ALREADY_EXISTS" ||
 			create.error.errorCode === "STRATEGY_REVISION_CONFLICT" ||
 			create.error.errorCode === "IDEMPOTENCY_KEY_REUSED");
 

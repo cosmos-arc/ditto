@@ -19,6 +19,7 @@ from ditto_application.commands.strategy import (
     CreateStrategyCommand,
     CreateStrategyHandler,
 )
+from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_platform.foundation import SQLitePool
@@ -132,6 +133,35 @@ def test_saved_version_expressions_are_what_the_backtest_compiles(
     assert result.strategy_version == saved.version
     # 运行编译的就是保存的表达式与权重：合法表达式保存后实际用于运行。
     assert bridge.compiled == [(("momentum_1m", "value_pe"), (0.6, 0.4))]
+
+
+def test_create_duplicate_strategy_raises_structured_conflict_code(
+    tmp_path: Path,
+) -> None:
+    governance, _catalog = _services(tmp_path)
+    create = CreateStrategyHandler(governance)
+    spec_json = _spec_json("dup-strategy")
+
+    create.handle(
+        CreateStrategyCommand(
+            strategy_id="dup-strategy",
+            name="dup-strategy",
+            spec_json=spec_json,
+        )
+    )
+
+    # 同名再创建：结构化冲突码（HTTP 层映射 409），不靠消息关键词。
+    with pytest.raises(AppCommandError) as error:
+        create.handle(
+            CreateStrategyCommand(
+                strategy_id="dup-strategy",
+                name="dup-strategy",
+                spec_json=spec_json,
+            )
+        )
+    assert error.value.details["code"] == "STRATEGY_ALREADY_EXISTS"
+    assert error.value.details["reason"] == "strategy_already_exists"
+    assert error.value.details["strategy_id"] == "dup-strategy"
 
 
 def test_create_rejects_unsafe_production_formula_fail_closed(tmp_path: Path) -> None:

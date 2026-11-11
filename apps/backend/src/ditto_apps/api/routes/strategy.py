@@ -120,6 +120,10 @@ def _raise_mutation_error(exc: AppError) -> Never:
         raise APIError(str(exc), status_code=500, error_code=code) from exc
     if isinstance(code, str) and code == "STRATEGY_REVISION_CONFLICT":
         raise ConflictError(str(exc), error_code=code) from exc
+    if isinstance(code, str) and code == "STRATEGY_ALREADY_EXISTS":
+        raise ConflictError(str(exc), error_code=code) from exc
+    if isinstance(code, str) and code == "STRATEGY_VERSION_ALREADY_EXISTS":
+        raise ConflictError(str(exc), error_code=code) from exc
     if isinstance(code, str) and code == "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR":
         raise APIError(str(exc), status_code=500, error_code=code) from exc
     raise_business_error(exc, conflict_keywords=_CONFLICT_KEYWORDS)
