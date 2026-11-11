@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -44,8 +45,8 @@ def _case(**overrides: object) -> ResearchCase:
 
 
 @pytest.fixture
-def store(tmp_path: Path) -> SQLiteResearchCaseStore:
-    pool = SQLitePool(tmp_path / "metadata.sqlite")
+def store(tmp_path: Path) -> Iterator[SQLiteResearchCaseStore]:
+    pool = SQLitePool(str(tmp_path / "metadata.sqlite"))
     client = SQLiteClient(pool)
     value = SQLiteResearchCaseStore(client)
     value.init_schema()

@@ -251,12 +251,19 @@ APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
 APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
     CompositionImportAllowance(
         path="apps/backend/src/ditto_apps/registry/research_case.py",
-        allowed_modules=frozenset({"ditto_analysis.research.cases"}),
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.research.cases",
+                "ditto_analysis.storage.sqlite.research",
+            }
+        ),
         owner="apps ResearchCase composition adapter",
         reason=(
             "The composition root converts an Application-owned SelectionRun "
-            "handoff contract into the isolated Analysis ResearchCase domain; "
-            "ordinary application processes never import Analysis."
+            "handoff contract into the isolated Analysis ResearchCase domain "
+            "and binds the Analysis-owned append-only case store to the "
+            "Application persistence ports; ordinary application processes "
+            "never import Analysis."
         ),
     ),
     CompositionImportAllowance(

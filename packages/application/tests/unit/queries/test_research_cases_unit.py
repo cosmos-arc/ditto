@@ -14,6 +14,7 @@ from ditto_application.research_case_contracts import (
     ResearchCaseMaterial,
     ResearchCaseView,
 )
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.selection.contracts import SelectionRun
 
 _AS_OF = datetime(2026, 11, 10, 7, 0, tzinfo=UTC)
@@ -35,7 +36,7 @@ def _material(**overrides: object) -> ResearchCaseMaterial:
         universe_snapshot_id="universe:sha256:abc",
         industry_rotation_snapshot_id="industry-rotation:sha256:def",
         source_snapshot_ids=("source-a", "source-b"),
-        candidate_instrument_ids=(600001, 600002),
+        candidate_instrument_ids=(InstrumentId(600001), InstrumentId(600002)),
         selection_status="ready",
         missing_inputs=(),
     )
