@@ -294,6 +294,28 @@ describe("InstrumentChartView", () => {
 		expect(endInput.value).not.toBe("not-a-date");
 	});
 
+	it("形似合法的假观察日（2026-13-45）不进入日期算术，不炸渲染", async () => {
+		render(<InstrumentChartView id="1000001" observeDate="2026-13-45" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		expect(screen.queryByTestId("observe-anchor-1000001")).not.toBeInTheDocument();
+		const endInput = screen.getByLabelText("截至日期") as HTMLInputElement;
+		expect(endInput.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+		expect(endInput.value).not.toBe("2026-13-45");
+	});
+
+	it("手动改期后锚定条如实转「已手动覆盖」，不再宣称 K 线截至锚点日", async () => {
+		const user = userEvent.setup();
+		render(<InstrumentChartView id="1000001" observeDate="2026-03-10" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		const chip = screen.getByTestId("observe-anchor-1000001");
+		expect(chip.textContent).toContain("K 线截至该日");
+		expect(chip.textContent).not.toContain("已手动覆盖");
+		await user.clear(screen.getByLabelText("截至日期"));
+		await user.type(screen.getByLabelText("截至日期"), "2026-03-06");
+		expect(chip.textContent).not.toContain("K 线截至该日");
+		expect(chip.textContent).toContain("截至日期已手动覆盖");
+	});
+
 	it("指标开关把 MA overlay 与 MACD/RSI 副图喂给图表 shell，并持久化选择", async () => {
 		const user = userEvent.setup();
 		const view = render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });

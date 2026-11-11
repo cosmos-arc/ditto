@@ -11,6 +11,8 @@ export interface MarketQueryResult<T> {
 /**
  * 最近完整交易日的展示标签：calendar 数据集最新一次成功摄取的交易日；
  * 失败/缺失按真实结果降级（未解析/最新摄取失败/未报告），不伪装完整。
+ * A 股周末从不交易：latest_date 落在周末时明确标注「非交易日」，
+ * 不把周末日期直接称作最近完整交易日。
  */
 export function observationAnchorLabel(
 	status: MarketCalendarStatus | undefined,
@@ -19,7 +21,10 @@ export function observationAnchorLabel(
 ): string {
 	if (isLoading) return "解析中";
 	if (isError || !status) return "未解析";
-	if (status.latest_status === "success" && status.latest_date) return status.latest_date;
+	if (status.latest_status === "success" && status.latest_date) {
+		const weekday = new Date(`${status.latest_date}T00:00:00Z`).getUTCDay();
+		return weekday === 0 || weekday === 6 ? `${status.latest_date}（非交易日）` : status.latest_date;
+	}
 	if (status.latest_status === "failed") return `最新摄取失败（${status.latest_date ?? "无日期"}）`;
 	return "未报告";
 }

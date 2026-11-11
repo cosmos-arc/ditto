@@ -11,7 +11,12 @@ export {
 	type InstrumentCatalog,
 	type InstrumentCatalogFilter,
 } from "./api/instrument-catalog";
-export { type BarAdjustment, fetchInstrumentBars, fetchInstrumentIdentity } from "./api/instrument-workspace";
+export {
+	type BarAdjustment,
+	fetchInstrumentBars,
+	fetchInstrumentIdentity,
+	type InstrumentChart,
+} from "./api/instrument-workspace";
 export { InstrumentChartView } from "./components/instrument-chart-view";
 export {
 	InstrumentHubPage,

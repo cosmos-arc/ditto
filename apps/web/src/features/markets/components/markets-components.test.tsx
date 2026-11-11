@@ -202,14 +202,48 @@ describe("WatchlistPage", () => {
 		expect(screen.getByRole("link", { name: "贵州茅台" })).toHaveAttribute("href", "/instruments/1000001");
 	});
 
-	it("日历状态不可得时锚点如实显示未解析，行情列仍可用", async () => {
+	it("日历状态不可得时锚点如实显示未解析，行情列保持锚点未落定不猜测", async () => {
 		server.use(http.get("/api/v1/ingestion/status", () => HttpResponse.json({ detail: "boom" }, { status: 500 })));
 		localStorage.setItem("ditto.market-watchlist.v1", "[1000001]");
 		render(<WatchlistPage />, { wrapper: wrapper() });
 		const anchor = await screen.findByTestId("watchlist-anchor");
 		expect(anchor).toHaveTextContent("最近完整交易日");
 		await expect(waitForAnchorDate(anchor, "未解析")).resolves.toBe(true);
-		await expect(screen.findByText("1750.20")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
+		// 不用客户端"今天"猜锚点：猜测的窗口会撞日历权威 fail-closed，
+		// 每行都会永久「行情读取失败」且重试无效——保持未落定并如实展示。
+		await expect(screen.findByText("锚点未落定")).resolves.toBeInTheDocument();
+		expect(screen.queryByText("行情读取失败")).not.toBeInTheDocument();
+		expect(screen.queryByText("1750.20")).not.toBeInTheDocument();
+		// 对象操作不被封死：链接不带观察日仍可进入。
+		expect(screen.getByRole("link", { name: "贵州茅台" })).toHaveAttribute("href", "/instruments/1000001");
+	});
+
+	it("日历最新摄取失败时不猜锚点：行不进入永久错误态", async () => {
+		server.use(
+			http.get("/api/v1/ingestion/status", () =>
+				HttpResponse.json({
+					data: {
+						datasets: [
+							{
+								catalog_freshness_at: null,
+								dataset: "calendar",
+								latest_date: "2026-09-29",
+								latest_status: "failed",
+								record_count: 0,
+							},
+						],
+					},
+				}),
+			),
+		);
+		localStorage.setItem("ditto.market-watchlist.v1", "[1000001]");
+		render(<WatchlistPage />, { wrapper: wrapper() });
+		const anchor = await screen.findByTestId("watchlist-anchor");
+		await expect(waitForAnchorDate(anchor, "最新摄取失败")).resolves.toBe(true);
+		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("锚点未落定")).resolves.toBeInTheDocument();
+		expect(screen.queryByText("行情读取失败")).not.toBeInTheDocument();
 	});
 
 	it("解析失败的对象保留并可重试恢复", async () => {
@@ -239,5 +273,106 @@ describe("WatchlistPage", () => {
 		render(<WatchlistPage />, { wrapper: wrapper() });
 		await user.click(screen.getByRole("button", { name: "批量删除" }));
 		expect(screen.getByRole("dialog", { name: "批量删除自选" })).toHaveTextContent("localStorage");
+	});
+
+	it("长停牌复牌：行情窄窗只剩一根时自动改用图表同一观察窗，涨跌同口径", async () => {
+		// 服务端语义：按请求窗口过滤 bars（msw 默认全量返回会掩盖窗口口径）。
+		const requests: string[] = [];
+		server.use(
+			http.post("/api/v1/market/chart", async ({ request }) => {
+				const body = (await request.json()) as { start_date: string; end_date: string };
+				requests.push(`${body.start_date}..${body.end_date}`);
+				const bar = (tradeDate: string, close: number) => ({
+					trade_date: tradeDate,
+					first_trade_date: tradeDate,
+					last_trade_date: tradeDate,
+					open: close,
+					high: close,
+					low: close,
+					close,
+					volume: 1000,
+					amount: close * 1000,
+					source_snapshot_ids: ["bars-exact-1"],
+					available_at: "2026-09-30T08:00:00Z",
+					published_at: "2026-09-30T08:00:00Z",
+					partial: false,
+				});
+				// 两根 K 相距 50 个自然日：锚点（2026-09-30）的 45 天窄窗拿不到前一根。
+				const all = [bar("2026-08-11", 10), bar("2026-09-30", 11)];
+				return HttpResponse.json({
+					data: {
+						instrument_id: 1000001,
+						period: "daily",
+						adjustment: "none",
+						as_of: "2026-09-30T08:00:00Z",
+						knowledge_cutoff: "2026-09-30T08:00:00Z",
+						publication_cutoff: "2026-09-30T08:00:00Z",
+						timezone: "Asia/Shanghai",
+						calendar_snapshot_ids: ["calendar-exact-1"],
+						source_snapshot_ids: ["bars-exact-1"],
+						sources: ["tushare"],
+						latest_price_date: "2026-09-30",
+						stale_reason: null,
+						missing_sessions: [],
+						bars: all.filter((b) => b.trade_date >= body.start_date && b.trade_date <= body.end_date),
+					},
+				});
+			}),
+		);
+		localStorage.setItem("ditto.market-watchlist.v1", "[1000001]");
+		render(<WatchlistPage />, { wrapper: wrapper() });
+		// 表与锚定图表（观察日−1 年窗）同口径：+1.00 (+10.00%)，不是「—」。
+		const change = await screen.findByText(/^\+1\.00/);
+		expect(change.textContent).toContain("(+10.00%)");
+		expect(screen.getByText(/行情日 2026-09-30/)).toBeInTheDocument();
+		// 窄窗（45 天）只剩一根后，第二次请求即为图表同一观察窗。
+		expect(requests[0]).toMatch(/^2026-08-16\.\.2026-09-30$/);
+		expect(requests.at(-1)).toMatch(/^2025-09-30\.\.2026-09-30$/);
+	});
+
+	it("前收盘为 0 时涨跌幅按不可算处理，不出现除零结果", async () => {
+		server.use(
+			http.post("/api/v1/market/chart", async () => {
+				const bar = (tradeDate: string, close: number) => ({
+					trade_date: tradeDate,
+					first_trade_date: tradeDate,
+					last_trade_date: tradeDate,
+					open: close,
+					high: close,
+					low: close,
+					close,
+					volume: 1000,
+					amount: close * 1000,
+					source_snapshot_ids: ["bars-exact-1"],
+					available_at: "2026-09-30T08:00:00Z",
+					published_at: "2026-09-30T08:00:00Z",
+					partial: false,
+				});
+				return HttpResponse.json({
+					data: {
+						instrument_id: 1000001,
+						period: "daily",
+						adjustment: "none",
+						as_of: "2026-09-30T08:00:00Z",
+						knowledge_cutoff: "2026-09-30T08:00:00Z",
+						publication_cutoff: "2026-09-30T08:00:00Z",
+						timezone: "Asia/Shanghai",
+						calendar_snapshot_ids: ["calendar-exact-1"],
+						source_snapshot_ids: ["bars-exact-1"],
+						sources: ["tushare"],
+						latest_price_date: "2026-09-30",
+						stale_reason: null,
+						missing_sessions: [],
+						bars: [bar("2026-09-29", 0), bar("2026-09-30", 5)],
+					},
+				});
+			}),
+		);
+		localStorage.setItem("ditto.market-watchlist.v1", "[1000001]");
+		render(<WatchlistPage />, { wrapper: wrapper() });
+		await expect(screen.findByText(/^\+5\.00$/)).resolves.toBeInTheDocument();
+		expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/Infinity/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
 	});
 });

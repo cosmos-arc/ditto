@@ -50,6 +50,11 @@ ETF_ID = 4_100_001
 ETF_NAME = "盘后样本ETF"
 DELISTED_ID = 4_000_002
 DELISTED_NAME = "盘后退市样本"
+# 长停牌复牌样本：仅两根日 K（2026-08-21 与锚点日，相距 81 个自然日），
+# 45 天行情窄窗拿不到前一根——覆盖自选行情窗自适应前扩的表图同口径路径。
+SUSPENDED_ID = 4_000_003
+SUSPENDED_NAME = "盘后停牌样本"
+SUSPENDED_RESUMPTION_GAP_FROM = date(2026, 8, 21)
 
 # 固定最近完整交易日 2026-11-10（周二）。价格/日历证据自锚点日前一整年
 # （2025-11-10，周一）起全覆盖，使观察日锚定的图表窗口（锚点-1 年 →
@@ -133,16 +138,39 @@ def _seed(root: Path) -> None:
             delist_date="2026-06-30",
         ),
     )
+    writer.register(
+        SUSPENDED_ID,
+        InstrumentRegistration(
+            source_ticker="600781.SH",
+            ticker="600781",
+            name=SUSPENDED_NAME,
+            exchange="SSE",
+            asset_class="stock",
+            list_date="2001-04-16",
+        ),
+    )
 
-    # 行情证据走与生产一致的 retained payload 链（etf_daily/stock_daily）。
+    # 行情证据走与生产一致的 retained payload 链（etf_daily/stock_daily）；
+    # 每个标的用自己的 source_ticker，避免跨标的串行归属。
     stock_ticker = "600779.SH"
+    suspended_ticker = "600781.SH"
     etf_ticker = "510888.SH"
-    for dataset, frame, ticker in (
-        ("stock_daily", _bars_frame(STOCK_ID, 60.0), stock_ticker),
-        ("etf_daily", _bars_frame(ETF_ID, 3.5), etf_ticker),
+    suspended_frame = _bars_frame(SUSPENDED_ID, 20.0).filter(
+        pl.col("trade_date").is_in(
+            [SUSPENDED_RESUMPTION_GAP_FROM.isoformat(), ANCHOR_DATE.isoformat()]
+        )
+    )
+    for dataset, frame in (
+        ("stock_daily", pl.concat([_bars_frame(STOCK_ID, 60.0), suspended_frame])),
+        ("etf_daily", _bars_frame(ETF_ID, 3.5)),
     ):
         payload = frame.with_columns(
-            pl.lit(ticker).alias("source_ticker"),
+            pl.when(pl.col("instrument_id") == STOCK_ID)
+            .then(pl.lit(stock_ticker))
+            .when(pl.col("instrument_id") == SUSPENDED_ID)
+            .then(pl.lit(suspended_ticker))
+            .otherwise(pl.lit(etf_ticker))
+            .alias("source_ticker"),
             pl.col("trade_date").alias("event_time"),
         )
         retain_fixture_payload(

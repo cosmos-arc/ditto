@@ -4,6 +4,7 @@ import type { BarPeriod, CockpitBar } from "@/components/chart/cockpit/chart-dat
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { ContextSection } from "@/components/domain";
 import { ErrorState } from "@/lib/error-boundary";
+import { dateYearsBefore, isValidIsoCalendarDate } from "@/lib/iso-calendar-date";
 import { StaleIndicator } from "@/lib/stale-indicator";
 import type { OverlayKind } from "../api/indicator-overlays";
 import type { BarAdjustment } from "../api/instrument-workspace";
@@ -39,15 +40,6 @@ function dateDaysAgo(days: number): string {
 	const date = new Date(Date.now() + 8 * 60 * 60 * 1000);
 	date.setUTCDate(date.getUTCDate() - days);
 	return date.toISOString().slice(0, 10);
-}
-
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-/** 锚点日前推 N 年（纯日期算术，不涉及时区边界）。 */
-function dateYearsBefore(date: string, years: number): string {
-	const parsed = new Date(`${date}T00:00:00Z`);
-	parsed.setUTCFullYear(parsed.getUTCFullYear() - years);
-	return parsed.toISOString().slice(0, 10);
 }
 
 function formatSigned(value: number, digits = 2): string {
@@ -99,7 +91,9 @@ function SegmentedControl<T extends string>({
 export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartViewProps) {
 	// 观察日锚点：来自观察面（自选等）的合法日期成为初始截至日期；与图表
 	// 默认窗口同一状态位，用户手动改期即覆盖锚点（不锁死后续分析）。
-	const anchoredEndDate = observeDate !== undefined && ISO_DATE_PATTERN.test(observeDate) ? observeDate : null;
+	// 观察日经 Date 往返校验：正则放行的假日期（如 2026-13-45）会让
+	// 日期算术抛 RangeError 炸掉整页，两层（route + view）同规则拒绝。
+	const anchoredEndDate = observeDate !== undefined && isValidIsoCalendarDate(observeDate) ? observeDate : null;
 	const [period, setPeriod] = useState<BarPeriod>("daily");
 	const [adjustment, setAdjustment] = useState<BarAdjustment>("none");
 	const [includeExperimental, setIncludeExperimental] = useState(false);
@@ -336,7 +330,10 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 						<span className="font-medium text-(--color-foreground)">观察日锚定</span>
 						<span className="font-data text-(--color-foreground-secondary)">{anchoredEndDate}</span>
 						<span className="text-(--color-foreground-muted)">
-							来自观察面（自选/筛选）的同一交易日；K 线截至该日，知识截止仍为服务端当前时钟
+							来自观察面（自选/筛选）的同一交易日；
+							{endDate === anchoredEndDate
+								? "K 线截至该日，知识截止仍为服务端当前时钟"
+								: "截至日期已手动覆盖，知识截止仍为服务端当前时钟"}
 						</span>
 					</div>
 				)}

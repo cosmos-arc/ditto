@@ -40,8 +40,12 @@ export function WatchlistPage({
 	readonly searchCatalog: WatchlistSearchFn;
 	/** 最近完整交易日锚点（calendar 数据集真实摄取结果），用于摘要与行情窗口。 */
 	readonly observationQuery: MarketCalendarStatusQuery;
-	/** 行情解析（既有日 K 合同）与锚点日期（观察锚点未落定为 null），由 workflow 注入。 */
-	readonly quote: { readonly anchorDate: string | null; readonly resolve: WatchlistQuoteFn };
+	/** 行情解析（既有日 K 合同）与锚点状态（日期未落定为 null；pending=日历仍在读取），由 workflow 注入。 */
+	readonly quote: {
+		readonly anchorDate: string | null;
+		readonly anchorPending: boolean;
+		readonly resolve: WatchlistQuoteFn;
+	};
 }) {
 	const [ids, setIds] = useState<number[]>(readLocalWatchlist);
 	const [activeOverlay, setActiveOverlay] = useState<WatchlistOverlayId | null>(null);
@@ -170,15 +174,20 @@ function WatchlistEntryRow({
 	readonly instrumentId: number;
 	readonly onRemove: () => void;
 	readonly resolveEntry: WatchlistEntryFn;
-	readonly quote: { readonly anchorDate: string | null; readonly resolve: WatchlistQuoteFn };
+	readonly quote: {
+		readonly anchorDate: string | null;
+		readonly anchorPending: boolean;
+		readonly resolve: WatchlistQuoteFn;
+	};
 }) {
 	const entry = useQuery({
 		queryKey: ["watchlist-entry", instrumentId],
 		queryFn: () => resolveEntry(instrumentId),
 		retry: false,
 	});
-	// 行情列在观察锚点落定且身份解析成功后才发起；未知/解析失败对象不请求
-	// 行情。锚点未落定时保持待发（queryFn 不会执行，占位串仅满足类型）。
+	// 行情列仅在观察锚点落定且身份解析成功后发起：无成功锚点（日历失败/
+	// 未报告）不猜测日期发注定 422 的请求；未知/解析失败对象不请求行情。
+	// 锚点未落定时 queryFn 不执行（占位串仅满足类型）。
 	const quoteQuery = useQuery({
 		queryKey: ["watchlist-quote", instrumentId, quote.anchorDate],
 		queryFn: () => quote.resolve(instrumentId, quote.anchorDate ?? ""),
@@ -272,9 +281,10 @@ function WatchlistEntryRow({
 				)}
 			</span>
 			<WatchlistQuoteCell
+				anchorDate={quote.anchorDate}
+				anchorPending={quote.anchorPending}
 				instrumentId={instrumentId}
 				instrumentName={instrument.name}
-				pending={quote.anchorDate === null || quoteQuery.isLoading}
 				query={quoteQuery}
 			/>
 			<button
@@ -292,21 +302,36 @@ function WatchlistEntryRow({
 function WatchlistQuoteCell({
 	instrumentId,
 	instrumentName,
-	pending,
+	anchorDate,
+	anchorPending,
 	query,
 }: {
 	readonly instrumentId: number;
 	readonly instrumentName: string;
-	/** 观察锚点未落定或行情请求在途。 */
-	readonly pending: boolean;
+	/** 成功锚点日期；null = 无成功锚点（已落定，非等待中）。 */
+	readonly anchorDate: string | null;
+	/** 日历状态仍在读取（等待锚点，非终态）。 */
+	readonly anchorPending: boolean;
 	readonly query: {
 		readonly data: MarketQuoteSnapshot | null | undefined;
 		readonly isError: boolean;
+		readonly isLoading: boolean;
 		readonly refetch: () => unknown;
 	};
 }) {
-	if (pending) {
+	if (anchorPending || query.isLoading) {
 		return <span className="w-56 text-xs text-(--color-foreground-tertiary)">行情解析中…</span>;
+	}
+	if (anchorDate === null) {
+		return (
+			<span
+				data-quote-state="anchor-unresolved"
+				title="日历数据集未报告最近成功摄取的交易日；行情列不猜测锚点日期发起注定失败的请求，待日历恢复后自动重解析"
+				className="w-56 text-xs text-(--color-foreground-muted)"
+			>
+				锚点未落定
+			</span>
+		);
 	}
 	if (query.isError) {
 		return (

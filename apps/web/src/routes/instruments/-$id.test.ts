@@ -13,6 +13,9 @@ describe("parseInstrumentSearch", () => {
 		expect(parseInstrumentSearch({}).observeDate).toBeUndefined();
 		expect(parseInstrumentSearch({ observeDate: "not-a-date" }).observeDate).toBeUndefined();
 		expect(parseInstrumentSearch({ observeDate: "2026-3-10" }).observeDate).toBeUndefined();
+		// 形似合法的假日期：Date.parse 为 NaN，进日期算术会抛 RangeError。
+		expect(parseInstrumentSearch({ observeDate: "2026-13-45" }).observeDate).toBeUndefined();
+		expect(parseInstrumentSearch({ observeDate: "2026-02-30" }).observeDate).toBeUndefined();
 	});
 
 	it("既有 tab 与回测下钻参数不受影响", () => {

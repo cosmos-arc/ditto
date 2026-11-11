@@ -16,6 +16,8 @@ const ETF_ID = 4_100_001;
 const ETF_NAME = "盘后样本ETF";
 const DELISTED_ID = 4_000_002;
 const DELISTED_NAME = "盘后退市样本";
+const SUSPENDED_ID = 4_000_003;
+const SUSPENDED_NAME = "盘后停牌样本";
 const WATCHLIST_STORAGE_KEY = "ditto.market-watchlist.v1";
 const API_HEADERS = { "X-Ditto-API-Contract-Version": "v1" };
 
@@ -53,12 +55,17 @@ async function fetchCalendarAnchor(page: Page): Promise<string> {
 	return calendar?.latest_date ?? "";
 }
 
-async function fetchQuoteExpectation(page: Page, instrumentId: number, anchor: string): Promise<QuoteExpectation> {
+async function fetchQuoteExpectation(
+	page: Page,
+	instrumentId: number,
+	anchor: string,
+	options: { readonly startDays?: number } = {},
+): Promise<QuoteExpectation> {
 	const response = await page.request.post(`${apiOrigin}/api/v1/market/chart`, {
 		headers: API_HEADERS,
 		data: {
 			instrument_id: instrumentId,
-			start_date: daysBefore(anchor, 45),
+			start_date: daysBefore(anchor, options.startDays ?? 45),
 			end_date: anchor,
 			period: "daily",
 			adjustment: "none",
@@ -231,5 +238,24 @@ test.describe.serial("post-market observation to anchored instrument workspace o
 			"href",
 			`/instruments/${DELISTED_ID}`,
 		);
+	});
+
+	test("长停牌复牌对象经加宽观察窗取到真实涨跌，表与图同口径", async ({ page }) => {
+		const browserErrors = captureBrowserErrors(page);
+		const anchor = await fetchCalendarAnchor(page);
+		// 该对象前一根 K 距锚点 81 个自然日：涨跌按图表同一观察窗（观察日−1 年）计算。
+		const quote = await fetchQuoteExpectation(page, SUSPENDED_ID, anchor, { startDays: 366 });
+
+		await page.goto(`${webOrigin}/markets/watchlist`);
+		await page.getByRole("button", { name: "添加标的" }).click();
+		await page.getByLabel("搜索代码或名称").fill("盘后停牌");
+		await page.getByRole("button", { name: "检索" }).click();
+		await page.getByRole("button", { name: `加入自选 ${SUSPENDED_NAME}` }).click();
+
+		const row = page.locator('[data-info-unit="watchlist-row"]', { hasText: SUSPENDED_NAME });
+		await expect(row.locator('[data-quote-field="close"]')).toHaveText(quote.closeText);
+		await expect(row.locator('[data-quote-field="change"]')).toHaveText(quote.changeText);
+		await expect(row.locator('[data-quote-field="date"]')).toHaveText(`行情日 ${quote.tradeDate}`);
+		expect(browserErrors).toEqual([]);
 	});
 });
