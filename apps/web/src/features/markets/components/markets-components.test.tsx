@@ -1,11 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
 import { WatchlistPage } from "@/workflows/market-pages";
+
+/** 等待锚点格从"解析中"落到稳定文案（真实摄取结果或未解析）。 */
+async function waitForAnchorDate(anchor: HTMLElement, expected: string): Promise<boolean> {
+	await waitFor(() => {
+		if (!anchor.textContent?.includes(expected)) throw new Error(`锚点未落到 ${expected}: ${anchor.textContent}`);
+	});
+	return true;
+}
 
 function wrapper() {
 	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -122,6 +130,86 @@ describe("WatchlistPage", () => {
 		render(<WatchlistPage />, { wrapper: wrapper() });
 		await expect(screen.findByText("退市示例")).resolves.toBeInTheDocument();
 		expect(screen.getByText("已退出")).toBeInTheDocument();
+	});
+
+	it("活跃自选展示真实最近收盘与涨跌，链接携带该观察日进入图表", async () => {
+		localStorage.setItem("ditto.market-watchlist.v1", "[1000001]");
+		render(<WatchlistPage />, { wrapper: wrapper() });
+		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
+		// 行情列来自真实 market/chart 合同（mock 两根日 K：03-09 收 1746.3、03-10 收 1750.2）。
+		await expect(screen.findByText("1750.20")).resolves.toBeInTheDocument();
+		expect(screen.getByText(/^\+3\.90/)).toBeInTheDocument();
+		expect(screen.getByText(/\+0\.22%/)).toBeInTheDocument();
+		expect(screen.getByText(/行情日 2026-03-10/)).toBeInTheDocument();
+		// 表（自选行情列）与图（标的 K 线）共用同一观察日与同一收盘数字。
+		expect(screen.getByRole("link", { name: "贵州茅台" })).toHaveAttribute(
+			"href",
+			"/instruments/1000001?tab=chart&observeDate=2026-03-10",
+		);
+	});
+
+	it("摘要以日历数据集真实摄取结果显示最近完整交易日锚点", async () => {
+		localStorage.setItem("ditto.market-watchlist.v1", "[1000001]");
+		render(<WatchlistPage />, { wrapper: wrapper() });
+		const anchor = await screen.findByTestId("watchlist-anchor");
+		expect(anchor).toHaveTextContent("最近完整交易日");
+		await expect(waitForAnchorDate(anchor, "2026-09-30")).resolves.toBe(true);
+	});
+
+	it("行情读取失败不锁死对象：行内明确失败并可重试恢复", async () => {
+		server.use(http.post("/api/v1/market/chart", () => HttpResponse.json({ detail: "boom" }, { status: 500 })));
+		localStorage.setItem("ditto.market-watchlist.v1", "[1000001]");
+		const user = userEvent.setup();
+		render(<WatchlistPage />, { wrapper: wrapper() });
+		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
+		await expect(screen.findByText(/行情读取失败/)).resolves.toBeInTheDocument();
+		// 对象本身没有被封死：移除/进入链接仍可用，行情可在行内重试。
+		expect(screen.getByRole("link", { name: "贵州茅台" })).toHaveAttribute("href", "/instruments/1000001");
+		server.resetHandlers();
+		await user.click(screen.getByRole("button", { name: "重试行情 贵州茅台" }));
+		await expect(screen.findByText("1750.20")).resolves.toBeInTheDocument();
+	});
+
+	it("本地行情库无可见日 K 时明确「行情不可得」，不用静态值顶替", async () => {
+		server.use(
+			http.post("/api/v1/market/chart", () =>
+				HttpResponse.json({
+					data: {
+						instrument_id: 1000001,
+						period: "daily",
+						adjustment: "none",
+						as_of: "2026-03-10T08:00:00Z",
+						knowledge_cutoff: "2026-03-10T08:00:00Z",
+						publication_cutoff: "2026-03-10T08:00:00Z",
+						timezone: "Asia/Shanghai",
+						calendar_snapshot_ids: [],
+						source_snapshot_ids: [],
+						sources: [],
+						latest_price_date: null,
+						stale_reason: null,
+						missing_sessions: [],
+						bars: [],
+					},
+				}),
+			),
+		);
+		localStorage.setItem("ditto.market-watchlist.v1", "[1000001]");
+		render(<WatchlistPage />, { wrapper: wrapper() });
+		await expect(screen.findByText("贵州茅台")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("行情不可得")).resolves.toBeInTheDocument();
+		expect(screen.queryByText(/^\d+\.\d{2}$/)).not.toBeInTheDocument();
+		// 无行情日的对象进入工作面仍可用（不带观察日锚点）。
+		expect(screen.getByRole("link", { name: "贵州茅台" })).toHaveAttribute("href", "/instruments/1000001");
+	});
+
+	it("日历状态不可得时锚点如实显示未解析，行情列仍可用", async () => {
+		server.use(http.get("/api/v1/ingestion/status", () => HttpResponse.json({ detail: "boom" }, { status: 500 })));
+		localStorage.setItem("ditto.market-watchlist.v1", "[1000001]");
+		render(<WatchlistPage />, { wrapper: wrapper() });
+		const anchor = await screen.findByTestId("watchlist-anchor");
+		expect(anchor).toHaveTextContent("最近完整交易日");
+		await expect(waitForAnchorDate(anchor, "未解析")).resolves.toBe(true);
+		await expect(screen.findByText("1750.20")).resolves.toBeInTheDocument();
 	});
 
 	it("解析失败的对象保留并可重试恢复", async () => {

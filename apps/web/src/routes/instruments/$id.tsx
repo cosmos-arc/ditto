@@ -8,6 +8,10 @@ function optionalString(value: unknown): string | undefined {
 export function parseInstrumentSearch(search: Record<string, unknown>): InstrumentHubSearch {
 	const tab = search["tab"];
 	const direction = optionalString(search["drillDirection"]);
+	// 观察日锚点（跨域跳转合同）：自选/筛选带入的最近完整交易日，严格 ISO 日期。
+	const rawObserveDate = optionalString(search["observeDate"]);
+	const observeDate =
+		rawObserveDate !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(rawObserveDate) ? rawObserveDate : undefined;
 	return {
 		selectionRunId: optionalString(search["selectionRunId"]),
 		tab: tab === "capital" || tab === "chart" || tab === "fundamentals" || tab === "technical" ? tab : "overview",
@@ -21,6 +25,7 @@ export function parseInstrumentSearch(search: Record<string, unknown>): Instrume
 						direction: direction === "sell" ? "sell" : "buy",
 					}
 				: undefined,
+		observeDate,
 	};
 }
 

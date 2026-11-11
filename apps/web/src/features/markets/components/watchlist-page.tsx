@@ -5,7 +5,14 @@ import { PageActionBar } from "@/components/domain/page-action-overlay";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
 import { LOCAL_WATCHLIST_STORAGE_KEY, readLocalWatchlist } from "@/lib/local-watchlist";
 import { WatchlistOverlay, type WatchlistOverlayId } from "./market-page-overlays";
-import type { MarketCatalog, MarketCatalogInstrument } from "./market-view-contracts";
+import type {
+	MarketCalendarStatusQuery,
+	MarketCatalog,
+	MarketCatalogInstrument,
+	MarketQuoteSnapshot,
+	WatchlistQuoteFn,
+} from "./market-view-contracts";
+import { observationAnchorLabel } from "./market-view-contracts";
 
 const watchlistActions = [
 	{ id: "add-instrument", label: "添加标的" },
@@ -17,12 +24,24 @@ export type WatchlistSearchFn = (term: string, offset: number) => Promise<Market
 /** 自选对象按精确身份解析（现有单对象解析），由 workflow 注入。 */
 export type WatchlistEntryFn = (instrumentId: number) => Promise<MarketCatalogInstrument>;
 
+/** 与图表主读数同口径的有符号数字（负号用 U+2212），保证表图数字对齐。 */
+function formatSigned(value: number, digits = 2): string {
+	const sign = value > 0 ? "+" : value < 0 ? "−" : "";
+	return `${sign}${Math.abs(value).toFixed(digits)}`;
+}
+
 export function WatchlistPage({
 	resolveEntry,
 	searchCatalog,
+	observationQuery,
+	quote,
 }: {
 	readonly resolveEntry: WatchlistEntryFn;
 	readonly searchCatalog: WatchlistSearchFn;
+	/** 最近完整交易日锚点（calendar 数据集真实摄取结果），用于摘要与行情窗口。 */
+	readonly observationQuery: MarketCalendarStatusQuery;
+	/** 行情解析（既有日 K 合同）与锚点日期（观察锚点未落定为 null），由 workflow 注入。 */
+	readonly quote: { readonly anchorDate: string | null; readonly resolve: WatchlistQuoteFn };
 }) {
 	const [ids, setIds] = useState<number[]>(readLocalWatchlist);
 	const [activeOverlay, setActiveOverlay] = useState<WatchlistOverlayId | null>(null);
@@ -47,7 +66,9 @@ export function WatchlistPage({
 					>
 						<p className="truncate text-xs font-medium">
 							自选监控{" "}
-							<span className="font-normal text-(--color-foreground-tertiary)">· 仅保存 identity，不伪造实时行情</span>
+							<span className="font-normal text-(--color-foreground-tertiary)">
+								· 行情为最近可见交易日收盘，不伪造盘中实时数据
+							</span>
 						</p>
 						<PageActionBar ariaLabel="自选页面操作" actions={watchlistActions} onOpen={setActiveOverlay} />
 					</div>
@@ -64,13 +85,15 @@ export function WatchlistPage({
 								<span className="text-xs text-(--color-foreground-tertiary)">当前清单</span>
 								<span className="mt-1 font-data text-sm">{ids.length} 个本地标的</span>
 							</div>
-							<div className="flex min-w-0 flex-col justify-center px-4">
-								<span className="text-xs text-(--color-foreground-tertiary)">数据边界</span>
-								<span className="mt-1 truncate text-sm">metadata identity only</span>
+							<div className="flex min-w-0 flex-col justify-center px-4" data-testid="watchlist-anchor">
+								<span className="text-xs text-(--color-foreground-tertiary)">最近完整交易日</span>
+								<span className="mt-1 truncate font-data text-sm">
+									{observationAnchorLabel(observationQuery.data, observationQuery.isError, observationQuery.isLoading)}
+								</span>
 							</div>
 							<div className="flex min-w-0 flex-col justify-center px-4">
-								<span className="text-xs text-(--color-foreground-tertiary)">下一步</span>
-								<span className="mt-1 truncate text-sm">按名称或代码检索并保存自选</span>
+								<span className="text-xs text-(--color-foreground-tertiary)">数据边界</span>
+								<span className="mt-1 truncate text-sm">行情列按各对象真实可见行情日展示</span>
 							</div>
 						</section>
 						<main
@@ -96,6 +119,7 @@ export function WatchlistPage({
 												<WatchlistEntryRow
 													key={id}
 													instrumentId={id}
+													quote={quote}
 													resolveEntry={resolveEntry}
 													onRemove={() => setIds((current) => current.filter((entry) => entry !== id))}
 												/>
@@ -116,7 +140,9 @@ export function WatchlistPage({
 								每个对象重开时按 instrument_id
 								精确身份重新解析；目录中已不存在或已退出的对象会明确标注，不会静默消失或被替换。
 							</p>
-							<p>公开 Watchlist 写接口尚不存在；价格、信号、新闻与策略暴露也不会用静态值替代。</p>
+							<p>
+								行情列为最近可见交易日收盘与对前收盘涨跌；本地行情库未覆盖的对象明确标注「行情不可得」，不会用静态值替代。
+							</p>
 						</PanelBody>
 					</Panel>
 				}
@@ -139,14 +165,24 @@ function WatchlistEntryRow({
 	instrumentId,
 	onRemove,
 	resolveEntry,
+	quote,
 }: {
 	readonly instrumentId: number;
 	readonly onRemove: () => void;
 	readonly resolveEntry: WatchlistEntryFn;
+	readonly quote: { readonly anchorDate: string | null; readonly resolve: WatchlistQuoteFn };
 }) {
 	const entry = useQuery({
 		queryKey: ["watchlist-entry", instrumentId],
 		queryFn: () => resolveEntry(instrumentId),
+		retry: false,
+	});
+	// 行情列在观察锚点落定且身份解析成功后才发起；未知/解析失败对象不请求
+	// 行情。锚点未落定时保持待发（queryFn 不会执行，占位串仅满足类型）。
+	const quoteQuery = useQuery({
+		queryKey: ["watchlist-quote", instrumentId, quote.anchorDate],
+		queryFn: () => quote.resolve(instrumentId, quote.anchorDate ?? ""),
+		enabled: quote.anchorDate !== null && entry.data !== undefined,
 		retry: false,
 	});
 
@@ -205,23 +241,29 @@ function WatchlistEntryRow({
 	}
 
 	const instrument = entry.data;
+	const snapshot = quoteQuery.data ?? null;
+	// 观察上下文合同：进入标的图表时携带该对象自己的最近可见行情日，
+	// 表（自选行情列）与图（K 线 Primary Answer）锚定同一交易日。
+	const href = snapshot
+		? `/instruments/${instrument.instrument_id}?tab=chart&observeDate=${snapshot.tradeDate}`
+		: `/instruments/${instrument.instrument_id}`;
 	return (
 		<div
 			data-info-level="l3"
 			data-info-unit="watchlist-row"
 			data-row-state={instrument.is_active ? "active" : "delisted"}
-			className="grid grid-cols-[minmax(0,1fr)_8rem_6rem_auto] items-center gap-3 px-4 py-3 text-sm"
+			className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm"
 		>
-			<div>
-				<a href={`/instruments/${instrument.instrument_id}`} className="font-medium hover:text-(--color-accent)">
+			<div className="min-w-[11rem] flex-1">
+				<a href={href} className="font-medium hover:text-(--color-accent)">
 					{instrument.name}
 				</a>
 				<p className="font-mono text-xs text-(--color-foreground-tertiary)">ID {instrument.instrument_id}</p>
 			</div>
-			<span className="font-mono">
+			<span className="w-32 font-mono text-xs text-(--color-foreground-secondary)">
 				{instrument.ticker} · {instrument.exchange}
 			</span>
-			<span className="flex items-center gap-1 text-(--color-foreground-tertiary)">
+			<span className="flex w-24 items-center gap-1 text-(--color-foreground-tertiary)">
 				{instrument.asset_class}
 				{instrument.is_active ? null : (
 					<span className="rounded bg-(--color-risk-warning)/10 px-1 py-0.5 text-xs text-(--color-risk-warning)">
@@ -229,6 +271,12 @@ function WatchlistEntryRow({
 					</span>
 				)}
 			</span>
+			<WatchlistQuoteCell
+				instrumentId={instrumentId}
+				instrumentName={instrument.name}
+				pending={quote.anchorDate === null || quoteQuery.isLoading}
+				query={quoteQuery}
+			/>
 			<button
 				type="button"
 				aria-label={`移除 ${instrument.name}`}
@@ -238,6 +286,81 @@ function WatchlistEntryRow({
 				移除
 			</button>
 		</div>
+	);
+}
+
+function WatchlistQuoteCell({
+	instrumentId,
+	instrumentName,
+	pending,
+	query,
+}: {
+	readonly instrumentId: number;
+	readonly instrumentName: string;
+	/** 观察锚点未落定或行情请求在途。 */
+	readonly pending: boolean;
+	readonly query: {
+		readonly data: MarketQuoteSnapshot | null | undefined;
+		readonly isError: boolean;
+		readonly refetch: () => unknown;
+	};
+}) {
+	if (pending) {
+		return <span className="w-56 text-xs text-(--color-foreground-tertiary)">行情解析中…</span>;
+	}
+	if (query.isError) {
+		return (
+			<span className="flex w-56 items-center gap-2 text-xs">
+				<span data-quote-state="error" className="text-(--color-risk-warning-fg)">
+					行情读取失败
+				</span>
+				<button
+					type="button"
+					aria-label={`重试行情 ${instrumentName}`}
+					onClick={() => void query.refetch()}
+					className="rounded-md border border-(--color-border-subtle) px-2 py-1 text-xs hover:bg-(--color-interaction-hover-subtle-bg)"
+				>
+					重试
+				</button>
+			</span>
+		);
+	}
+	const snapshot = query.data ?? null;
+	if (snapshot === null) {
+		return (
+			<span
+				data-quote-state="unavailable"
+				title={`标的 ${instrumentId}：本地行情库当前窗口内没有可见日 K（数据集未覆盖或未晋级）`}
+				className="w-56 text-xs text-(--color-foreground-muted)"
+			>
+				行情不可得
+			</span>
+		);
+	}
+	const direction = snapshot.change === null || snapshot.change === 0 ? "flat" : snapshot.change > 0 ? "up" : "down";
+	return (
+		<span className="flex w-56 items-baseline justify-end gap-3 tabular-nums">
+			<span data-quote-field="close" className="font-data text-sm">
+				{snapshot.close.toFixed(2)}
+			</span>
+			<span
+				data-quote-field="change"
+				className={
+					direction === "up"
+						? "font-data text-sm text-(--color-market-up)"
+						: direction === "down"
+							? "font-data text-sm text-(--color-market-down)"
+							: "font-data text-sm text-(--color-foreground-secondary)"
+				}
+			>
+				{snapshot.change === null
+					? "—"
+					: `${formatSigned(snapshot.change)}${snapshot.changePercent === null ? "" : ` (${formatSigned(snapshot.changePercent)}%)`}`}
+			</span>
+			<span data-quote-field="date" className="w-[6.5rem] text-right text-xs text-(--color-foreground-tertiary)">
+				行情日 {snapshot.tradeDate}
+			</span>
+		</span>
 	);
 }
 

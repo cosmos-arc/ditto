@@ -15,6 +15,8 @@ export interface InstrumentHubSearch {
 	readonly selectionRunId?: string | undefined;
 	readonly tab?: "capital" | "chart" | "fundamentals" | "overview" | "technical";
 	readonly drill?: InstrumentDrillContext | undefined;
+	/** 观察日锚点（自选/筛选带入）：合法 YYYY-MM-DD 时图表截至日期锚定该日。 */
+	readonly observeDate?: string | undefined;
 }
 
 export interface InstrumentTechnicalSlotProps {
@@ -81,7 +83,7 @@ export function InstrumentHubPage({
 							</TabsContent>
 							<TabsContent value="chart">
 								<div data-info-level="l1" data-info-unit="instrument-chart">
-									<InstrumentChartView id={instrumentId} drill={search.drill} />
+									<InstrumentChartView id={instrumentId} drill={search.drill} observeDate={search.observeDate} />
 								</div>
 							</TabsContent>
 							<TabsContent value="capital">

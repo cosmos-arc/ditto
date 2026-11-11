@@ -1,11 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchInstrumentCatalog, fetchInstrumentIdentity, type InstrumentCatalogFilter } from "@/features/instruments";
+import {
+	fetchInstrumentBars,
+	fetchInstrumentCatalog,
+	fetchInstrumentIdentity,
+	type InstrumentCatalogFilter,
+} from "@/features/instruments";
 import {
 	ASharesPage as ASharesView,
 	CalendarPage as CalendarView,
 	fetchCalendarStatus,
 	type MarketCatalog,
 	type MarketCatalogInstrument,
+	type MarketQuoteSnapshot,
 	MarketsPage as MarketsView,
 	WatchlistPage as WatchlistView,
 } from "@/features/markets";
@@ -33,11 +39,34 @@ function useCalendarStatus() {
 	});
 }
 
+/** 上海交易所时区的"今天"（盘后观察以交易所日界为准，非 UTC 日）。 */
+function shanghaiToday(): string {
+	return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function dateDaysBefore(date: string, days: number): string {
+	const parsed = new Date(`${date}T00:00:00Z`);
+	parsed.setUTCDate(parsed.getUTCDate() - days);
+	return parsed.toISOString().slice(0, 10);
+}
+
+/** 行情观察窗口：锚点日前推 45 个自然日，足以覆盖前后两根日 K 的涨跌口径。 */
+const QUOTE_WINDOW_DAYS = 45;
+
 /** Cross-feature composition for the top-level Markets overview. */
 export function MarketsPage() {
 	const catalogQuery = useMarketCatalog({ limit: 100 });
 	const contextQuery = useCurrentMarketContext();
-	return <MarketsView catalogQuery={catalogQuery} contextQuery={contextQuery} etfCandidates={<ETFCandidates />} />;
+	// 盘后落地锚点：最近完整交易日来自 calendar 数据集真实摄取结果。
+	const calendarQuery = useCalendarStatus();
+	return (
+		<MarketsView
+			calendarQuery={calendarQuery}
+			catalogQuery={catalogQuery}
+			contextQuery={contextQuery}
+			etfCandidates={<ETFCandidates />}
+		/>
+	);
 }
 
 /** Cross-feature composition for the A-share identity catalog. */
@@ -58,7 +87,41 @@ export function WatchlistPage() {
 		const instrument = await fetchInstrumentIdentity(String(instrumentId));
 		return toMarketInstrument(instrument);
 	};
-	return <WatchlistView resolveEntry={resolveEntry} searchCatalog={searchCatalog} />;
+	// 最近完整交易日锚点来自 calendar 数据集真实摄取结果。日历状态落定前
+	// 不发起行情请求（用今天当窗口会撞上日历权威 fail closed）；日历不可得
+	// 时回退到上海今天（服务端仍按日历权威钳制），摘要如实显示"未解析"。
+	const observationQuery = useCalendarStatus();
+	const anchorDate =
+		observationQuery.data?.latest_status === "success" && observationQuery.data.latest_date
+			? observationQuery.data.latest_date
+			: observationQuery.isLoading
+				? null
+				: shanghaiToday();
+	// 行情列复用既有日 K 合同：窗口内最后一根收盘与对前一根涨跌，
+	// 与标的图表 Primary Answer 同口径（表图数字对齐）。
+	const resolveQuote = async (instrumentId: number, end: string): Promise<MarketQuoteSnapshot | null> => {
+		const chart = await fetchInstrumentBars(String(instrumentId), {
+			adjustment: "none",
+			allowExperimental: false,
+			endDate: end,
+			period: "daily",
+			startDate: dateDaysBefore(end, QUOTE_WINDOW_DAYS),
+		});
+		const last = chart.bars.at(-1);
+		if (!last) return null;
+		const previous = chart.bars.at(-2);
+		const change = previous ? last.close - previous.close : null;
+		const changePercent = change !== null && previous ? (change / previous.close) * 100 : null;
+		return { change, changePercent, close: last.close, tradeDate: last.trade_date };
+	};
+	return (
+		<WatchlistView
+			observationQuery={observationQuery}
+			quote={{ anchorDate, resolve: resolveQuote }}
+			resolveEntry={resolveEntry}
+			searchCatalog={searchCatalog}
+		/>
+	);
 }
 
 function toMarketInstrument(instrument: {

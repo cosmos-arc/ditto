@@ -22,6 +22,11 @@ interface InstrumentChartViewProps {
 	readonly id: string;
 	/** 回测买卖点下钻上下文：定位日滚入可视中心 + 买卖 marker + as_of 水位线。 */
 	readonly drill?: InstrumentDrillContext | undefined;
+	/**
+	 * 观察日锚点（如自选/筛选带入）：合法 YYYY-MM-DD 时成为初始截至日期，
+	 * 使 K 线 Primary Answer 与来源观察面同日同口径；非法值忽略。
+	 */
+	readonly observeDate?: string | undefined;
 }
 
 const ADJUSTMENT_OPTIONS: ReadonlyArray<{ readonly value: BarAdjustment; readonly label: string }> = [
@@ -34,6 +39,15 @@ function dateDaysAgo(days: number): string {
 	const date = new Date(Date.now() + 8 * 60 * 60 * 1000);
 	date.setUTCDate(date.getUTCDate() - days);
 	return date.toISOString().slice(0, 10);
+}
+
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** 锚点日前推 N 年（纯日期算术，不涉及时区边界）。 */
+function dateYearsBefore(date: string, years: number): string {
+	const parsed = new Date(`${date}T00:00:00Z`);
+	parsed.setUTCFullYear(parsed.getUTCFullYear() - years);
+	return parsed.toISOString().slice(0, 10);
 }
 
 function formatSigned(value: number, digits = 2): string {
@@ -82,12 +96,17 @@ function SegmentedControl<T extends string>({
 	);
 }
 
-export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
+export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartViewProps) {
+	// 观察日锚点：来自观察面（自选等）的合法日期成为初始截至日期；与图表
+	// 默认窗口同一状态位，用户手动改期即覆盖锚点（不锁死后续分析）。
+	const anchoredEndDate = observeDate !== undefined && ISO_DATE_PATTERN.test(observeDate) ? observeDate : null;
 	const [period, setPeriod] = useState<BarPeriod>("daily");
 	const [adjustment, setAdjustment] = useState<BarAdjustment>("none");
 	const [includeExperimental, setIncludeExperimental] = useState(false);
-	const [startDate, setStartDate] = useState(() => dateDaysAgo(365));
-	const [endDate, setEndDate] = useState(() => dateDaysAgo(0));
+	const [startDate, setStartDate] = useState(() =>
+		anchoredEndDate ? dateYearsBefore(anchoredEndDate, 1) : dateDaysAgo(365),
+	);
+	const [endDate, setEndDate] = useState(() => anchoredEndDate ?? dateDaysAgo(0));
 	const [toggles, setToggles] = useState<IndicatorToggles>(() => readIndicatorToggles());
 	const updateToggle = (key: keyof IndicatorToggles, value: boolean) => {
 		setToggles((previous) => {
@@ -305,6 +324,20 @@ export function InstrumentChartView({ id, drill }: InstrumentChartViewProps) {
 						<span className="font-data text-(--color-foreground-tertiary)">run {drill.runId}</span>
 						<span className="font-data text-(--color-foreground-tertiary)">as_of {drill.asOf || "—"}</span>
 						<span className="text-(--color-foreground-muted)">决策线为源 run as_of；K 线按当前图表来源截止</span>
+					</div>
+				)}
+
+				{anchoredEndDate && (
+					<div
+						data-state="observe-anchor"
+						data-testid={`observe-anchor-${id}`}
+						className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-(--color-border-subtle) px-3 py-2 text-xs"
+					>
+						<span className="font-medium text-(--color-foreground)">观察日锚定</span>
+						<span className="font-data text-(--color-foreground-secondary)">{anchoredEndDate}</span>
+						<span className="text-(--color-foreground-muted)">
+							来自观察面（自选/筛选）的同一交易日；K 线截至该日，知识截止仍为服务端当前时钟
+						</span>
 					</div>
 				)}
 

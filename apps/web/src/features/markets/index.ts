@@ -14,6 +14,8 @@ export type {
 	MarketCatalogInstrument,
 	MarketCatalogQuery,
 	MarketContextQuery,
+	MarketQuoteSnapshot,
+	WatchlistQuoteFn,
 } from "./components/market-view-contracts";
 export { MarketsPage } from "./components/markets-page";
 export type { WatchlistEntryFn, WatchlistSearchFn } from "./components/watchlist-page";
