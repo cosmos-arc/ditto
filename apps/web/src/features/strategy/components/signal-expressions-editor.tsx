@@ -3,10 +3,18 @@ import { ContextSection } from "@/components/domain/context-section";
 import type { StrategySpec } from "@/types/strategy";
 import { INPUT_CLASS } from "./spec-fields";
 
+/** 行级编译反馈（来自 Author 预览的逐表达式结果，索引与表达式行对齐）。 */
+export type SignalExpressionCompileStatus = {
+	readonly valid: boolean;
+	readonly message: string;
+};
+
 interface SignalExpressionsEditorProps {
 	readonly spec: StrategySpec;
 	/** 工作副本更新器（与 `useStrategyStudioStore.updateSpec` 同构）。 */
 	readonly onChange: (updater: (draft: StrategySpec) => StrategySpec) => void;
+	/** Author 预览后的行级状态：错误可定位到具体表达式行。 */
+	readonly compileStatuses?: readonly (SignalExpressionCompileStatus | undefined)[] | undefined;
 }
 
 /**
@@ -28,7 +36,11 @@ function signalKey(index: number): string {
  * 表达式或权重只改对应槽位。组件把两个平行数组呈现为成对行：表达式输入 + 权重数值
  * 输入 + 上移/下移/删除。
  */
-export function SignalExpressionsEditor({ spec, onChange }: SignalExpressionsEditorProps): ReactElement {
+export function SignalExpressionsEditor({
+	spec,
+	onChange,
+	compileStatuses,
+}: SignalExpressionsEditorProps): ReactElement {
 	const expressions = spec.signalExpressions;
 	const weights = spec.signalWeights;
 
@@ -49,105 +61,125 @@ export function SignalExpressionsEditor({ spec, onChange }: SignalExpressionsEdi
 							return (
 								<li
 									key={signalKey(index)}
-									className="flex items-center gap-2 rounded-sm p-(--density-panel-padding) transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+									className="flex flex-col gap-1 rounded-sm p-(--density-panel-padding) transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
+									data-expression-row={index}
 								>
-									<input
-										aria-label={`信号表达式 ${index + 1}`}
-										className={`${INPUT_CLASS} flex-1`}
-										value={expression}
-										onChange={(event) => {
-											const nextValue = event.target.value;
-											onChange((draft) => ({
-												...draft,
-												signalExpressions: draft.signalExpressions.map((value, i) => (i === index ? nextValue : value)),
-											}));
-										}}
-									/>
-									<input
-										aria-label={`权重 ${index + 1}`}
-										className={`${INPUT_CLASS} w-20`}
-										inputMode="decimal"
-										type="number"
-										value={Number.isFinite(weight) ? weight : 0}
-										onChange={(event) => {
-											const parsed = Number(event.target.value);
-											onChange((draft) => ({
-												...draft,
-												signalWeights: draft.signalWeights.map((value, i) =>
-													i === index ? (Number.isFinite(parsed) ? parsed : 0) : value,
-												),
-											}));
-										}}
-									/>
-									<button
-										type="button"
-										aria-label={`上移信号 ${index + 1}`}
-										disabled={index === 0}
-										onClick={() => {
-											const nextExpr = [...expressions];
-											const nextWeight = [...weights];
-											const currentExpression = nextExpr[index];
-											const previousExpression = nextExpr[index - 1];
-											const currentWeight = nextWeight[index];
-											const previousWeight = nextWeight[index - 1];
-											if (
-												currentExpression === undefined ||
-												previousExpression === undefined ||
-												currentWeight === undefined ||
-												previousWeight === undefined
-											)
-												return;
-											nextExpr[index] = previousExpression;
-											nextExpr[index - 1] = currentExpression;
-											nextWeight[index] = previousWeight;
-											nextWeight[index - 1] = currentWeight;
-											updateBoth(nextExpr, nextWeight);
-										}}
-										className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-40"
-									>
-										上移
-									</button>
-									<button
-										type="button"
-										aria-label={`下移信号 ${index + 1}`}
-										disabled={index === expressions.length - 1}
-										onClick={() => {
-											const nextExpr = [...expressions];
-											const nextWeight = [...weights];
-											const currentExpression = nextExpr[index];
-											const nextExpression = nextExpr[index + 1];
-											const currentWeight = nextWeight[index];
-											const followingWeight = nextWeight[index + 1];
-											if (
-												currentExpression === undefined ||
-												nextExpression === undefined ||
-												currentWeight === undefined ||
-												followingWeight === undefined
-											)
-												return;
-											nextExpr[index] = nextExpression;
-											nextExpr[index + 1] = currentExpression;
-											nextWeight[index] = followingWeight;
-											nextWeight[index + 1] = currentWeight;
-											updateBoth(nextExpr, nextWeight);
-										}}
-										className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-40"
-									>
-										下移
-									</button>
-									<button
-										type="button"
-										aria-label={`删除信号 ${index + 1}`}
-										onClick={() =>
-											updateBoth(
-												expressions.filter((_, i) => i !== index),
-												weights.filter((_, i) => i !== index),
-											)
-										}
-										className="rounded-sm px-2 py-0.5 text-xs text-(--color-led-danger) hover:bg-(--color-interaction-hover-subtle-bg)"
-									>
-										删除
-									</button>
+									<div className="flex items-center gap-2">
+										<input
+											aria-label={`信号表达式 ${index + 1}`}
+											className={`${INPUT_CLASS} flex-1`}
+											value={expression}
+											onChange={(event) => {
+												const nextValue = event.target.value;
+												onChange((draft) => ({
+													...draft,
+													signalExpressions: draft.signalExpressions.map((value, i) =>
+														i === index ? nextValue : value,
+													),
+												}));
+											}}
+										/>
+										<input
+											aria-label={`权重 ${index + 1}`}
+											className={`${INPUT_CLASS} w-20`}
+											inputMode="decimal"
+											type="number"
+											value={Number.isFinite(weight) ? weight : 0}
+											onChange={(event) => {
+												const parsed = Number(event.target.value);
+												onChange((draft) => ({
+													...draft,
+													signalWeights: draft.signalWeights.map((value, i) =>
+														i === index ? (Number.isFinite(parsed) ? parsed : 0) : value,
+													),
+												}));
+											}}
+										/>
+										<button
+											type="button"
+											aria-label={`上移信号 ${index + 1}`}
+											disabled={index === 0}
+											onClick={() => {
+												const nextExpr = [...expressions];
+												const nextWeight = [...weights];
+												const currentExpression = nextExpr[index];
+												const previousExpression = nextExpr[index - 1];
+												const currentWeight = nextWeight[index];
+												const previousWeight = nextWeight[index - 1];
+												if (
+													currentExpression === undefined ||
+													previousExpression === undefined ||
+													currentWeight === undefined ||
+													previousWeight === undefined
+												)
+													return;
+												nextExpr[index] = previousExpression;
+												nextExpr[index - 1] = currentExpression;
+												nextWeight[index] = previousWeight;
+												nextWeight[index - 1] = currentWeight;
+												updateBoth(nextExpr, nextWeight);
+											}}
+											className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-40"
+										>
+											上移
+										</button>
+										<button
+											type="button"
+											aria-label={`下移信号 ${index + 1}`}
+											disabled={index === expressions.length - 1}
+											onClick={() => {
+												const nextExpr = [...expressions];
+												const nextWeight = [...weights];
+												const currentExpression = nextExpr[index];
+												const nextExpression = nextExpr[index + 1];
+												const currentWeight = nextWeight[index];
+												const followingWeight = nextWeight[index + 1];
+												if (
+													currentExpression === undefined ||
+													nextExpression === undefined ||
+													currentWeight === undefined ||
+													followingWeight === undefined
+												)
+													return;
+												nextExpr[index] = nextExpression;
+												nextExpr[index + 1] = currentExpression;
+												nextWeight[index] = followingWeight;
+												nextWeight[index + 1] = currentWeight;
+												updateBoth(nextExpr, nextWeight);
+											}}
+											className="rounded-sm px-2 py-0.5 text-xs text-(--color-foreground-secondary) hover:bg-(--color-interaction-hover-subtle-bg) disabled:opacity-40"
+										>
+											下移
+										</button>
+										<button
+											type="button"
+											aria-label={`删除信号 ${index + 1}`}
+											onClick={() =>
+												updateBoth(
+													expressions.filter((_, i) => i !== index),
+													weights.filter((_, i) => i !== index),
+												)
+											}
+											className="rounded-sm px-2 py-0.5 text-xs text-(--color-led-danger) hover:bg-(--color-interaction-hover-subtle-bg)"
+										>
+											删除
+										</button>
+									</div>
+									{compileStatuses?.[index] ? (
+										compileStatuses[index]?.valid ? (
+											<p className="pl-1 text-[11px] text-(--color-led-success)" data-expression-compile-status="valid">
+												表达式 {index + 1} 编译通过
+											</p>
+										) : (
+											<p
+												className="pl-1 text-[11px] text-(--color-led-danger)"
+												data-expression-compile-status="invalid"
+												role="alert"
+											>
+												表达式 {index + 1}：{compileStatuses[index]?.message}
+											</p>
+										)
+									) : null}
 								</li>
 							);
 						})}

@@ -19,6 +19,7 @@ from ditto_strategy.industry_rotation.contracts import (
 )
 from ditto_strategy.industry_rotation.service import IndustryRotationService
 from ditto_strategy.selection.contracts import (
+    EtfSelectionSpec,
     SelectionFactorValue,
     SelectionFactorWeight,
     SelectionInputBundle,
@@ -26,6 +27,7 @@ from ditto_strategy.selection.contracts import (
     SelectionLimitState,
     SelectionRun,
     StockSelectionSpec,
+    canonical_spec_hash,
 )
 from ditto_strategy.selection.pipeline import SelectionPipeline
 
@@ -36,6 +38,7 @@ class _Store:
     def __init__(self) -> None:
         self.saved: dict[str, SelectionRun] = {}
         self.saved_rotations: dict[str, IndustryRotationSnapshot] = {}
+        self.saved_policies: dict[str, StockSelectionSpec | EtfSelectionSpec] = {}
 
     def save(self, value: SelectionRun) -> None:
         self.saved.setdefault(value.run_id, value)
@@ -50,6 +53,14 @@ class _Store:
 
     def save_rotation(self, value: IndustryRotationSnapshot) -> None:
         self.saved_rotations.setdefault(value.snapshot_id, value)
+
+    def save_policy(self, value: StockSelectionSpec | EtfSelectionSpec) -> None:
+        self.saved_policies.setdefault(canonical_spec_hash(value), value)
+
+    def policy_by_hash(
+        self, spec_hash: str
+    ) -> StockSelectionSpec | EtfSelectionSpec | None:
+        return self.saved_policies.get(spec_hash)
 
 
 def _rotation_input() -> IndustryRotationInputBundle:
@@ -119,6 +130,7 @@ def _process(store: _Store) -> RunIndustryAndSecuritySelection:
         selection_pipeline=SelectionPipeline(),
         rotation_writer=store,
         run_writer=store,
+        policy_writer=store,
     )
 
 
@@ -141,6 +153,22 @@ def test_process_binds_exact_rotation_snapshot_and_saves_selection_run() -> None
     assert store.saved == {receipt.selection_run.run_id: receipt.selection_run}
 
 
+def test_process_persists_the_exact_policy_snapshot_with_the_run() -> None:
+    store = _Store()
+
+    receipt = _process(store).execute(
+        RunIndustryAndSecuritySelectionRequest(
+            rotation_input=_rotation_input(),
+            selection_input=_selection_input(),
+        )
+    )
+
+    # 条件快照按运行的 spec_hash 落库：后续模板交接按固定身份读回权重与条件。
+    assert store.policy_by_hash(receipt.selection_run.spec_hash) == (
+        _selection_input().spec
+    )
+
+
 def test_exact_replay_is_idempotent() -> None:
     store = _Store()
     process = _process(store)
@@ -155,6 +183,7 @@ def test_exact_replay_is_idempotent() -> None:
     assert first == second
     assert len(store.saved) == 1
     assert len(store.saved_rotations) == 1
+    assert len(store.saved_policies) == 1
 
 
 def test_process_rejects_stale_rotation_identity_before_write() -> None:

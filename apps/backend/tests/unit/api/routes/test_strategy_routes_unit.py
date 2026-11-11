@@ -35,6 +35,7 @@ from ditto_application.queries.strategy import StrategyQueryFacade
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.strategy import (
     approve_strategy_review,
+    create_strategy,
     deprecate_strategy_version,
     diff_strategy_version,
     get_active_strategy,
@@ -51,6 +52,7 @@ from ditto_apps.api.routes.strategy import (
 from ditto_apps.models import strategy as strategy_models
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.strategy import (
+    CreateStrategyRequest,
     GovernanceDecisionRequest,
     ReactivateStrategyRequest,
     SpecChangeResponse,
@@ -241,6 +243,21 @@ def _unwrap(route: Callable[..., object]) -> Callable[..., object]:
     return cast(Callable[..., object], getattr(route, "__dishka_orig_func__", route))
 
 
+_CreateRoute = Callable[..., Awaitable[APIResponse[StrategyResponse]]]
+
+
+async def _call_create(
+    request: CreateStrategyRequest,
+    handler: CreateStrategyHandler,
+) -> APIResponse[StrategyResponse]:
+    route = cast(_CreateRoute, _unwrap(create_strategy))
+    return await route(
+        request=request,
+        handler=handler,
+        idempotency_key="unit.create-001",
+    )
+
+
 async def _call_update(
     strategy_id: str,
     request: UpdateStrategyRequest,
@@ -429,6 +446,8 @@ class TestUpdateStrategyErrorMapping:
         ("code", "expected_status"),
         [
             ("STRATEGY_REVISION_CONFLICT", 409),
+            ("STRATEGY_ALREADY_EXISTS", 409),
+            ("STRATEGY_VERSION_ALREADY_EXISTS", 409),
             ("STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR", 500),
         ],
     )
@@ -452,6 +471,37 @@ class TestUpdateStrategyErrorMapping:
 
         assert exc_info.value.status_code == expected_status
         assert exc_info.value.error_code == code
+
+
+class TestCreateStrategyErrorMapping:
+    """POST /strategies — duplicate identity maps to structured 409, not 400."""
+
+    async def test_create_duplicate_strategy_maps_typed_conflict_to_409(
+        self,
+        mock_create_handler: MagicMock,
+    ) -> None:
+        mock_create_handler.handle.side_effect = AppCommandError(
+            "Strategy already exists: handoff-dup",
+            details={
+                "code": "STRATEGY_ALREADY_EXISTS",
+                "reason": "strategy_already_exists",
+                "strategy_id": "handoff-dup",
+            },
+        )
+
+        with pytest.raises(APIError) as exc_info:
+            await _call_create(
+                CreateStrategyRequest(
+                    strategy_id="handoff-dup",
+                    name="handoff-dup",
+                    spec_json={"template": "etf_rotation"},
+                    tags=[],
+                ),
+                mock_create_handler,
+            )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.error_code == "STRATEGY_ALREADY_EXISTS"
 
 
 class TestListStrategyVersions:
@@ -1054,3 +1104,23 @@ class TestDiffStrategyVersion:
             await _call_diff("s1", 99, mock_query_facade)
 
         assert exc_info.value.status_code == 404
+
+
+async def test_router_registers_templates_read_before_path_capture() -> None:
+    """The template catalog has its own read-only operation, not a strategy id."""
+    matches = [
+        route
+        for route in router.routes
+        if isinstance(route, APIRoute)
+        and route.path == "/strategies/templates"
+        and "GET" in (route.methods or ())
+    ]
+    assert len(matches) == 1
+    assert matches[0].operation_id == "strategies_list_templates"
+    # 注册顺序必须先于 /{strategy_id}，否则 "templates" 被当成策略 ID 捕获。
+    strategy_capture = [
+        route
+        for route in router.routes
+        if isinstance(route, APIRoute) and route.path == "/strategies/{strategy_id}"
+    ]
+    assert router.routes.index(matches[0]) < router.routes.index(strategy_capture[0])

@@ -35,12 +35,16 @@ class _Writer:
     def __init__(self) -> None:
         self.saved: list[SelectionRun] = []
         self.saved_rotations: list[IndustryRotationSnapshot] = []
+        self.saved_policies: list[object] = []
 
     def save(self, value: SelectionRun) -> None:
         self.saved.append(value)
 
     def save_rotation(self, value: IndustryRotationSnapshot) -> None:
         self.saved_rotations.append(value)
+
+    def save_policy(self, value: object) -> None:
+        self.saved_policies.append(value)
 
 
 def _request() -> CreateSelectionRunRequest:
@@ -103,6 +107,7 @@ def _facade(writer: _Writer, readiness, history) -> SelectionWorkspaceFacade:
             selection_pipeline=SelectionPipeline(),
             rotation_writer=writer,
             run_writer=writer,
+            policy_writer=writer,
         ),
         readiness=readiness,
         historical_universe=history,

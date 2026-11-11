@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import asdict
-from typing import Annotated, Never
+from datetime import datetime
+from typing import Annotated, Never, cast
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
@@ -24,21 +25,29 @@ from ditto_application.processes.selection.facade import (
     SelectionWorkspaceFacade,
     StockSelectionSpecDraft,
 )
+from ditto_application.processes.strategy.template_handoff import (
+    ProposeStrategyTemplateDraft,
+    StrategyTemplateHandoffRequest,
+)
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
 from ditto_application.queries.research_cases import ResearchCaseQueryService
 from ditto_application.queries.selection_factor_catalog import (
     SelectionFactorCatalogQuery,
 )
 from ditto_application.queries.selection_runs import SelectionRunQueryService
+from ditto_platform.foundation.json_types import JsonValue
 from fastapi import APIRouter, Path, Query, status
 
 from ditto_apps.api.errors import NotFoundError, UnprocessableEntityError
+from ditto_apps.api.json_values import to_json_mapping
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.selection import (
     AssembledSelectionRunResponse,
     AssembleSelectionRunBody,
     CreateResearchCaseBody,
     CreateSelectionRunBody,
+    HandoffConversionResponse,
+    HandoffGapResponse,
     IndustryRotationResponse,
     ResearchCaseResponse,
     ResearchCaseSummaryResponse,
@@ -46,6 +55,8 @@ from ditto_apps.models.selection import (
     SelectionRunDiffResponse,
     SelectionRunResponse,
     SelectionWorkspaceReceiptResponse,
+    StrategyTemplateDraftProposalResponse,
+    StrategyTemplateHandoffBody,
 )
 
 router = APIRouter(prefix="/selections", tags=["selections"])
@@ -239,6 +250,70 @@ async def create_research_case(
             raise NotFoundError(str(exc)) from exc
         raise UnprocessableEntityError(str(exc), error_code=reason) from exc
     return APIResponse(data=ResearchCaseResponse.model_validate(value))
+
+
+@router.post(
+    "/runs/{run_id}/strategy-template-drafts",
+    response_model=APIResponse[StrategyTemplateDraftProposalResponse],
+    operation_id="selections_propose_strategy_template_draft",
+)
+@inject
+async def propose_strategy_template_draft(
+    run_id: Annotated[str, Path(min_length=1)],
+    body: StrategyTemplateHandoffBody,
+    process: Annotated[ProposeStrategyTemplateDraft, FromComponent()],
+) -> APIResponse[StrategyTemplateDraftProposalResponse]:
+    """
+    Propose a saveable strategy draft from one exact run and template.
+
+    The proposal itself is side-effect free; persistence happens through the
+    strategy create command with the returned spec_json.
+    """
+    try:
+        proposal = await asyncio.to_thread(
+            process.propose,
+            StrategyTemplateHandoffRequest(
+                selection_run_id=run_id,
+                template_id=body.template_id,
+                research_case_id=body.research_case_id,
+                universe_id=body.universe_id,
+            ),
+        )
+    except AppProcessError as exc:
+        reason = str(exc.details.get("reason", "STRATEGY_HANDOFF_INVALID"))
+        if reason in {"selection_run_not_found", "research_case_not_found"}:
+            raise NotFoundError(str(exc)) from exc
+        if reason == "template_universe_mismatch":
+            raise UnprocessableEntityError(str(exc), error_code=reason) from exc
+        raise UnprocessableEntityError(str(exc), error_code=reason) from exc
+    lineage = {
+        key: (
+            value.isoformat()
+            if isinstance(value, datetime)
+            else cast("JsonValue", value)
+        )
+        for key, value in proposal.lineage.items()
+    }
+    return APIResponse(
+        data=StrategyTemplateDraftProposalResponse(
+            template_id=proposal.template_id,
+            spec_json=to_json_mapping(proposal.spec_json),
+            converted=tuple(
+                HandoffConversionResponse(source=item.source, detail=item.detail)
+                for item in proposal.converted
+            ),
+            unconverted=tuple(
+                HandoffGapResponse(
+                    source=item.source,
+                    reason_code=item.reason_code,
+                    explanation=item.explanation,
+                    detail=item.detail,
+                )
+                for item in proposal.unconverted
+            ),
+            lineage=to_json_mapping(lineage),
+        )
+    )
 
 
 @router.get(

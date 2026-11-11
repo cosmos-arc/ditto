@@ -104,3 +104,34 @@ describe("SignalExpressionsEditor", () => {
 		expect(screen.getByLabelText("下移信号 2")).toBeDisabled();
 	});
 });
+
+describe("SignalExpressionsEditor compile statuses", () => {
+	it("marks each row with its per-expression compile outcome", () => {
+		render(
+			<SignalExpressionsEditor
+				spec={specWith(["momentum_1m", "cs_ranks(close)"], [0.6, 0.4])}
+				onChange={vi.fn()}
+				compileStatuses={[
+					{ valid: true, message: "" },
+					{ valid: false, message: "unknown function 'cs_ranks'" },
+				]}
+			/>,
+		);
+
+		const firstRow = screen.getByText("表达式 1 编译通过");
+		expect(firstRow).toHaveAttribute("data-expression-compile-status", "valid");
+		const secondRow = screen.getByRole("alert");
+		expect(secondRow).toHaveAttribute("data-expression-compile-status", "invalid");
+		// 错误定位到行号与编译器消息，不只给一个笼统失败。
+		expect(secondRow).toHaveTextContent("表达式 2：unknown function 'cs_ranks'");
+		expect(firstRow.closest("[data-expression-row]")).toHaveAttribute("data-expression-row", "0");
+		expect(secondRow.closest("[data-expression-row]")).toHaveAttribute("data-expression-row", "1");
+	});
+
+	it("renders no status markers before a preview exists", () => {
+		render(<SignalExpressionsEditor spec={specWith(["momentum_1m"], [1])} onChange={vi.fn()} />);
+
+		expect(screen.queryByRole("alert")).toBeNull();
+		expect(screen.queryByText(/编译通过/)).toBeNull();
+	});
+});

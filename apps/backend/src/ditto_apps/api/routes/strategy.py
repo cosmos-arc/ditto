@@ -60,6 +60,9 @@ from ditto_application.contracts import (
 from ditto_application.exceptions import AppError, AppQueryError
 from ditto_application.mutation_idempotency import canonical_resource_id
 from ditto_application.queries.strategy import StrategyQueryFacade
+from ditto_application.queries.strategy_templates import (
+    StrategyTemplateCatalogQuery,
+)
 from fastapi import APIRouter, Depends, Path, Query
 
 from ditto_apps.api.deps import paginate, pagination_params
@@ -92,6 +95,8 @@ from ditto_apps.models.strategy import (
     StrategyResponse,
     StrategySpecValidateRequest,
     StrategySpecValidationResponse,
+    StrategyTemplateCatalogEntryResponse,
+    StrategyTemplateParamConstraintResponse,
     StrategyVersionDetailResponse,
     StrategyVersionDiffResponse,
     StrategyVersionResponse,
@@ -114,6 +119,10 @@ def _raise_mutation_error(exc: AppError) -> Never:
     if isinstance(code, str) and code == "IDEMPOTENCY_RECEIPT_INVALID":
         raise APIError(str(exc), status_code=500, error_code=code) from exc
     if isinstance(code, str) and code == "STRATEGY_REVISION_CONFLICT":
+        raise ConflictError(str(exc), error_code=code) from exc
+    if isinstance(code, str) and code == "STRATEGY_ALREADY_EXISTS":
+        raise ConflictError(str(exc), error_code=code) from exc
+    if isinstance(code, str) and code == "STRATEGY_VERSION_ALREADY_EXISTS":
         raise ConflictError(str(exc), error_code=code) from exc
     if isinstance(code, str) and code == "STRATEGY_GOVERNANCE_EVENT_INTEGRITY_ERROR":
         raise APIError(str(exc), status_code=500, error_code=code) from exc
@@ -317,6 +326,38 @@ async def list_strategies(
     """列出策略."""
     specs = await run_blocking(facade.list_specs)
     return paginate([to_strategy_response(s) for s in specs], pagination)
+
+
+@router.get(
+    "/templates",
+    response_model=APIResponse[list[StrategyTemplateCatalogEntryResponse]],
+    operation_id="strategies_list_templates",
+)
+@inject
+async def list_strategy_templates(
+    catalog: Annotated[StrategyTemplateCatalogQuery, FromComponent()],
+) -> APIResponse[list[StrategyTemplateCatalogEntryResponse]]:
+    """List the committed research templates strategy authoring may start from."""
+    entries = await run_blocking(catalog.list_entries)
+    return APIResponse(
+        data=[
+            StrategyTemplateCatalogEntryResponse(
+                template_id=entry.template_id,
+                display_name=entry.display_name,
+                asset_class=entry.asset_class,
+                description=entry.description,
+                universe=entry.universe,
+                benchmark=entry.benchmark,
+                default_frequency=entry.default_frequency,
+                required_datasets=list(entry.required_datasets),
+                param_constraints=[
+                    StrategyTemplateParamConstraintResponse.model_validate(item)
+                    for item in entry.param_constraints
+                ],
+            )
+            for entry in entries
+        ]
+    )
 
 
 @router.get(
