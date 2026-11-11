@@ -47,6 +47,7 @@ from ditto_application.queries.historical_universe import (
 )
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
 from ditto_application.queries.provider_snapshot import ProviderSnapshotQuery
+from ditto_application.queries.research_cases import ResearchCaseQueryService
 from ditto_application.queries.selection_evidence import (
     IndustryRotationEvidenceQueryFacade,
     SelectionRunEvidenceQueryFacade,
@@ -56,7 +57,11 @@ from ditto_application.queries.selection_factor_catalog import (
 )
 from ditto_application.queries.selection_runs import SelectionRunQueryService
 from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
-from ditto_application.research_case_contracts import ResearchCaseFactory
+from ditto_application.research_case_contracts import (
+    ResearchCaseFactory,
+    ResearchCaseReader,
+    ResearchCaseRecorder,
+)
 
 __all__ = ["AppSelectionProvider"]
 
@@ -351,9 +356,19 @@ class AppSelectionProvider(Provider):
         self,
         reader: SelectionRunReader,
         factory: ResearchCaseFactory,
+        recorder: ResearchCaseRecorder,
     ) -> CreateResearchCaseFromSelection:
         """Bind Analysis Research Cases to exact persisted SelectionRuns."""
-        return CreateResearchCaseFromSelection(reader, factory)
+        return CreateResearchCaseFromSelection(reader, factory, recorder)
+
+    @provide
+    def research_case_query_service(
+        self,
+        reader: ResearchCaseReader,
+        runs: SelectionRunReader,
+    ) -> ResearchCaseQueryService:
+        """Expose exact persisted Research Case reads to UI transports."""
+        return ResearchCaseQueryService(reader, runs)
 
     @provide
     def selection_factor_catalog_query(self) -> SelectionFactorCatalogQuery:

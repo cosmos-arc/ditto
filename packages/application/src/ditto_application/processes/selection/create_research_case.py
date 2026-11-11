@@ -13,6 +13,7 @@ from ditto_application.exceptions import AppProcessError
 from ditto_application.research_case_contracts import (
     ResearchCaseFactory,
     ResearchCaseMaterial,
+    ResearchCaseRecorder,
     ResearchCaseView,
 )
 
@@ -39,9 +40,11 @@ class CreateResearchCaseFromSelection:
         self,
         reader: SelectionRunReader,
         factory: ResearchCaseFactory,
+        recorder: ResearchCaseRecorder,
     ) -> None:
         self._reader = reader
         self._factory = factory
+        self._recorder = recorder
 
     def create(self, request: CreateResearchCaseRequest) -> ResearchCaseView:
         """Build the stable case or fail closed on unusable/foreign candidates."""
@@ -83,7 +86,7 @@ class CreateResearchCaseFromSelection:
             if not requested_ids or item.instrument_id in requested_ids
         )
         try:
-            return self._factory.create(
+            case = self._factory.create(
                 ResearchCaseMaterial(
                     selection_run_id=run.run_id,
                     selection_run_hash=canonical_selection_run_hash(run),
@@ -107,3 +110,7 @@ class CreateResearchCaseFromSelection:
                 "Research Case lineage is invalid",
                 reason="research_case_lineage_invalid",
             ) from exc
+        # 持久化交接：成功创建即落 append-only 存储，重放同身份为 no-op；
+        # 之前的所有失败路径都已 raise，不会写入半截用例。
+        self._recorder.save(case)
+        return case

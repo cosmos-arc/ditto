@@ -22,6 +22,7 @@ __all__ = [
     "IndustryRotationRankResponse",
     "IndustryRotationResponse",
     "ResearchCaseResponse",
+    "ResearchCaseSummaryResponse",
     "SelectionCandidateResponse",
     "SelectionExclusionChangeResponse",
     "SelectionExclusionResponse",
@@ -97,6 +98,20 @@ class ResearchCaseResponse(BaseModel):
     candidate_instrument_ids: tuple[InstrumentId, ...]
     selection_status: Literal["ready", "degraded"]
     missing_inputs: tuple[str, ...]
+
+
+class ResearchCaseSummaryResponse(BaseModel):
+    """Compact research-entry summary of one persisted handoff case."""
+
+    model_config = _RESPONSE_CONFIG
+
+    case_id: str
+    objective: str
+    selection_run_id: str
+    asset_kind: Literal["stock", "etf"]
+    as_of: datetime
+    selection_status: Literal["ready", "degraded"]
+    candidate_count: int = Field(ge=0)
 
 
 class IndustryRotationObservationRequest(BaseModel):

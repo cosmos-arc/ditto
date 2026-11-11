@@ -24,6 +24,7 @@ from ditto_analysis.storage.sqlite.experiments import (
     SQLiteExperimentWriter,
 )
 from ditto_analysis.storage.sqlite.research import (
+    SQLiteResearchCaseStore,
     SQLiteResearchCatalogReader,
     SQLiteResearchCatalogWriter,
 )
@@ -129,6 +130,16 @@ class AnalysisStorageProvider(Provider):
     ) -> SQLiteResearchCatalogWriter:
         """Research 控制面写入器."""
         return SQLiteResearchCatalogWriter(sqlite_client)
+
+    @provide
+    def research_case_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteResearchCaseStore:
+        """Provide append-only Research Case handoff persistence."""
+        store = SQLiteResearchCaseStore(sqlite_client)
+        store.init_schema()
+        return store
 
     @provide
     def research_catalog_service(

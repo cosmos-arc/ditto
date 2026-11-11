@@ -30,8 +30,10 @@ from ditto_application.processes.selection.run_industry_and_security_selection i
     RunIndustryAndSecuritySelection,
 )
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
+from ditto_application.queries.research_cases import ResearchCaseQueryService
 from ditto_application.queries.selection_runs import SelectionRunQueryService
-from ditto_apps.api.errors import UnprocessableEntityError
+from ditto_application.research_case_contracts import ResearchCaseView
+from ditto_apps.api.errors import NotFoundError, UnprocessableEntityError
 from ditto_apps.api.routes.selection import (
     _assembly_request,
     assemble_selection_run,
@@ -39,7 +41,10 @@ from ditto_apps.api.routes.selection import (
     create_research_case,
     create_selection_run,
     get_industry_rotation,
+    get_research_case,
     get_selection_run,
+    list_recent_research_cases,
+    list_run_research_cases,
 )
 from ditto_apps.models.selection import (
     AssembleSelectionRunBody,
@@ -80,6 +85,37 @@ class _Store:
 
     def list_by_spec(self, spec_id: str, *, limit: int = 100) -> list[SelectionRun]:
         return [item for item in self.saved.values() if item.spec_id == spec_id][:limit]
+
+
+class _CaseStore:
+    """In-memory case store double satisfying the persistence ports."""
+
+    def __init__(self) -> None:
+        self.cases: dict[str, ResearchCaseView] = {}
+
+    def save(self, case: ResearchCaseView) -> None:
+        self.cases[case.case_id] = case
+
+    def get(self, case_id: str) -> ResearchCaseView | None:
+        return self.cases.get(case_id)
+
+    def list_recent(self, *, limit: int = 20) -> tuple[ResearchCaseView, ...]:
+        ordered = sorted(
+            self.cases.values(),
+            key=lambda item: (item.as_of, item.case_id),
+            reverse=True,
+        )
+        return tuple(ordered[:limit])
+
+    def list_by_run(
+        self, selection_run_id: str, *, limit: int = 20
+    ) -> tuple[ResearchCaseView, ...]:
+        matched = [
+            item
+            for item in self.list_recent(limit=len(self.cases))
+            if item.selection_run_id == selection_run_id
+        ]
+        return tuple(matched[:limit])
 
 
 async def _inline_to_thread(function: Callable[..., object], /, *args, **kwargs):
@@ -303,6 +339,7 @@ def test_create_research_case_handler_returns_exact_selection_lineage(
 ) -> None:
     readiness, bound, history = gate
     store = _Store()
+    cases = _CaseStore()
     facade = _facade(store, readiness, history)
     create_run_handler = _original(create_selection_run)
     create_case_handler = _original(create_research_case)
@@ -325,6 +362,7 @@ def test_create_research_case_handler_returns_exact_selection_lineage(
                 process=CreateResearchCaseFromSelection(
                     store,
                     AnalysisResearchCaseFactory(),
+                    cases,
                 ),
             )
         )
@@ -332,6 +370,64 @@ def test_create_research_case_handler_returns_exact_selection_lineage(
     assert case_response.data.selection_run_id == run_response.data.selection_run.run_id
     assert case_response.data.case_id.startswith("research-case:sha256:")
     assert case_response.data.candidate_instrument_ids == (InstrumentId(600000),)
+    # 交接已持久化：不依赖创建会话即可再次读取。
+    assert cases.get(case_response.data.case_id) is not None
+
+
+def test_research_case_read_handlers_reopen_persisted_handoffs(gate) -> None:
+    readiness, bound, history = gate
+    store = _Store()
+    cases = _CaseStore()
+    facade = _facade(store, readiness, history)
+    process = _FakeAssembleProcess(lambda request: bound)
+
+    with patch(
+        "ditto_apps.api.routes.selection.asyncio.to_thread",
+        side_effect=_inline_to_thread,
+    ):
+        run_response = asyncio.run(
+            _original(create_selection_run)(
+                body=_assembly_body(), process=process, facade=facade
+            )
+        )
+        run_id = run_response.data.selection_run.run_id
+        created = asyncio.run(
+            _original(create_research_case)(
+                run_id=run_id,
+                body=CreateResearchCaseBody(objective="重开这条研究线。"),
+                process=CreateResearchCaseFromSelection(
+                    store, AnalysisResearchCaseFactory(), cases
+                ),
+            )
+        )
+        query = ResearchCaseQueryService(cases, store)
+        reopened = asyncio.run(
+            _original(get_research_case)(query=query, case_id=created.data.case_id)
+        )
+        recent = asyncio.run(_original(list_recent_research_cases)(query=query))
+        by_run = asyncio.run(
+            _original(list_run_research_cases)(run_id=run_id, query=query)
+        )
+        with pytest.raises(NotFoundError):
+            asyncio.run(
+                _original(get_research_case)(
+                    query=query,
+                    case_id="research-case:sha256:" + "f" * 64,
+                )
+            )
+        with pytest.raises(NotFoundError):
+            asyncio.run(
+                _original(list_run_research_cases)(
+                    run_id="selection-run:sha256:" + "f" * 64,
+                    query=query,
+                )
+            )
+
+    assert reopened.data == created.data
+    assert [item.case_id for item in recent.data] == [created.data.case_id]
+    assert [item.case_id for item in by_run.data] == [created.data.case_id]
+    assert recent.data[0].objective == "重开这条研究线。"
+    assert recent.data[0].candidate_count == 1
 
 
 def test_research_case_request_accepts_json_candidate_array() -> None:

@@ -86,7 +86,11 @@ from ditto_application.queries.research_certification import (
 )
 from ditto_application.queries.selection_runs import SelectionRunQueryService
 from ditto_application.queries.source import SourceDataPort
-from ditto_application.research_case_contracts import ResearchCaseFactory
+from ditto_application.research_case_contracts import (
+    ResearchCaseFactory,
+    ResearchCaseReader,
+    ResearchCaseRecorder,
+)
 from ditto_application.settings import ResearchExecutionSettings, TradingSettings
 from ditto_data.catalog import InMemoryDataCatalog
 from ditto_data.config.data_source import DataSourceSettings
@@ -303,6 +307,14 @@ class _ProtocolAdapterProvider(Provider):
     @provide
     def research_case_factory(self) -> ResearchCaseFactory:
         return MagicMock(spec=ResearchCaseFactory)
+
+    @provide
+    def research_case_recorder(self) -> ResearchCaseRecorder:
+        return MagicMock(spec=ResearchCaseRecorder)
+
+    @provide
+    def research_case_reader(self) -> ResearchCaseReader:
+        return MagicMock(spec=ResearchCaseReader)
 
     @provide
     def source_data_port(self) -> SourceDataPort:

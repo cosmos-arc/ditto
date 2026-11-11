@@ -25,6 +25,7 @@ from ditto_application.processes.selection.facade import (
     StockSelectionSpecDraft,
 )
 from ditto_application.queries.industry_rotations import IndustryRotationQueryService
+from ditto_application.queries.research_cases import ResearchCaseQueryService
 from ditto_application.queries.selection_factor_catalog import (
     SelectionFactorCatalogQuery,
 )
@@ -40,6 +41,7 @@ from ditto_apps.models.selection import (
     CreateSelectionRunBody,
     IndustryRotationResponse,
     ResearchCaseResponse,
+    ResearchCaseSummaryResponse,
     SelectionFactorCatalogEntryResponse,
     SelectionRunDiffResponse,
     SelectionRunResponse,
@@ -51,7 +53,11 @@ router = APIRouter(prefix="/selections", tags=["selections"])
 
 def _raise_query_error(exc: AppQueryError) -> Never:
     reason = exc.details.get("reason")
-    if reason in {"selection_run_not_found", "industry_rotation_not_found"}:
+    if reason in {
+        "selection_run_not_found",
+        "industry_rotation_not_found",
+        "research_case_not_found",
+    }:
         raise NotFoundError(str(exc)) from exc
     raise UnprocessableEntityError(
         str(exc),
@@ -313,3 +319,62 @@ async def compare_selection_runs(
     except AppQueryError as exc:
         _raise_query_error(exc)
     return APIResponse(data=SelectionRunDiffResponse.model_validate(value))
+
+
+@router.get(
+    "/research-cases",
+    response_model=APIResponse[tuple[ResearchCaseSummaryResponse, ...]],
+    operation_id="selections_list_research_cases",
+)
+@inject
+async def list_recent_research_cases(
+    query: Annotated[ResearchCaseQueryService, FromComponent()],
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> APIResponse[tuple[ResearchCaseSummaryResponse, ...]]:
+    """List the newest handed-off research cases for the research entry."""
+    try:
+        values = await asyncio.to_thread(query.list_recent, limit=limit)
+    except AppQueryError as exc:
+        _raise_query_error(exc)
+    return APIResponse(
+        data=tuple(ResearchCaseSummaryResponse.model_validate(item) for item in values)
+    )
+
+
+@router.get(
+    "/research-cases/{case_id}",
+    response_model=APIResponse[ResearchCaseResponse],
+    operation_id="selections_get_research_case",
+)
+@inject
+async def get_research_case(
+    query: Annotated[ResearchCaseQueryService, FromComponent()],
+    case_id: Annotated[str, Path(min_length=1)],
+) -> APIResponse[ResearchCaseResponse]:
+    """Reopen one exact persisted Research Case by content identity."""
+    try:
+        value = await asyncio.to_thread(query.get, case_id)
+    except AppQueryError as exc:
+        _raise_query_error(exc)
+    return APIResponse(data=ResearchCaseResponse.model_validate(value))
+
+
+@router.get(
+    "/runs/{run_id}/research-cases",
+    response_model=APIResponse[tuple[ResearchCaseSummaryResponse, ...]],
+    operation_id="selections_list_run_research_cases",
+)
+@inject
+async def list_run_research_cases(
+    query: Annotated[ResearchCaseQueryService, FromComponent()],
+    run_id: Annotated[str, Path(min_length=1)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> APIResponse[tuple[ResearchCaseSummaryResponse, ...]]:
+    """List cases handed off from one exact saved SelectionRun."""
+    try:
+        values = await asyncio.to_thread(query.list_by_run, run_id, limit=limit)
+    except AppQueryError as exc:
+        _raise_query_error(exc)
+    return APIResponse(
+        data=tuple(ResearchCaseSummaryResponse.model_validate(item) for item in values)
+    )

@@ -11,6 +11,8 @@ from ditto_kernel.identity import InstrumentId
 __all__ = [
     "ResearchCaseFactory",
     "ResearchCaseMaterial",
+    "ResearchCaseReader",
+    "ResearchCaseRecorder",
     "ResearchCaseView",
 ]
 
@@ -135,4 +137,30 @@ class ResearchCaseFactory(Protocol):
 
     def create(self, material: ResearchCaseMaterial) -> ResearchCaseView:
         """Validate and create one immutable analysis-owned case."""
+        ...
+
+
+class ResearchCaseRecorder(Protocol):
+    """Append-only persistence port for handed-off cases."""
+
+    def save(self, case: ResearchCaseView) -> None:
+        """Persist one case; exact replay stays a verified no-op."""
+        ...
+
+
+class ResearchCaseReader(Protocol):
+    """Exact read port backed by the append-only case store."""
+
+    def get(self, case_id: str) -> ResearchCaseView | None:
+        """Return one exact case or None when never created."""
+        ...
+
+    def list_recent(self, *, limit: int = 20) -> tuple[ResearchCaseView, ...]:
+        """Return the most recently decided cases, newest first."""
+        ...
+
+    def list_by_run(
+        self, selection_run_id: str, *, limit: int = 20
+    ) -> tuple[ResearchCaseView, ...]:
+        """Return cases handed off from one exact SelectionRun."""
         ...

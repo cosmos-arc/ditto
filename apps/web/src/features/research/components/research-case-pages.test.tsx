@@ -1,0 +1,133 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it } from "vitest";
+import { researchCaseFixture, selectionRunFixtures } from "@/mocks/fixtures/selection";
+import { server } from "@/mocks/server";
+import { ResearchCaseDetailPage, ResearchCaseListPage } from "./research-case-pages";
+
+function wrapper() {
+	const client = new QueryClient({
+		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+	});
+	return ({ children }: { children: ReactNode }) => (
+		<QueryClientProvider client={client}>{children}</QueryClientProvider>
+	);
+}
+
+const summaryFixture = {
+	as_of: researchCaseFixture.as_of,
+	asset_kind: researchCaseFixture.asset_kind,
+	candidate_count: researchCaseFixture.candidate_instrument_ids.length,
+	case_id: researchCaseFixture.case_id,
+	objective: researchCaseFixture.objective,
+	selection_run_id: researchCaseFixture.selection_run_id,
+	selection_status: researchCaseFixture.selection_status,
+};
+
+beforeEach(() => {
+	server.use(
+		http.get("/api/v1/selections/research-cases", () => HttpResponse.json({ data: [summaryFixture] })),
+		// msw 路径模式会把 :sha256: 当参数语法，用参数形式按身份精确匹配。
+		http.get("/api/v1/selections/research-cases/:caseId", ({ params }) =>
+			decodeURIComponent(String(params["caseId"])) === researchCaseFixture.case_id
+				? HttpResponse.json({ data: researchCaseFixture })
+				: HttpResponse.json({ detail: "research case not found" }, { status: 404 }),
+		),
+		http.get("/api/v1/selections/runs/:runId", ({ params }) =>
+			decodeURIComponent(String(params["runId"])) === selectionRunFixtures[0].run_id
+				? HttpResponse.json({ data: selectionRunFixtures[0] })
+				: HttpResponse.json({ detail: "not found" }, { status: 404 }),
+		),
+	);
+});
+
+describe("ResearchCaseListPage", () => {
+	it("lists persisted handoff cases with objective, run, and candidate scope", async () => {
+		render(<ResearchCaseListPage />, { wrapper: wrapper() });
+
+		const link = await screen.findByRole("link", { name: /验证动量因子持续性/ });
+		expect(link).toHaveAttribute("href", `/research/cases/${encodeURIComponent(researchCaseFixture.case_id)}`);
+		const row = link.closest("tr");
+		expect(row).not.toBeNull();
+		expect(row).toHaveTextContent("2 只候选");
+		expect(row).toHaveTextContent(/2026/);
+	});
+
+	it("keeps an honest empty state pointing at the selection workspace", async () => {
+		server.use(http.get("/api/v1/selections/research-cases", () => HttpResponse.json({ data: [] })));
+		render(<ResearchCaseListPage />, { wrapper: wrapper() });
+
+		await expect(screen.findByText(/尚无研究用例/)).resolves.toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "前往 Selection Workspace" })).toHaveAttribute("href", "/markets/screener");
+	});
+
+	it("surfaces a readable error state with retry", async () => {
+		server.use(
+			http.get("/api/v1/selections/research-cases", () => HttpResponse.json({ detail: "boom" }, { status: 500 })),
+		);
+		render(<ResearchCaseListPage />, { wrapper: wrapper() });
+
+		await expect(screen.findByRole("button", { name: "重试" })).resolves.toBeVisible();
+	});
+});
+
+describe("ResearchCaseDetailPage", () => {
+	it("reopens the case with objective, dates, lineage, and the selected candidates", async () => {
+		const user = userEvent.setup();
+		render(<ResearchCaseDetailPage caseId={researchCaseFixture.case_id} />, {
+			wrapper: wrapper(),
+		});
+
+		await expect(screen.findByText(researchCaseFixture.objective)).resolves.toBeInTheDocument();
+		const identity = screen.getByLabelText("用例身份");
+		expect(within(identity).getByText(researchCaseFixture.case_id)).toBeInTheDocument();
+
+		// 时间身份三要素可见（对象、日期、来源随交接保留）。
+		const temporal = screen.getByLabelText("时间身份");
+		expect(temporal).toHaveTextContent("2026/8/31");
+		expect(temporal).toHaveTextContent("knowledge cutoff");
+		expect(temporal).toHaveTextContent("publication cutoff");
+
+		// 候选名单用来源 run 的名字与排名解释选择。
+		const roster = await screen.findByLabelText("候选名单");
+		expect(within(roster).getByText("贵州茅台")).toBeInTheDocument();
+		expect(within(roster).getByText("宁德时代")).toBeInTheDocument();
+		expect(roster).toHaveTextContent("#1");
+
+		// 返回筛选：带固定运行身份重开（返回恢复筛选上下文）。
+		const backToSelection = screen.getByRole("link", { name: "回到该运行的筛选工作面" });
+		expect(backToSelection).toHaveAttribute(
+			"href",
+			`/markets/screener?run=${encodeURIComponent(selectionRunFixtures[0].run_id)}&spec=a-share-stock-discovery`,
+		);
+		await user.click(backToSelection);
+	});
+
+	it("keeps candidate drilldown anchored to the case's decision date", async () => {
+		render(<ResearchCaseDetailPage caseId={researchCaseFixture.case_id} />, {
+			wrapper: wrapper(),
+		});
+
+		const candidate = await screen.findByRole("link", { name: "贵州茅台" });
+		expect(candidate).toHaveAttribute(
+			"href",
+			`/instruments/600519?tab=chart&observeDate=2026-08-31&selectionRunId=${encodeURIComponent(selectionRunFixtures[0].run_id)}`,
+		);
+	});
+
+	it("explains a missing case instead of rendering a broken page", async () => {
+		server.use(
+			http.get("/api/v1/selections/research-cases/:caseId", () =>
+				HttpResponse.json({ detail: "research case not found" }, { status: 404 }),
+			),
+		);
+		render(<ResearchCaseDetailPage caseId="research-case:sha256:not-there" />, {
+			wrapper: wrapper(),
+		});
+
+		await expect(screen.findByText(/未找到该研究用例/)).resolves.toBeInTheDocument();
+	});
+});

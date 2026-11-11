@@ -17,3 +17,16 @@ export function dateYearsBefore(date: string, years: number): string {
 	parsed.setUTCFullYear(parsed.getUTCFullYear() - years);
 	return parsed.toISOString().slice(0, 10);
 }
+
+/** A 股会话时区（Asia/Shanghai，无夏令时）相对 UTC 的毫秒偏移。 */
+const SESSION_UTC_OFFSET_MS = 8 * 3_600_000;
+
+/**
+ * ISO 时刻的上海会话日（YYYY-MM-DD）：自选/筛选/研究用例下钻图表共用
+ * 的观察日锚点。不可解析的时点返回 null——调用方宁缺毋滥，不猜观察日。
+ */
+export function sessionCalendarDate(instantIso: string): string | null {
+	const instant = Date.parse(instantIso);
+	if (Number.isNaN(instant)) return null;
+	return new Date(instant + SESSION_UTC_OFFSET_MS).toISOString().slice(0, 10);
+}
