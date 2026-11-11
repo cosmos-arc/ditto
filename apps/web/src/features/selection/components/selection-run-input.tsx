@@ -131,7 +131,7 @@ function strategyErrors(form: StrategyForm): readonly string[] {
 	if (seed === null || seed < 0) errors.push("seed 需为 ≥0 的整数");
 	const lookbackDays = parseInteger(form.lookbackDays);
 	if (lookbackDays === null || lookbackDays < 60 || lookbackDays > 1500) errors.push("回看天数需为 60–1500 的整数");
-	// 知识截止可以晚于决策时点（#583 live lane：决策定在最近完整交易日收盘，
+	// 知识截止可以晚于决策时点（issue 583 live lane：决策定在最近完整交易日收盘，
 	// 截止从发起时刻签发），早于决策时点同样交由服务端裁定；此处只校验
 	// 披露截止与知识截止的相对关系。
 	if (form.knowledgeCutoff.trim() && form.publicationCutoff.trim()) {
