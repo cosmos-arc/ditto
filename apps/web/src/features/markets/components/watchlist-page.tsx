@@ -50,7 +50,7 @@ export function WatchlistPage({
 		readonly anchorPending: boolean;
 		readonly resolve: WatchlistQuoteFn;
 	};
-	/** 研究判断来源（#748）：从判断「转入次日计划」链接进入时携带。 */
+	/** 研究判断来源（票 748）：从判断「转入次日计划」链接进入时携带。 */
 	readonly sourceJudgmentId?: string;
 }) {
 	const [ids, setIds] = useState<number[]>(readLocalWatchlist);

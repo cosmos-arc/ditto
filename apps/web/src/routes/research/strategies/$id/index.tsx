@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { StrategyGovernanceDetailPage } from "@/workflows/strategy-governance";
 
-/** 解析 #748 研究判断的回程上下文（进入验证链接携带；直接进入时缺省）。 */
+/** 解析 票 748 研究判断的回程上下文（进入验证链接携带；直接进入时缺省）。 */
 function parseStrategyDetailSearch(search: Record<string, unknown>): {
 	fromJudgment?: string;
 } {

@@ -5,7 +5,7 @@ import { listResearchJudgments, type ResearchJudgmentSummary, recordResearchJudg
 import type { BacktestRun } from "../types";
 
 /**
- * 比较视图的「研究判断」区（#748）。
+ * 比较视图的「研究判断」区（票 748）。
  *
  * - 保存的判断绑定明确的比较成员 run_ids（会话选择序原样冻结），append-only
  *   内容寻址：重开找回原结果，后续新数据不改写已存结论；

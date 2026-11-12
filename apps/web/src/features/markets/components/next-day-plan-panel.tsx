@@ -10,13 +10,13 @@ type Props = {
 	readonly resolveEntry: WatchlistEntryFn;
 	/** 最近完整交易日锚点（#739 合同）；未落定时为 null，表单等待手填日期。 */
 	readonly defaultObservationDate: string | null;
-	/** 研究判断来源（#748）：从判断「转入次日计划」链接进入时携带并随保存写入。 */
+	/** 研究判断来源（票 748）：从判断「转入次日计划」链接进入时携带并随保存写入。 */
 	readonly sourceJudgmentId?: string;
 };
 
 const PLANS_KEY = ["next-day-plans"] as const;
 
-// 与正式表单同一字段样式词汇（视觉门 #748：裸原生控件默认宽度/无边界不可辨）。
+// 与正式表单同一字段样式词汇（视觉门 票 748：裸原生控件默认宽度/无边界不可辨）。
 const FIELD_CLASS =
 	"w-full rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-app) px-3 text-xs outline-none focus:border-(--color-border-strong)";
 const TEXTAREA_CLASS = `${FIELD_CLASS} resize-none py-2`;

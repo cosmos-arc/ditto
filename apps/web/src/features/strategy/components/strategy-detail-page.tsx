@@ -16,7 +16,7 @@ type DetailTab = "overview" | "versions" | "factors";
 interface StrategyDetailPageProps {
 	readonly renderBacktestForm?: (strategyId: string, version: number) => ReactNode;
 	readonly renderGovernanceActions: StrategyGovernanceActionsRenderer;
-	/** 研究判断回程上下文（#748）：来自比较视图「进入验证」链接时不为空。 */
+	/** 研究判断回程上下文（票 748）：来自比较视图「进入验证」链接时不为空。 */
 	readonly fromJudgment?: string;
 }
 

@@ -307,6 +307,6 @@ export const researchHandlers: RequestHandler[] = [
 		});
 	}),
 
-	// #748 研究判断：默认空列表（比较视图保存旅程由用例内 server.use 覆盖）。
+	// 票 748 研究判断：默认空列表（比较视图保存旅程由用例内 server.use 覆盖）。
 	http.get("/api/v1/research/judgments", () => HttpResponse.json({ data: [] })),
 ];
