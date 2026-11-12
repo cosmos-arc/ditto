@@ -284,6 +284,23 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
     ),
     CompositionImportAllowance(
+        path="apps/backend/src/ditto_apps/registry/research_judgment.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.research.judgments",
+                "ditto_analysis.storage.sqlite.research",
+            }
+        ),
+        owner="apps ResearchJudgment composition adapter",
+        reason=(
+            "The composition root converts an Application-owned research "
+            "record contract into the isolated Analysis ResearchJudgment "
+            "domain and binds the Analysis-owned append-only judgment store "
+            "to the Application persistence ports; ordinary application "
+            "processes never import Analysis.",
+        ),
+    ),
+    CompositionImportAllowance(
         path="apps/backend/src/ditto_apps/registry/fresh_runtime.py",
         allowed_modules=frozenset(
             {
