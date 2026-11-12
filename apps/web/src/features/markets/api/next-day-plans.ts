@@ -16,6 +16,7 @@ export type NextDayPlan = {
 	readonly candidateNotes: readonly NextDayPlanCandidateNote[];
 	readonly nextDayPlan: string;
 	readonly createdAt: string;
+	readonly sourceJudgmentId: string | null;
 };
 
 export type NextDayPlanSummary = {
@@ -24,6 +25,7 @@ export type NextDayPlanSummary = {
 	readonly createdAt: string;
 	readonly candidateCount: number;
 	readonly nextDayPlan: string;
+	readonly sourceJudgmentId: string | null;
 };
 
 function toPlan(value: PlanDTO): NextDayPlan {
@@ -36,6 +38,7 @@ function toPlan(value: PlanDTO): NextDayPlan {
 		})),
 		nextDayPlan: value.next_day_plan,
 		createdAt: value.created_at,
+		sourceJudgmentId: value.source_judgment_id ?? null,
 	};
 }
 
@@ -43,6 +46,7 @@ export async function recordNextDayPlan(body: {
 	readonly observationDate: string;
 	readonly candidateNotes: readonly NextDayPlanCandidateNote[];
 	readonly nextDayPlan: string;
+	readonly sourceJudgmentId?: string;
 }): Promise<NextDayPlan> {
 	const result = await apiClient.post("/api/v1/market/next-day-plans", {
 		body: {
@@ -52,6 +56,7 @@ export async function recordNextDayPlan(body: {
 				reason: note.reason,
 			})),
 			next_day_plan: body.nextDayPlan,
+			...(body.sourceJudgmentId !== undefined ? { source_judgment_id: body.sourceJudgmentId } : {}),
 		} satisfies RecordBody,
 	});
 	if (!result.plan_id.startsWith("next-day-plan:sha256:")) {
@@ -70,6 +75,7 @@ export async function listNextDayPlans(observationDate?: string): Promise<NextDa
 		createdAt: item.created_at,
 		candidateCount: item.candidate_count,
 		nextDayPlan: item.next_day_plan,
+		sourceJudgmentId: item.source_judgment_id ?? null,
 	}));
 }
 

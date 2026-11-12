@@ -6,6 +6,7 @@ import { fetchBacktestRun } from "../api/backtests";
 import { comparisonLifetime, useBacktestComparison } from "../hooks/use-backtest-comparison";
 import { backtestKeys } from "../hooks/use-backtest-resources";
 import type { BacktestRun } from "../types";
+import { BacktestJudgmentSection } from "./backtest-judgment-section";
 import { BacktestMultiRunCompare } from "./backtest-multi-run-compare";
 
 export type BacktestOverlayId = "export" | "enable-signal" | "ai-analysis" | "compare";
@@ -168,6 +169,7 @@ export function BacktestCompareOverlay({ onClose, open }: { readonly onClose: ()
 				) : (
 					<BacktestMultiRunCompare runs={runs} />
 				)}
+				<BacktestJudgmentSection runIds={runIds} runs={runs} />
 			</div>
 		</PageActionOverlay>
 	);

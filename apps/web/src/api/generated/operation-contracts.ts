@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 418e1bbc385c0db23675c9772ade80f6c0277953c834de31cc48d2060035e79b
+ * Schema SHA-256: 51fbd92ef860afc1d7423599366efb10446c0866dbbff61980b764fe5fc739a6
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -1037,6 +1037,26 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "get /api/v1/research/judgments": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/research/judgments/{judgment_id}": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "get /api/v1/research/node-descriptors": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -1800,6 +1820,16 @@ export const operationResponseContracts = {
   },
   "post /api/v1/research/experiments/{experiment_id}/retry-fold": {
     "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "post /api/v1/research/judgments": {
+    "201": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
     "404": ["application/json"],
@@ -2623,6 +2653,18 @@ export const operationRequestContracts = {
       "query": ["adj", "asset_class", "end_date", "holding_period", "n_quantiles", "rolling_ir_window", "start_date", "version"],
     },
   },
+  "get /api/v1/research/judgments": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["limit"],
+    },
+  },
+  "get /api/v1/research/judgments/{judgment_id}": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["judgment_id"],
+    },
+  },
   "get /api/v1/research/node-descriptors": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
@@ -3058,6 +3100,11 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["Idempotency-Key", "X-Ditto-API-Contract-Version"],
       "path": ["experiment_id"],
+    },
+  },
+  "post /api/v1/research/judgments": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
     },
   },
   "post /api/v1/selections/runs": {

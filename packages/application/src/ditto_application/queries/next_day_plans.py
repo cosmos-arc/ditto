@@ -23,6 +23,7 @@ class NextDayPlanSummary:
     created_at: datetime
     candidate_count: int
     next_day_plan: str
+    source_judgment_id: str | None = None
 
 
 class NextDayPlanQueryService:
@@ -71,6 +72,7 @@ def _summary(item: NextDayPlanView) -> NextDayPlanSummary:
         created_at=item.created_at,
         candidate_count=len(item.candidate_notes),
         next_day_plan=item.next_day_plan,
+        source_judgment_id=item.source_judgment_id,
     )
 
 

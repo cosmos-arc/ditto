@@ -26,6 +26,7 @@ class NextDayPlanMaterial:
     candidate_notes: tuple[tuple[int, str], ...]
     next_day_plan: str
     created_at: datetime
+    source_judgment_id: str | None = None
 
 
 class PlanCandidateNoteView(Protocol):
@@ -73,6 +74,11 @@ class NextDayPlanView(Protocol):
     @property
     def schema_version(self) -> int:
         """Return the plan schema version."""
+        ...
+
+    @property
+    def source_judgment_id(self) -> str | None:
+        """Return the optional research judgment this plan continues."""
         ...
 
 

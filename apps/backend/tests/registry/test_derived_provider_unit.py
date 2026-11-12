@@ -253,6 +253,7 @@ class TestStorageProviderWiring:
             "research_campaign_writer_port",
             "research_case_store",
             "next_day_plan_store",
+            "research_judgment_store",
         }
         assert expected == provide_methods
 

@@ -16,7 +16,7 @@
   "counts": {
     "DEFER/PLANNED": 1,
     "EQUIVALENT/IMPLEMENTED": 6,
-    "IMPLEMENT/IMPLEMENTED": 36
+    "IMPLEMENT/IMPLEMENTED": 39
   },
   "approval_required": {
     "status": "APPROVED",
@@ -1660,6 +1660,168 @@
             "description": "复权类型",
             "default": "none",
             "title": "Adj"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_list_research_judgments",
+      "method": "GET",
+      "path": "/api/v1/research/judgments",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_tuple_ResearchJudgmentSummaryResponse__________"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "422": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        }
+      },
+      "parameters": [
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "default": 20,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_record_research_judgment",
+      "method": "POST",
+      "path": "/api/v1/research/judgments",
+      "request_body_schema": {
+        "$ref": "#/components/schemas/CreateResearchJudgmentBody"
+      },
+      "responses": {
+        "201": {
+          "$ref": "#/components/schemas/APIResponse_ResearchJudgmentResponse_"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "422": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        }
+      },
+      "parameters": [
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
+        }
+      ],
+      "maturity": "experimental"
+    },
+    {
+      "operation_id": "research_get_research_judgment",
+      "method": "GET",
+      "path": "/api/v1/research/judgments/{judgment_id}",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_ResearchJudgmentResponse_"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "422": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        }
+      },
+      "parameters": [
+        {
+          "name": "judgment_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Judgment Id"
           }
         },
         {
@@ -3847,6 +4009,39 @@
       "controversy_topic": "aggregate-selection-evidence"
     },
     {
+      "operation_id": "research_get_research_judgment",
+      "design_method": "GET",
+      "design_path": "/api/v1/research/judgments/{judgment_id}",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/judgments/{judgment_id}",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        14,
+        17
+      ],
+      "reason": "Runtime-only personal-workstation addition (#748): reopen one exact saved conclusion; newer runs never rewrite the stored run bindings.",
+      "origins": [
+        "PERSONAL_QUANT_WORKSTATION",
+        "RUNTIME_ONLY"
+      ],
+      "contracts": {
+        "request_identity": "judgment_id path parameter matching research-judgment:sha256:{64 hex}.",
+        "response_dto": "APIResponse[ResearchJudgmentResponse]; same shape as the record response.",
+        "error_codes": "404 research_judgment_not_found; 422 invalid_research_judgment_id for blank identities.",
+        "idempotency": "Read-only append-only store read; Idempotency-Key is not applicable.",
+        "revision_etag": "Content-addressed identity authenticates the payload on read; tampering fails closed.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Backtest compare research judgment section"
+      ],
+      "controversy_topic": null
+    },
+    {
       "operation_id": "research_launch_experiment",
       "design_method": "POST",
       "design_path": "/api/v1/research/experiments",
@@ -4058,6 +4253,39 @@
       "controversy_topic": null
     },
     {
+      "operation_id": "research_list_research_judgments",
+      "design_method": "GET",
+      "design_path": "/api/v1/research/judgments",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/research/judgments",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        14,
+        17
+      ],
+      "reason": "Runtime-only personal-workstation addition (#748): recent judgments as reopen summaries with run identities and optional strategy reference.",
+      "origins": [
+        "PERSONAL_QUANT_WORKSTATION",
+        "RUNTIME_ONLY"
+      ],
+      "contracts": {
+        "request_identity": "limit query bounded to 1..100 with default 20; no other parameters.",
+        "response_dto": "APIResponse[tuple[ResearchJudgmentSummaryResponse, ...]] with judgment_id, run_ids, created_at, judgment, and optional strategy reference.",
+        "error_codes": "422 invalid_research_judgment_limit for non-positive limits (HTTP layer already bounds 1..100).",
+        "idempotency": "Read-only append-only store read; Idempotency-Key is not applicable.",
+        "revision_etag": "Newest-first ordering over append-only identities; no mutable ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Backtest compare research judgment section"
+      ],
+      "controversy_topic": null
+    },
+    {
       "operation_id": "research_list_research_node_descriptors",
       "design_method": "GET",
       "design_path": "/api/v1/research/node-descriptors",
@@ -4187,6 +4415,39 @@
       },
       "page_consumers": [
         "Experiment create preflight panel"
+      ],
+      "controversy_topic": null
+    },
+    {
+      "operation_id": "research_record_research_judgment",
+      "design_method": "POST",
+      "design_path": "/api/v1/research/judgments",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "POST",
+      "runtime_path": "/api/v1/research/judgments",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        4,
+        14,
+        17
+      ],
+      "reason": "Runtime-only personal-workstation addition (#748): saved comparison conclusions are content-addressed append-only records bound to explicit run_ids; no new research platform.",
+      "origins": [
+        "PERSONAL_QUANT_WORKSTATION",
+        "RUNTIME_ONLY"
+      ],
+      "contracts": {
+        "request_identity": "CreateResearchJudgmentBody with unique non-empty run_ids, non-empty judgment, and optional strategy_id plus strategy_version that must be provided together.",
+        "response_dto": "APIResponse[ResearchJudgmentResponse] with judgment_id research-judgment:sha256:{hash}, run_ids, judgment, created_at, optional strategy reference, and schema_version.",
+        "error_codes": "201 on record and exact replay; 422 RESEARCH_JUDGMENT_INVALID for blank, padded, duplicated, or half strategy references.",
+        "idempotency": "Content addressing makes an exact replay return the first-recorded entry; Idempotency-Key is not applicable.",
+        "revision_etag": "judgment_id is the full SHA-256 of the canonical payload; edited judgments append as new identities; no mutable ETag.",
+        "maturity": "experimental"
+      },
+      "page_consumers": [
+        "Backtest compare research judgment section"
       ],
       "controversy_topic": null
     },

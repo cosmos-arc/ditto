@@ -5,7 +5,7 @@
 > 设计事实源：R3 设计 §12.2（37 operations）与 W5 页面接线设计
 > 机器可读事实源：[`r3-v1-api-surface.json`](r3-v1-api-surface.json)
 >
-> JSON canonical SHA-256: `77d18c39af874e696252ea879bb49d1b00a423dbafcb91b281d3c0322d472372`
+> JSON canonical SHA-256: `682cd1c5b9108d802a024276c43681430e69a1286b6eb12b09357beda18c9536`
 
 Task 4 classification 已由用户批准；批准 reference 为
 `user-message:2026-07-31:final-task4-classification-approved`。Task 9 candidate
@@ -32,9 +32,9 @@ JSON 是规范事实源；本 Markdown 是便于审批的派生说明。上述 S
   "classification_counts": {
     "DEFER/PLANNED": 1,
     "EQUIVALENT/IMPLEMENTED": 6,
-    "IMPLEMENT/IMPLEMENTED": 36
+    "IMPLEMENT/IMPLEMENTED": 39
   },
-  "runtime_contract_count": 42,
+  "runtime_contract_count": 45,
   "defer_operation_ids": [
     "design_research_experiment_launch_alias"
   ],

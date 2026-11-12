@@ -38,6 +38,7 @@ export function WatchlistPage({
 	searchCatalog,
 	observationQuery,
 	quote,
+	sourceJudgmentId = "",
 }: {
 	readonly resolveEntry: WatchlistEntryFn;
 	readonly searchCatalog: WatchlistSearchFn;
@@ -49,6 +50,8 @@ export function WatchlistPage({
 		readonly anchorPending: boolean;
 		readonly resolve: WatchlistQuoteFn;
 	};
+	/** 研究判断来源（票 748）：从判断「转入次日计划」链接进入时携带。 */
+	readonly sourceJudgmentId?: string;
 }) {
 	const [ids, setIds] = useState<number[]>(readLocalWatchlist);
 	const [activeOverlay, setActiveOverlay] = useState<WatchlistOverlayId | null>(null);
@@ -138,7 +141,12 @@ export function WatchlistPage({
 							<Panel className="m-4 mt-0" data-info-unit="watchlist-next-day-plan">
 								<PanelHeader title="候选理由与次日计划" subtitle="盘后判断留档" />
 								<PanelBody>
-									<NextDayPlanPanel ids={ids} resolveEntry={resolveEntry} defaultObservationDate={quote.anchorDate} />
+									<NextDayPlanPanel
+										ids={ids}
+										resolveEntry={resolveEntry}
+										defaultObservationDate={quote.anchorDate}
+										sourceJudgmentId={sourceJudgmentId}
+									/>
 								</PanelBody>
 							</Panel>
 						</main>

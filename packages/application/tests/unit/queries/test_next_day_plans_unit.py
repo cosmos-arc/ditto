@@ -54,6 +54,10 @@ class _StubView:
     def schema_version(self) -> int:
         return 1
 
+    @property
+    def source_judgment_id(self) -> str | None:
+        return self.material.source_judgment_id
+
 
 def _view(
     plan_id_suffix: str,
@@ -122,5 +126,23 @@ def test_list_recent_summarizes_without_live_market_state() -> None:
             created_at=view.created_at,
             candidate_count=2,
             next_day_plan="次日开盘观察放量",
+            source_judgment_id=None,
         ),
     )
+
+
+def test_list_recent_exposes_the_source_judgment_reference() -> None:
+    sourced = _StubView(
+        NextDayPlanMaterial(
+            observation_date="2026-11-10",
+            candidate_notes=((600779, "缩量回踩"),),
+            next_day_plan="按判断结论执行观察",
+            created_at=_CREATED,
+            source_judgment_id="research-judgment:sha256:" + "4" * 64,
+        )
+    )
+    service = NextDayPlanQueryService(_Reader((sourced,)))
+
+    summaries = service.list_recent(limit=10)
+
+    assert summaries[0].source_judgment_id == "research-judgment:sha256:" + "4" * 64

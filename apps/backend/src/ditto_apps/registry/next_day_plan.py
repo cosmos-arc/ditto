@@ -19,6 +19,7 @@ from ditto_application.processes.markets.record_next_day_plan import (
     RecordNextDayPlan,
 )
 from ditto_application.queries.next_day_plans import NextDayPlanQueryService
+from ditto_application.research_judgment_contracts import ResearchJudgmentReader
 from ditto_kernel.identity import InstrumentId
 
 __all__ = [
@@ -42,6 +43,7 @@ class AnalysisNextDayPlanFactory:
             ),
             next_day_plan=material.next_day_plan,
             created_at=material.created_at,
+            source_judgment_id=material.source_judgment_id,
         )
 
 
@@ -99,11 +101,15 @@ class NextDayPlanCompositionProvider(Provider):
 
     @provide
     def record_next_day_plan(
-        self, factory: NextDayPlanFactory, recorder: NextDayPlanRecorder
+        self,
+        factory: NextDayPlanFactory,
+        recorder: NextDayPlanRecorder,
+        judgment_reader: ResearchJudgmentReader,
     ) -> RecordNextDayPlan:
         """Provide the recording process with the server wall clock."""
         return RecordNextDayPlan(
             factory=factory,
             recorder=recorder,
             clock=lambda: datetime.now(UTC),
+            judgment_reader=judgment_reader,
         )

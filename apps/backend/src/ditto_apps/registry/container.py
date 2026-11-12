@@ -22,6 +22,7 @@ from .infra.risk_persistence import RiskPersistenceProvider
 from .infra.trading_storage import TradingStorageProvider
 from .next_day_plan import NextDayPlanCompositionProvider
 from .research_case import ResearchCaseCompositionProvider
+from .research_judgment import ResearchJudgmentCompositionProvider
 
 __all__ = ["Container", "make_app_container", "make_async_app_container"]
 
@@ -38,6 +39,7 @@ def _get_base_providers() -> tuple[Provider, ...]:
         TradingStorageProvider(),  # 将 execution 绑定到独立 trading 恢复单元
         ResearchCaseCompositionProvider(),  # Analysis→Application handoff adapter
         NextDayPlanCompositionProvider(),  # Analysis→Application 计划记录适配
+        ResearchJudgmentCompositionProvider(),  # Analysis→Application 研究判断适配
         *get_app_providers(),  # App 层
         AgentRuntimeProvider(),  # R5 Agent 默认关闭并结构化 fail closed
         RiskPersistenceProvider(),  # 显式覆盖 V3 fail-closed reader

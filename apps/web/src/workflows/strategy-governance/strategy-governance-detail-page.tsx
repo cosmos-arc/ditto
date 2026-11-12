@@ -78,8 +78,12 @@ function renderBacktestForm(strategyId: string, version: number): ReactElement {
 }
 
 /** Route-ready Strategy page whose cross-feature dependencies stay in the workflow layer. */
-export function StrategyGovernanceDetailPage(): ReactElement {
+export function StrategyGovernanceDetailPage({ fromJudgment = "" }: { readonly fromJudgment?: string }): ReactElement {
 	return (
-		<StrategyDetailPage renderGovernanceActions={renderGovernanceActions} renderBacktestForm={renderBacktestForm} />
+		<StrategyDetailPage
+			renderGovernanceActions={renderGovernanceActions}
+			renderBacktestForm={renderBacktestForm}
+			fromJudgment={fromJudgment}
+		/>
 	);
 }

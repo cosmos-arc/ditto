@@ -14,6 +14,8 @@ __all__ = ["NextDayPlan", "PlanCandidateNote"]
 
 _SCHEMA_VERSION = 1
 
+_JUDGMENT_ID_PREFIX = "research-judgment:sha256:"
+
 
 def _text(value: object, *, field_name: str) -> str:
     if not isinstance(value, str) or not value or value != value.strip():
@@ -31,6 +33,16 @@ def _observation_date(value: object) -> date:
     if not isinstance(value, date) or isinstance(value, datetime):
         raise ValueError("observation_date must be a plain calendar date")
     return value
+
+
+def _source_judgment_id(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.startswith(_JUDGMENT_ID_PREFIX):
+        raise ValueError(
+            "source_judgment_id must follow research-judgment:sha256:{hash}"
+        )
+    return _text(value, field_name="source_judgment_id")
 
 
 def _candidate_notes(values: object) -> tuple[PlanCandidateNote, ...]:
@@ -86,6 +98,7 @@ class NextDayPlan:
     next_day_plan: str
     created_at: datetime
     schema_version: int = _SCHEMA_VERSION
+    source_judgment_id: str | None = None
 
     def __post_init__(self) -> None:
         """Fail closed on erased dates, candidates, reasons, or plan text."""
@@ -108,6 +121,11 @@ class NextDayPlan:
         object.__setattr__(
             self, "created_at", _utc(self.created_at, field_name="created_at")
         )
+        object.__setattr__(
+            self,
+            "source_judgment_id",
+            _source_judgment_id(self.source_judgment_id),
+        )
 
     @property
     def canonical_payload(self) -> dict[str, object]:
@@ -118,7 +136,7 @@ class NextDayPlan:
         identity regardless of when the retry landed, while an edited plan is
         new content and therefore a new entry.
         """
-        return {
+        payload: dict[str, object] = {
             "schema_version": self.schema_version,
             "observation_date": self.observation_date.isoformat(),
             # 候选顺序是记录者组织的阅读顺序，按输入原序冻结。
@@ -131,6 +149,10 @@ class NextDayPlan:
             ],
             "next_day_plan": self.next_day_plan,
         }
+        # 来源键只在携带时进入 preimage：#743 存量记录的字节级身份不变。
+        if self.source_judgment_id is not None:
+            payload["source_judgment_id"] = self.source_judgment_id
+        return payload
 
     @property
     def content_hash(self) -> str:

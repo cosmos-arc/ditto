@@ -16,6 +16,7 @@ __all__ = [
     "NextDayPlanIntegrityError",
     "ResearchCaseIntegrityError",
     "ResearchDatasetError",
+    "ResearchJudgmentIntegrityError",
 ]
 
 
@@ -33,6 +34,10 @@ class ResearchCaseIntegrityError(AnalysisError):
 
 class NextDayPlanIntegrityError(AnalysisError):
     """持久化次日计划的身份与载荷不一致（append-only 记录被破坏）。"""
+
+
+class ResearchJudgmentIntegrityError(AnalysisError):
+    """持久化研究判断的身份与载荷不一致（append-only 记录被破坏）。"""
 
 
 class ExperimentIdentityError(AnalysisError):
