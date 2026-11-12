@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator
 from dataclasses import replace
 from datetime import UTC, date, datetime
+from hashlib import sha256
 from pathlib import Path
 from unittest.mock import patch
 
@@ -208,3 +209,69 @@ def test_candidate_order_is_preserved_for_the_reader() -> None:
         {"instrument_id": 510888, "reason": "先看 ETF"},
         {"instrument_id": 600779, "reason": "再看个股"},
     ]
+
+
+def test_source_judgment_reference_changes_identity_and_only_rides_when_set() -> None:
+    plain = _plan()
+    sourced = _plan(source_judgment_id="research-judgment:sha256:" + "1" * 64)
+
+    # 默认不带来源：canonical_payload 不含该键，旧对象身份逐字节不变。
+    assert "source_judgment_id" not in plain.canonical_payload
+    assert plain.source_judgment_id is None
+    # 带来源是新的内容 → 新身份；来源键进入 preimage。
+    assert sourced.plan_id != plain.plan_id
+    assert (
+        sourced.canonical_payload["source_judgment_id"]
+        == "research-judgment:sha256:" + "1" * 64
+    )
+    assert sourced.source_judgment_id == "research-judgment:sha256:" + "1" * 64
+
+
+def test_source_judgment_reference_must_use_the_judgment_identity_format() -> None:
+    for invalid in ("", " ", "padded ", "next-day-plan:sha256:" + "1" * 64):
+        with pytest.raises(ValueError, match="research-judgment:sha256:"):
+            _plan(source_judgment_id=invalid)
+
+
+def test_source_judgment_round_trips_through_the_store(
+    store: SQLiteNextDayPlanStore,
+) -> None:
+    sourced = _plan(source_judgment_id="research-judgment:sha256:" + "2" * 64)
+
+    store.save(sourced)
+
+    restored = store.get(sourced.plan_id)
+    assert restored is not None
+    assert restored.source_judgment_id == "research-judgment:sha256:" + "2" * 64
+    assert restored == sourced
+
+
+def test_a_legacy_row_without_the_source_key_keeps_its_exact_identity(
+    store: SQLiteNextDayPlanStore,
+) -> None:
+    """兼容：#743 旧行不含 source_judgment_id 键，解码后 canonical 字节不变。"""
+    plan = _plan()
+    legacy_payload = plan.canonical_payload
+    legacy_bytes = orjson.dumps(legacy_payload, option=orjson.OPT_SORT_KEYS)
+    legacy_id = f"next-day-plan:sha256:{sha256(legacy_bytes).hexdigest()}"
+    # 旧行确实等于当前无来源对象的身份（回归防护：preimage 未漂移）。
+    assert plan.plan_id == legacy_id
+    encoded_row = orjson.dumps(
+        {**legacy_payload, "created_at": _CREATED.isoformat()}
+    ).decode()
+    store._sqlite_client.execute(
+        "INSERT INTO next_day_plan "
+        "(plan_id, observation_date, created_at, payload_json) "
+        "VALUES (?, ?, ?, ?)",
+        (legacy_id, "2026-11-10", _CREATED.isoformat(), encoded_row),
+    )
+    store._sqlite_client.commit()
+
+    restored = store.get(legacy_id)
+    assert restored is not None
+    assert restored.source_judgment_id is None
+    assert (
+        orjson.dumps(restored.canonical_payload, option=orjson.OPT_SORT_KEYS)
+        == legacy_bytes
+    )
+    assert restored.plan_id == legacy_id

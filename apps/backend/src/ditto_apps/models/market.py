@@ -459,6 +459,11 @@ class NextDayPlanResponse(BaseModel):
     next_day_plan: str = Field(min_length=1)
     created_at: datetime
     schema_version: int
+    source_judgment_id: str | None = Field(
+        default=None,
+        min_length=1,
+        pattern=r"^research-judgment:sha256:[0-9a-f]{64}$",
+    )
 
 
 class NextDayPlanSummaryResponse(BaseModel):
@@ -471,6 +476,11 @@ class NextDayPlanSummaryResponse(BaseModel):
     created_at: datetime
     candidate_count: int = Field(ge=1)
     next_day_plan: str = Field(min_length=1)
+    source_judgment_id: str | None = Field(
+        default=None,
+        min_length=1,
+        pattern=r"^research-judgment:sha256:[0-9a-f]{64}$",
+    )
 
 
 class CreateNextDayPlanBody(BaseModel):
@@ -481,6 +491,11 @@ class CreateNextDayPlanBody(BaseModel):
     observation_date: date
     candidate_notes: tuple[NextDayPlanCandidateNoteResponse, ...] = Field(min_length=1)
     next_day_plan: str = Field(min_length=1)
+    source_judgment_id: str | None = Field(
+        default=None,
+        min_length=1,
+        pattern=r"^research-judgment:sha256:[0-9a-f]{64}$",
+    )
 
 
 __all__ = [

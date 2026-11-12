@@ -85,6 +85,13 @@ def _decode(payload: str, *, expected_plan_id: str) -> NextDayPlan:
             next_day_plan=str(data["next_day_plan"]),
             created_at=datetime.fromisoformat(str(data["created_at"])),
             schema_version=int(data["schema_version"]),
+            # 旧行不含该键（来源是 #748 新增的可选字段）：缺键解码为 None，
+            # canonical_payload 保持逐字节兼容。
+            source_judgment_id=(
+                str(data["source_judgment_id"])
+                if "source_judgment_id" in data
+                else None
+            ),
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise NextDayPlanIntegrityError(

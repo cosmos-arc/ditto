@@ -226,3 +226,74 @@ it("trims padded reasons and plan text before submission", async () => {
 	expect(body.candidate_notes[0]?.reason).toBe("回踩半年线");
 	expect(body.next_day_plan).toBe("计划正文");
 });
+
+it("saves with the source judgment from the research hand-off link", async () => {
+	const user = userEvent.setup();
+	const judgmentId = "research-judgment:sha256:" + "7".repeat(64);
+	const posted: unknown[] = [];
+	let recorded = false;
+	server.use(
+		http.get("/api/v1/market/next-day-plans", () =>
+			HttpResponse.json({
+				data: recorded
+					? [
+							{
+								plan_id: storedPlan.plan_id,
+								observation_date: storedPlan.observation_date,
+								created_at: storedPlan.created_at,
+								candidate_count: storedPlan.candidate_notes.length,
+								next_day_plan: storedPlan.next_day_plan,
+								source_judgment_id: judgmentId,
+							},
+						]
+					: [],
+			}),
+		),
+		http.post("/api/v1/market/next-day-plans", async ({ request }) => {
+			posted.push(await request.json());
+			recorded = true;
+			return HttpResponse.json({ data: { ...storedPlan, source_judgment_id: judgmentId } }, { status: 201 });
+		}),
+	);
+	render(
+		<NextDayPlanPanel
+			ids={[600779]}
+			resolveEntry={resolveEntry}
+			defaultObservationDate="2026-11-10"
+			sourceJudgmentId={judgmentId}
+		/>,
+		{ wrapper: wrapper() },
+	);
+	// 来源标识如实展示，不虚构（无来源时不渲染该行）。
+	expect(screen.getByTestId("plan-source-judgment")).toHaveTextContent(judgmentId);
+	await user.click(await screen.findByRole("checkbox", { name: /标的600779/ }));
+	await user.type(screen.getByLabelText("600779 候选理由"), "按判断结论执行观察");
+	await user.type(screen.getByLabelText("次日计划"), "次日观察放量");
+	await user.click(screen.getByRole("button", { name: "保存理由与次日计划" }));
+	await screen.findAllByText(/next-day-plan:sha256:first/);
+	expect((posted[0] as { source_judgment_id?: string }).source_judgment_id).toBe(judgmentId);
+	// 已保存条目显示来源（label 与 mono id 分节点，区域整体断言）。
+	const list = screen.getByRole("region", { name: "已保存理由与次日计划" });
+	await screen.findAllByText("来源研究判断");
+	expect(list).toHaveTextContent(judgmentId);
+});
+
+it("omits the source key when no judgment hand-off is present", async () => {
+	const user = userEvent.setup();
+	const posted: unknown[] = [];
+	server.use(
+		http.get("/api/v1/market/next-day-plans", () => HttpResponse.json({ data: [] })),
+		http.post("/api/v1/market/next-day-plans", async ({ request }) => {
+			posted.push(await request.json());
+			return HttpResponse.json({ data: storedPlan }, { status: 201 });
+		}),
+	);
+	renderPanel();
+	expect(screen.queryByTestId("plan-source-judgment")).toBeNull();
+	await user.click(await screen.findByRole("checkbox", { name: /标的600779/ }));
+	await user.type(screen.getByLabelText("600779 候选理由"), "回踩");
+	await user.type(screen.getByLabelText("次日计划", { exact: true }), "计划");
+	await user.click(screen.getByRole("button", { name: "保存理由与次日计划" }));
+	await screen.findByText(/next-day-plan:sha256:first/);
+	expect("source_judgment_id" in (posted[0] as object)).toBe(false);
+});

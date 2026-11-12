@@ -55,6 +55,10 @@ class _StubView:
     def schema_version(self) -> int:
         return 1
 
+    @property
+    def source_judgment_id(self) -> str | None:
+        return self.material.source_judgment_id
+
 
 class _Factory:
     def __init__(self) -> None:
@@ -112,6 +116,9 @@ def test_record_stamps_the_server_clock_and_persists_the_view() -> None:
         lambda r: replace(r, candidate_notes=((600779, " padded "),)),
         lambda r: replace(r, next_day_plan=" "),
         lambda r: replace(r, next_day_plan=" padded "),
+        lambda r: replace(r, source_judgment_id="next-day-plan:sha256:" + "1" * 64),
+        lambda r: replace(r, source_judgment_id="research-judgment:md5:" + "1" * 32),
+        lambda r: replace(r, source_judgment_id=" "),
     ],
 )
 def test_record_rejects_invalid_user_input(
@@ -123,3 +130,20 @@ def test_record_rejects_invalid_user_input(
 
     with pytest.raises(AppCommandError):
         process.record(mutation(_request()))
+
+
+def test_record_carries_the_optional_source_judgment_reference() -> None:
+    factory, recorder = _Factory(), _Recorder()
+    process = RecordNextDayPlan(
+        factory=factory, recorder=recorder, clock=lambda: _CREATED
+    )
+
+    view = process.record(
+        replace(_request(), source_judgment_id="research-judgment:sha256:" + "3" * 64)
+    )
+
+    assert view.source_judgment_id == "research-judgment:sha256:" + "3" * 64
+    assert factory.materials[0].source_judgment_id == (
+        "research-judgment:sha256:" + "3" * 64
+    )
+    assert recorder.saved == [view]

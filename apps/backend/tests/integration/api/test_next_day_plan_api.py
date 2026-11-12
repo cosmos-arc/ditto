@@ -143,3 +143,45 @@ def test_http_plan_record_reopen_and_original_date_freeze(tmp_path: Path) -> Non
             assert len(listed.json()["data"]) == 2
     finally:
         reopened_pool.close_all()
+
+
+def test_http_plan_record_accepts_and_echoes_a_source_judgment_reference(
+    tmp_path: Path,
+) -> None:
+    app, pool = _app(tmp_path / "plans.sqlite")
+    judgment_id = "research-judgment:sha256:" + "a" * 64
+    try:
+        with TestClient(app, raise_server_exceptions=False) as web:
+            created = web.post(
+                "/api/v1/market/next-day-plans",
+                json={**_body(), "source_judgment_id": judgment_id},
+            )
+            assert created.status_code == 201, created.text
+            data = created.json()["data"]
+            assert data["source_judgment_id"] == judgment_id
+            # The source reference is content: the same plan without it is a
+            # different identity (the judgment-conclusion path stays distinct).
+            plain = web.post("/api/v1/market/next-day-plans", json=_body())
+            assert plain.status_code == 201
+            assert plain.json()["data"]["plan_id"] != data["plan_id"]
+            assert plain.json()["data"]["source_judgment_id"] is None
+            # Reopen by id keeps the source; the saved list exposes it too.
+            reopened = web.get(f"/api/v1/market/next-day-plans/{data['plan_id']}")
+            assert reopened.status_code == 200
+            assert reopened.json()["data"]["source_judgment_id"] == judgment_id
+            listed = web.get("/api/v1/market/next-day-plans")
+            sourced = [
+                item
+                for item in listed.json()["data"]
+                if item["plan_id"] == data["plan_id"]
+            ]
+            assert sourced
+            assert sourced[0]["source_judgment_id"] == judgment_id
+            # 非 judgment 身份的来源值 fail closed（DTO 格式合同）。
+            malformed = web.post(
+                "/api/v1/market/next-day-plans",
+                json={**_body(), "source_judgment_id": "next-day-plan:sha256:x"},
+            )
+            assert malformed.status_code == 422
+    finally:
+        pool.close_all()

@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 418e1bbc385c0db23675c9772ade80f6c0277953c834de31cc48d2060035e79b
+ * Schema SHA-256: 51fbd92ef860afc1d7423599366efb10446c0866dbbff61980b764fe5fc739a6
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -3459,6 +3459,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/judgments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Research Judgments
+         * @description Reopen saved comparison conclusions by their exact run identities.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_list_research_judgments"];
+        put?: never;
+        /**
+         * Record Research Judgment
+         * @description Append one immutable judgment bound to explicit compared run identities.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        post: operations["research_record_research_judgment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/judgments/{judgment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Research Judgment
+         * @description Reopen one exact judgment; newer runs never rewrite the saved conclusion.
+         *
+         *     Capability maturity: `experimental`. Implemented or partly implemented; not production scope.
+         */
+        get: operations["research_get_research_judgment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/node-descriptors": {
         parameters: {
             query?: never;
@@ -5370,6 +5420,18 @@ export interface components {
              */
             read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
+        /** APIResponse[ResearchJudgmentResponse] */
+        APIResponse_ResearchJudgmentResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["ResearchJudgmentResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
+        };
         /** APIResponse[ResumeRunResponse] */
         APIResponse_ResumeRunResponse_: {
             /** @description 响应数据 */
@@ -6255,6 +6317,21 @@ export interface components {
              * @description 响应数据
              */
             data: components["schemas"]["ResearchCaseSummaryResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
+        };
+        /** APIResponse[tuple[ResearchJudgmentSummaryResponse, ...]] */
+        APIResponse_tuple_ResearchJudgmentSummaryResponse__________: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["ResearchJudgmentSummaryResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
             /**
@@ -8964,6 +9041,8 @@ export interface components {
              * Format: date
              */
             observation_date: string;
+            /** Source Judgment Id */
+            source_judgment_id?: string | null;
         };
         /**
          * CreatePaperAccountBody
@@ -9031,6 +9110,20 @@ export interface components {
             candidate_instrument_ids: number[];
             /** Objective */
             objective: string;
+        };
+        /**
+         * CreateResearchJudgmentBody
+         * @description User record of one comparison conclusion with optional follow-up entry.
+         */
+        CreateResearchJudgmentBody: {
+            /** Judgment */
+            judgment: string;
+            /** Run Ids */
+            run_ids: string[];
+            /** Strategy Id */
+            strategy_id?: string | null;
+            /** Strategy Version */
+            strategy_version?: number | null;
         };
         /**
          * CreateSelectionRunBody
@@ -13909,6 +14002,8 @@ export interface components {
             plan_id: string;
             /** Schema Version */
             schema_version: number;
+            /** Source Judgment Id */
+            source_judgment_id?: string | null;
         };
         /**
          * NextDayPlanSummaryResponse
@@ -13931,6 +14026,8 @@ export interface components {
             observation_date: string;
             /** Plan Id */
             plan_id: string;
+            /** Source Judgment Id */
+            source_judgment_id?: string | null;
         };
         /**
          * NodeDescriptorResponse
@@ -15584,6 +15681,50 @@ export interface components {
              * @enum {string}
              */
             selection_status: "ready" | "degraded";
+        };
+        /**
+         * ResearchJudgmentResponse
+         * @description One saved research conclusion bound to explicit compared run identities.
+         */
+        ResearchJudgmentResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Judgment */
+            judgment: string;
+            /** Judgment Id */
+            judgment_id: string;
+            /** Run Ids */
+            run_ids: string[];
+            /** Schema Version */
+            schema_version: number;
+            /** Strategy Id */
+            strategy_id?: string | null;
+            /** Strategy Version */
+            strategy_version?: number | null;
+        };
+        /**
+         * ResearchJudgmentSummaryResponse
+         * @description Compact judgment summary for the reopen list.
+         */
+        ResearchJudgmentSummaryResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Judgment */
+            judgment: string;
+            /** Judgment Id */
+            judgment_id: string;
+            /** Run Ids */
+            run_ids: string[];
+            /** Strategy Id */
+            strategy_id?: string | null;
+            /** Strategy Version */
+            strategy_version?: number | null;
         };
         /**
          * ResumeRunResponse
@@ -31469,6 +31610,272 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_FactorEvaluationSeriesResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    research_list_research_judgments: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_tuple_ResearchJudgmentSummaryResponse__________"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    research_record_research_judgment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateResearchJudgmentBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ResearchJudgmentResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    research_get_research_judgment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                judgment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_ResearchJudgmentResponse_"];
                 };
             };
             /** @description Bad request */

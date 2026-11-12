@@ -10,11 +10,13 @@ type Props = {
 	readonly resolveEntry: WatchlistEntryFn;
 	/** 最近完整交易日锚点（#739 合同）；未落定时为 null，表单等待手填日期。 */
 	readonly defaultObservationDate: string | null;
+	/** 研究判断来源（#748）：从判断「转入次日计划」链接进入时携带并随保存写入。 */
+	readonly sourceJudgmentId?: string;
 };
 
 const PLANS_KEY = ["next-day-plans"] as const;
 
-export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate }: Props) {
+export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate, sourceJudgmentId = "" }: Props) {
 	const queryClient = useQueryClient();
 	const [selected, setSelected] = useState<number[]>([]);
 	const [reasons, setReasons] = useState<Record<number, string>>({});
@@ -39,6 +41,7 @@ export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate }: 
 				})),
 				// 服务端拒绝 padded 文本：提交前 trim，保证一次重试即可成功。
 				nextDayPlan: planText.trim(),
+				...(sourceJudgmentId.trim() ? { sourceJudgmentId } : {}),
 			}),
 		onSuccess: () => {
 			void queryClient.invalidateQueries({ queryKey: PLANS_KEY });
@@ -87,6 +90,12 @@ export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate }: 
 			</label>
 			{defaultObservationDate === null && (
 				<p className="text-(--color-foreground-tertiary)">最近完整交易日尚未落定；手填观察日期后可保存。</p>
+			)}
+			{sourceJudgmentId.trim() && (
+				<p data-testid="plan-source-judgment" className="break-all text-xs text-(--color-foreground-tertiary)">
+					来源研究判断 <span className="font-mono">{sourceJudgmentId}</span>
+					<span>（保存的计划将携带此来源）</span>
+				</p>
 			)}
 			<label className="block">
 				次日计划{" "}
@@ -212,6 +221,11 @@ function PlanEntry({
 				观察日 {summary.observationDate} · {summary.candidateCount} 个候选 · 记录于 {summary.createdAt}
 			</p>
 			<p className="text-(--color-foreground-tertiary)">{summary.nextDayPlan}</p>
+			{summary.sourceJudgmentId && (
+				<p className="break-all text-xs text-(--color-foreground-tertiary)">
+					来源研究判断 <span className="font-mono">{summary.sourceJudgmentId}</span>
+				</p>
+			)}
 			<button type="button" onClick={() => setOpen((current) => !current)}>
 				{open ? "收起计划原文" : "展开计划原文"}
 			</button>

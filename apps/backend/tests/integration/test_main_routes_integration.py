@@ -80,6 +80,7 @@ class TestMainRoutesAssembly:
             "research_candidate_routes",
             "research_catalog_routes",
             "research_experiment_routes",
+            "research_judgment_routes",
             "research_review_routes",
             "research_selection_routes",
             "selection",

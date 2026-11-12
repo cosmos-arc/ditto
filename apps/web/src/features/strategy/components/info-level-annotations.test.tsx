@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { strategyHandlers } from "@/mocks/handlers/strategy";
@@ -92,6 +92,24 @@ describe("StrategyDetailPage info-level annotations", () => {
 		// 派生节点：scorer + selector + execution + 2 constraints = 5
 		expect(l3UnitNames.filter((n) => n === "pipeline-node")).toHaveLength(5);
 		expect(l3Units).toHaveLength(5);
+	});
+
+	it("shows the judgment return banner only when a fromJudgment source exists", async () => {
+		const judgmentId = "research-judgment:sha256:" + "3".repeat(64);
+		const plain = render(<StrategyDetailPage renderGovernanceActions={renderNoGovernanceActions} />, {
+			wrapper: createWrapper(),
+		});
+		await screen.findByText("ETF 行业轮动");
+		// 来源缺失（直接进入策略页）不虚构返回目标。
+		expect(screen.queryByTestId("strategy-judgment-return")).toBeNull();
+		plain.unmount();
+
+		render(<StrategyDetailPage renderGovernanceActions={renderNoGovernanceActions} fromJudgment={judgmentId} />, {
+			wrapper: createWrapper(),
+		});
+		const banner = await screen.findByTestId("strategy-judgment-return");
+		expect(banner).toHaveTextContent(judgmentId);
+		expect(within(banner).getByRole("link", { name: "返回研究判断" })).toHaveAttribute("href", "/research/backtests");
 	});
 });
 

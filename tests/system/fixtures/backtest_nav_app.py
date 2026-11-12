@@ -13,9 +13,11 @@ from __future__ import annotations
 
 import importlib
 import os
+from copy import deepcopy
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from typing import cast
 
 import orjson
 import polars as pl
@@ -43,9 +45,17 @@ from ditto_backtest.engine import (
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.statistics import BacktestReport, build_report
 from ditto_backtest.synchronizer import BacktestSynchronizer
+from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
+from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 from ditto_data.models.metadata import InstrumentRegistration
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_data.storage.metadata.instrument.instrument_writer import InstrumentWriter
+from ditto_data.storage.runtime.ingestion.ingestion_log_reader import (
+    IngestionLogReader,
+)
+from ditto_data.storage.runtime.ingestion.ingestion_log_writer import (
+    IngestionLogWriter,
+)
 from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 from ditto_execution.orders.book import OrderBook
 from ditto_execution.orders.journal import InMemoryOrderEventJournal
@@ -344,6 +354,23 @@ def _seed_market() -> dict[InstrumentId, pl.DataFrame]:
         pl.col("trade_date").cast(pl.String),
     )
     _retain_chart_evidence(client, seeded)
+    # 最近完整交易日的摄取证据（#748 计划面板锚点）：calendar 数据集在样本
+    # 末日成功摄取，/api/v1/ingestion/status 如实报告 latest_date/latest_status。
+    log_store = IngestionLogStore(
+        IngestionLogReader(client), IngestionLogWriter(client)
+    )
+    log_store.save_log(
+        IngestionLog(
+            dataset="calendar",
+            source="tushare",
+            trade_date=END_DATE,
+            status=IngestionStatus.SUCCESS,
+            checksum=f"fixture:calendar:{END_DATE}",
+            rows=len(TRADING_DAYS),
+            first_attempt_at="2026-03-27T15:30:00Z",
+            last_attempt_at="2026-03-27T15:30:00Z",
+        )
+    )
     client.commit()
     pool.close_all()
     return {
@@ -460,6 +487,34 @@ def _seed() -> None:
             version=2,
             spec_record=replace(original, version=2, parent_version=1),
             created_at="2026-11-09T00:00:00Z",
+        )
+        # #748 判断「进入验证」目标：run 标注的 sys-fx-etf-rotation@1 真实可达。
+        # 从既有 seed spec 克隆为独立内容（strategy_id/name/params 进入 spec_json，
+        # canonical hash 与源 seed 不同）并发布 v1。
+        rotation_spec = deepcopy(original.spec_json)
+        rotation_spec["strategy_id"] = "sys-fx-etf-rotation"
+        rotation_spec["name"] = "ETF 轮动-判断验证入口"
+        source_params = cast(dict[str, object], rotation_spec["params"])
+        rotation_spec["params"] = {**source_params, "slow_period": 20}
+        rotation_record = replace(
+            original,
+            strategy_id="sys-fx-etf-rotation",
+            name="ETF 轮动-判断验证入口",
+            spec_json=rotation_spec,
+        )
+        governance = container.get(GovernanceService)
+        governance.create_draft(
+            strategy_id="sys-fx-etf-rotation",
+            version=1,
+            spec_record=rotation_record,
+            created_at="2026-11-09T00:00:00Z",
+        )
+        governance.publish_and_activate(
+            strategy_id="sys-fx-etf-rotation",
+            version=1,
+            actor="seed",
+            reason="fixture: judgment verification entry",
+            decided_at="2026-11-09T00:00:00Z",
         )
         run_service = container.get(StrategyRunLifecycleStore)
         audit_service = container.get(ExecutionAuditService)

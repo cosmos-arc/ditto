@@ -42,6 +42,7 @@ class AnalysisNextDayPlanFactory:
             ),
             next_day_plan=material.next_day_plan,
             created_at=material.created_at,
+            source_judgment_id=material.source_judgment_id,
         )
 
 

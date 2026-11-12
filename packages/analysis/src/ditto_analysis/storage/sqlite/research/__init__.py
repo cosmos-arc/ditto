@@ -3,6 +3,9 @@
 from ditto_analysis.storage.sqlite.research.case_store import (
     SQLiteResearchCaseStore,
 )
+from ditto_analysis.storage.sqlite.research.judgment_store import (
+    SQLiteResearchJudgmentStore,
+)
 from ditto_analysis.storage.sqlite.research.plan_store import (
     SQLiteNextDayPlanStore,
 )
@@ -18,4 +21,5 @@ __all__ = [
     "SQLiteResearchCaseStore",
     "SQLiteResearchCatalogReader",
     "SQLiteResearchCatalogWriter",
+    "SQLiteResearchJudgmentStore",
 ]

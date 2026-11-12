@@ -28,6 +28,7 @@ from ditto_analysis.storage.sqlite.research import (
     SQLiteResearchCaseStore,
     SQLiteResearchCatalogReader,
     SQLiteResearchCatalogWriter,
+    SQLiteResearchJudgmentStore,
 )
 from ditto_analysis.storage.sqlite.research.export import sqlite_dataset_bytes
 
@@ -149,6 +150,16 @@ class AnalysisStorageProvider(Provider):
     ) -> SQLiteNextDayPlanStore:
         """Provide append-only Next Day Plan persistence."""
         store = SQLiteNextDayPlanStore(sqlite_client)
+        store.init_schema()
+        return store
+
+    @provide
+    def research_judgment_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteResearchJudgmentStore:
+        """Provide append-only Research Judgment persistence."""
+        store = SQLiteResearchJudgmentStore(sqlite_client)
         store.init_schema()
         return store
 

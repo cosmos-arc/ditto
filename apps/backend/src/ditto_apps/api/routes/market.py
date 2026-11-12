@@ -455,6 +455,7 @@ async def record_next_day_plan(
                     (note.instrument_id, note.reason) for note in body.candidate_notes
                 ),
                 next_day_plan=body.next_day_plan,
+                source_judgment_id=body.source_judgment_id,
             ),
         )
     except AppCommandError as exc:

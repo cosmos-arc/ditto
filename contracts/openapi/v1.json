@@ -3486,6 +3486,47 @@
         "title": "APIResponse[ResearchCaseResponse]",
         "type": "object"
       },
+      "APIResponse_ResearchJudgmentResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ResearchJudgmentResponse",
+            "description": "响应数据"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[ResearchJudgmentResponse]",
+        "type": "object"
+      },
       "APIResponse_ResumeRunResponse_": {
         "properties": {
           "data": {
@@ -6252,6 +6293,51 @@
           "data"
         ],
         "title": "APIResponse[tuple[ResearchCaseSummaryResponse, ...]]",
+        "type": "object"
+      },
+      "APIResponse_tuple_ResearchJudgmentSummaryResponse__________": {
+        "properties": {
+          "data": {
+            "description": "响应数据",
+            "items": {
+              "$ref": "#/components/schemas/ResearchJudgmentSummaryResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaginationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "分页信息(可选)"
+          },
+          "read_semantics": {
+            "anyOf": [
+              {
+                "enum": [
+                  "latest_available",
+                  "pit_asof",
+                  "frozen_snapshot"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放",
+            "title": "Read Semantics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "APIResponse[tuple[ResearchJudgmentSummaryResponse, ...]]",
         "type": "object"
       },
       "APIResponse_tuple_SelectionFactorCatalogEntryResponse__________": {
@@ -11762,6 +11848,19 @@
             "format": "date",
             "title": "Observation Date",
             "type": "string"
+          },
+          "source_judgment_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "pattern": "^research-judgment:sha256:[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Judgment Id"
           }
         },
         "required": [
@@ -11906,6 +12005,55 @@
           "objective"
         ],
         "title": "CreateResearchCaseBody",
+        "type": "object"
+      },
+      "CreateResearchJudgmentBody": {
+        "additionalProperties": false,
+        "description": "User record of one comparison conclusion with optional follow-up entry.",
+        "properties": {
+          "judgment": {
+            "minLength": 1,
+            "title": "Judgment",
+            "type": "string"
+          },
+          "run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "strategy_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Id"
+          },
+          "strategy_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Version"
+          }
+        },
+        "required": [
+          "run_ids",
+          "judgment"
+        ],
+        "title": "CreateResearchJudgmentBody",
         "type": "object"
       },
       "CreateSelectionRunBody": {
@@ -22551,6 +22699,19 @@
           "schema_version": {
             "title": "Schema Version",
             "type": "integer"
+          },
+          "source_judgment_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "pattern": "^research-judgment:sha256:[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Judgment Id"
           }
         },
         "required": [
@@ -22592,6 +22753,19 @@
             "minLength": 1,
             "title": "Plan Id",
             "type": "string"
+          },
+          "source_judgment_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "pattern": "^research-judgment:sha256:[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Judgment Id"
           }
         },
         "required": [
@@ -25937,6 +26111,135 @@
           "candidate_count"
         ],
         "title": "ResearchCaseSummaryResponse",
+        "type": "object"
+      },
+      "ResearchJudgmentResponse": {
+        "additionalProperties": false,
+        "description": "One saved research conclusion bound to explicit compared run identities.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "judgment": {
+            "minLength": 1,
+            "title": "Judgment",
+            "type": "string"
+          },
+          "judgment_id": {
+            "minLength": 1,
+            "pattern": "^research-judgment:sha256:[0-9a-f]{64}$",
+            "title": "Judgment Id",
+            "type": "string"
+          },
+          "run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "strategy_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Id"
+          },
+          "strategy_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Version"
+          }
+        },
+        "required": [
+          "judgment_id",
+          "run_ids",
+          "judgment",
+          "created_at",
+          "schema_version"
+        ],
+        "title": "ResearchJudgmentResponse",
+        "type": "object"
+      },
+      "ResearchJudgmentSummaryResponse": {
+        "additionalProperties": false,
+        "description": "Compact judgment summary for the reopen list.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "judgment": {
+            "minLength": 1,
+            "title": "Judgment",
+            "type": "string"
+          },
+          "judgment_id": {
+            "minLength": 1,
+            "pattern": "^research-judgment:sha256:[0-9a-f]{64}$",
+            "title": "Judgment Id",
+            "type": "string"
+          },
+          "run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "strategy_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Id"
+          },
+          "strategy_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Version"
+          }
+        },
+        "required": [
+          "judgment_id",
+          "run_ids",
+          "created_at",
+          "judgment"
+        ],
+        "title": "ResearchJudgmentSummaryResponse",
         "type": "object"
       },
       "ResumeRunResponse": {
@@ -51698,6 +52001,357 @@
           }
         },
         "summary": "Get Research Factor Evaluation Series",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/research/judgments": {
+      "get": {
+        "description": "Reopen saved comparison conclusions by their exact run identities.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "research_list_research_judgments",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_tuple_ResearchJudgmentSummaryResponse__________"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "List Research Judgments",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      },
+      "post": {
+        "description": "Append one immutable judgment bound to explicit compared run identities.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "research_record_research_judgment",
+        "parameters": [
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateResearchJudgmentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ResearchJudgmentResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Record Research Judgment",
+        "tags": [
+          "research"
+        ],
+        "x-ditto-maturity": "experimental"
+      }
+    },
+    "/api/v1/research/judgments/{judgment_id}": {
+      "get": {
+        "description": "Reopen one exact judgment; newer runs never rewrite the saved conclusion.\n\nCapability maturity: `experimental`. Implemented or partly implemented; not production scope.",
+        "operationId": "research_get_research_judgment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "judgment_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Judgment Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "in": "header",
+            "name": "X-Ditto-API-Contract-Version",
+            "required": false,
+            "schema": {
+              "const": "v1",
+              "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+              "title": "X-Ditto-Api-Contract-Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_ResearchJudgmentResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Resource not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request conflicts with current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request or domain validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Structured Ditto API error"
+          }
+        },
+        "summary": "Get Research Judgment",
         "tags": [
           "research"
         ],

@@ -16,9 +16,15 @@ type DetailTab = "overview" | "versions" | "factors";
 interface StrategyDetailPageProps {
 	readonly renderBacktestForm?: (strategyId: string, version: number) => ReactNode;
 	readonly renderGovernanceActions: StrategyGovernanceActionsRenderer;
+	/** 研究判断回程上下文（#748）：来自比较视图「进入验证」链接时不为空。 */
+	readonly fromJudgment?: string;
 }
 
-export function StrategyDetailPage({ renderGovernanceActions, renderBacktestForm }: StrategyDetailPageProps) {
+export function StrategyDetailPage({
+	renderGovernanceActions,
+	renderBacktestForm,
+	fromJudgment = "",
+}: StrategyDetailPageProps) {
 	const { id } = useParams({ strict: false }) as { id: string };
 	const strategyId = id ?? "";
 	const detail = useStrategy(strategyId);
@@ -28,6 +34,23 @@ export function StrategyDetailPage({ renderGovernanceActions, renderBacktestForm
 
 	return (
 		<section aria-label="策略详情工作区" className="h-full min-h-0">
+			{fromJudgment.trim() && (
+				<div
+					data-testid="strategy-judgment-return"
+					className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-(--color-border-subtle) bg-(--color-interaction-hover-subtle-bg) px-3 py-2 text-xs leading-5"
+				>
+					<span className="font-medium text-(--color-foreground)">研究判断验证入口</span>
+					<span className="break-all font-mono text-(--color-foreground-tertiary)">{fromJudgment}</span>
+					{/* 回程入口：判断来自比较视图（会话集合在目录页重开）。
+					    来源缺失（直接进入策略页）时不虚构返回目标。 */}
+					<a
+						href="/research/backtests"
+						className="font-medium text-(--color-accent) underline underline-offset-2 hover:text-(--brand-accent-hover) focus-visible:outline-2 focus-visible:outline-offset-2"
+					>
+						返回研究判断
+					</a>
+				</div>
+			)}
 			<ShellHeaderExtension>
 				<div className="ml-auto flex items-center gap-1.5">
 					<Button asChild size="sm">

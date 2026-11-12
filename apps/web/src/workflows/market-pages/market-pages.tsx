@@ -83,7 +83,7 @@ export function ASharesPage() {
 }
 
 /** Cross-feature composition for the browser-local watchlist. */
-export function WatchlistPage() {
+export function WatchlistPage({ sourceJudgmentId = "" }: { readonly sourceJudgmentId?: string }) {
 	// 名称/代码检索走 metadata 目录（分页拉取，UI 负责按 offset 续载）；
 	// 每个已保存对象按精确身份经现有单对象解析重开。
 	const searchCatalog = async (term: string, offset: number): Promise<MarketCatalog> => {
@@ -131,6 +131,7 @@ export function WatchlistPage() {
 			quote={{ anchorDate, anchorPending: observationQuery.isLoading, resolve: resolveQuote }}
 			resolveEntry={resolveEntry}
 			searchCatalog={searchCatalog}
+			sourceJudgmentId={sourceJudgmentId}
 		/>
 	);
 }
