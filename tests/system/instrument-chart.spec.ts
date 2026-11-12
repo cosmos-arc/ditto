@@ -189,8 +189,9 @@ test.describe
 			await expect(comparison.getByRole("checkbox", { name: /沪深300ETF-图表验收/ })).toBeChecked();
 			await expect(comparison.getByLabel("配置理由")).toHaveValue("equal broad exposure");
 			await comparison.getByRole("button", { name: "保存候选版本" }).click();
-			await expect(comparison.getByText(/已保存 etf-allocation-/)).toBeVisible();
-			await expect(comparison.getByText(/research_only/)).toBeVisible();
+			// 保存消息与 #817 的「已保存配置」下拉选项都可能含 research_only：
+			// 锚定保存消息本体，避免 strict mode 双匹配。
+			await expect(comparison.getByText(/已保存 etf-allocation-[\S\s]*research_only/)).toBeVisible();
 			const version = new URL(page.url()).searchParams.get("etfVersion");
 			expect(version).toMatch(/^etf-allocation-/);
 			const cutoff = await comparison.getByLabel("知识截止").inputValue();

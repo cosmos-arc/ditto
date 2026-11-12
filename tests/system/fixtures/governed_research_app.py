@@ -58,6 +58,7 @@ from ditto_application.processes.experiments.scheduler_store import (
 from ditto_application.processes.strategy.promotion import StrategyPromotionProcess
 from ditto_application.queries.experiments import ExperimentQueryFacade
 from ditto_application.queries.strategy import StrategyQueryFacade
+from ditto_application.queries.strategy_templates import StrategyTemplateCatalogQuery
 from ditto_apps.api.app_metadata import BuildMetadata
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.research_experiment_routes import (
@@ -189,6 +190,12 @@ class _FixtureProvider(Provider):
     @provide
     def strategies(self) -> StrategyQueryFacade:
         return _strategy_queries
+
+    @provide
+    def strategy_templates(self) -> StrategyTemplateCatalogQuery:
+        # #818 的模板目录查询：策略详情页挂载的列表 overlay 会读取模板目录，
+        # fixture 缺该 provider 时该端点 500（浏览器报 CORS 而非真实原因）。
+        return StrategyTemplateCatalogQuery()
 
     @provide
     def submit_review(self) -> SubmitReviewHandler:
