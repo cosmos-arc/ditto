@@ -201,8 +201,9 @@ test.describe
 			await expect(comparison.getByRole("checkbox", { name: /创业板ETF-无净值验收/ })).toBeChecked();
 			await expect(comparison.getByText(/已保存 etf-allocation-/)).toBeVisible();
 			await comparison.getByLabel("权重模式").selectOption("manual");
-			await comparison.getByLabel("ETF 2000001 权重").fill("0.3");
-			await comparison.getByLabel("ETF 2000002 权重").fill("0.5");
+			// #817 起手工权重输入按业务代码（ticker）标注，不再用内部 ID。
+			await comparison.getByLabel("ETF 510300 权重").fill("0.3");
+			await comparison.getByLabel("ETF 159915 权重").fill("0.5");
 			await comparison.getByLabel("配置理由").fill("manual revision");
 			await comparison.getByRole("button", { name: "保存候选版本" }).click();
 			await expect(comparison.getByText(/已保存 etf-allocation-/)).toBeVisible();
