@@ -170,13 +170,21 @@ export function BacktestListPage({ createForm }: { readonly createForm?: ReactNo
 									{compareError}
 								</p>
 							)}
-							<div className="grid grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2 text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
+							<div
+								data-testid="runs-header-row"
+								className="grid grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2 text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)"
+							>
+								{/* sr-only 是 position:absolute，不参与网格自动放置、不占首列；
+								    内层五列表头必须显式 col-start-2，否则会从第 1 列起跨 1–5 列
+								    （系统性左移 + 压缩，与数据行 2–6 列错位）。 */}
 								<span className="sr-only">加入对比</span>
-								<span>Run</span>
-								<span>Strategy version</span>
-								<span>Status</span>
-								<span>Progress</span>
-								<span>Started</span>
+								<div className="col-start-2 col-span-5 grid w-full grid-cols-[minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] gap-x-3">
+									<span className="min-w-0 truncate">Run</span>
+									<span className="min-w-0 truncate">Strategy version</span>
+									<span>Status</span>
+									<span>Progress</span>
+									<span>Started</span>
+								</div>
 							</div>
 							{query.error ? (
 								<div className="flex flex-col items-start gap-2 p-4 text-xs text-(--color-led-danger)">
@@ -219,16 +227,18 @@ export function BacktestListPage({ createForm }: { readonly createForm?: ReactNo
 													aria-label={`选择回测 ${run.runId}`}
 													aria-pressed={isSelected}
 													onClick={() => setSelectedRunId(run.runId)}
-													// col-span-5：跨外层第 2–6 列，与表头五列一一对齐
-													// （自动布局会把按钮挤进首列导致内部轨道溢出错位）
-													className={`col-span-5 grid w-full grid-cols-[minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] items-center text-left transition-colors ${
+													// col-start-2 + col-span-5：显式占外层第 2–6 列，与表头五列
+													// 一一对齐；模板与列间距必须和表头内层网格完全同构
+													className={`col-start-2 col-span-5 grid w-full grid-cols-[minmax(10rem,1.2fr)_minmax(12rem,1.5fr)_6rem_6rem_8rem] gap-x-3 items-center text-left transition-colors ${
 														isSelected
 															? "rounded-(--radius-sm) bg-[color-mix(in_oklch,var(--color-accent)_8%,transparent)]"
 															: "hover:bg-(--color-interaction-hover-subtle-bg)"
 													}`}
 												>
-													<span className="truncate font-data font-medium text-(--color-foreground)">{run.runId}</span>
-													<span className="truncate font-data text-(--color-foreground-secondary)">
+													<span className="min-w-0 truncate font-data font-medium text-(--color-foreground)">
+														{run.runId}
+													</span>
+													<span className="min-w-0 truncate font-data text-(--color-foreground-secondary)">
 														{run.strategyId} · v{run.strategyVersion || "—"}
 													</span>
 													<StatusBadge label={run.status} variant={statusVariant(run.status)} size="sm" />

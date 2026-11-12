@@ -110,6 +110,30 @@ describe("BacktestTrades", () => {
 		expect(sellLink.getAttribute("href")).toContain("focusDate=2025-04-03");
 		expect(sellLink.getAttribute("href")).toContain("drillDirection=sell");
 	});
+
+	it("导出成交 CSV：与成交表同一次读取、同值行、携带 run 身份", async () => {
+		const createObjectURL = vi.fn<(blob: Blob) => string>(() => "blob:trades");
+		const revokeObjectURL = vi.fn();
+		vi.stubGlobal("URL", Object.assign(class extends URL {}, { createObjectURL, revokeObjectURL }));
+		const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+		try {
+			render(<BacktestTrades jobId="bt-001" />, { wrapper: createWrapper() });
+			await userEvent.click(await screen.findByRole("button", { name: "导出成交 CSV" }));
+			expect(createObjectURL).toHaveBeenCalledOnce();
+			const blob = createObjectURL.mock.calls[0]?.[0];
+			if (!blob) throw new Error("trades export did not produce a Blob");
+			const csv = await blob.text();
+			expect(csv).toContain("# run_id=bt-001");
+			// 行值与表格消费的同一 mock 读取结果一致（mockBacktestTrades 两条成交）
+			expect(csv).toContain("2025-04-03,600519,long,2025-03-03,1500,2025-04-03,1625,100,12500");
+			expect(csv).toContain("2025-09-18,300750,long,2025-08-01,220,2025-09-18,249.5,300,8850");
+			const anchor = anchorClick.mock.instances.at(-1) as HTMLAnchorElement | undefined;
+			expect(anchor?.download).toBe("bt-001-trades.csv");
+		} finally {
+			anchorClick.mockRestore();
+			vi.unstubAllGlobals();
+		}
+	});
 });
 
 describe("BacktestOverview", () => {

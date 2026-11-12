@@ -81,7 +81,7 @@ export function InstrumentHubPage({
 									<InstrumentOverview id={instrumentId} />
 								</div>
 							</TabsContent>
-							<TabsContent value="chart">
+							<TabsContent value="chart" className="m-0 h-full min-h-0 overflow-y-auto">
 								<div data-info-level="l1" data-info-unit="instrument-chart">
 									<InstrumentChartView id={instrumentId} drill={search.drill} observeDate={search.observeDate} />
 								</div>

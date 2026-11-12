@@ -5,19 +5,33 @@ import { ChartCockpit, ChartLegend } from "@/components/chart";
 import { Button } from "@/components/ui/button";
 import { fetchBacktestNav, fetchBacktestReport } from "../api/backtests";
 import { backtestKeys } from "../hooks";
+import {
+	CALIBER_AXES,
+	CALIBER_AXIS_LABELS,
+	type CaliberAxis,
+	type CaliberFacts,
+	type ComparabilityExcluded,
+	partitionByComparability,
+	type ReportReadOutcome,
+} from "../lib/comparability";
+import { toComparisonCsv } from "../lib/comparison-csv";
+import { downloadTextBlob } from "../lib/download";
 import { backtestExportContext } from "../lib/export-context";
 import { MAX_COMPARE_RUNS, metricsRows, multiRunSeries, runColor } from "../lib/multi-run-mapping";
 import type { BacktestNavPoint, BacktestReport, BacktestRun } from "../types";
 
 /**
- * 多 run 净值叠加对比（≥2 个真实 run；#215 ②）。
+ * 多 run 净值叠加对比（≥2 个真实 run）。
  *
+ * - 比较前核对资产池、币种、时间样本、收益定义与费用（口径事实全部来自
+ *   各 run 已发布 report）；同记录同值才并入同一叠加，不兼容的 run 逐轴
+ *   说明原因、分开解释，不改起点、不制造排名；
  * - 各 run 净值按 nav₀ 归一叠加（8 色 run 色板），图例 chip 控制显隐；
- *   色板索引绑定勾选序，隐藏不重排（CR：legend/曲线同色恒等）；
+ *   色板索引绑定勾选序，隐藏不重排；
  * - 关键指标差异表按 run 原值呈现（年化/回撤为引擎百分数口径），
  *   未发布 report 的 run 标「未发布」，不虚构指标；
  * - 404 = 未落盘/未发布（业务态，诚实空位）；超时/5xx 等获取失败显式报错并可重试，
- *   不冒充缺席证据（CR）；PNG 导出 footer 内嵌有序 run 身份。
+ *   不冒充缺席证据；PNG 导出 footer 内嵌有序 run 身份；对比表可导出同值 CSV。
  */
 
 type RunResources = {
@@ -37,6 +51,14 @@ function toFetchError(kind: "nav" | "report", error: unknown) {
 	// 404 是业务态（未落盘/未发布），不属获取失败
 	if (error instanceof ApiError && error.status === 404) return null;
 	return { kind, cause: error instanceof Error ? error : new Error(String(error)) };
+}
+
+/** report 读取结果 → 口径核对的输入（published/unpublished/pending/failed）。 */
+function reportOutcome(item: RunResources): ReportReadOutcome {
+	if (item.report !== undefined && !item.reportFailed) return { state: "published", report: item.report };
+	if (item.reportPending) return { state: "pending" };
+	if (item.reportFailed) return { state: "failed" };
+	return { state: "unpublished" };
 }
 
 /** 选中集（≤8）逐 run 取 nav/report：useQueries 承接动态长度，hook 顺序稳定。 */
@@ -91,10 +113,94 @@ function useRunResources(runs: readonly BacktestRun[]) {
 	return { resources, refetchAll };
 }
 
+function CaliberTable({
+	facts,
+	members,
+	excluded,
+	unverifiedAxes,
+}: {
+	readonly facts: readonly CaliberFacts[];
+	readonly members: readonly string[];
+	readonly excluded: readonly ComparabilityExcluded[];
+	readonly unverifiedAxes: readonly CaliberAxis[];
+}) {
+	const conclusionByRun = new Map(excluded.map((item) => [item.runId, item.reasons]));
+	return (
+		<div className="min-w-0 overflow-x-auto">
+			<table
+				className="w-full min-w-3xl border-collapse text-xs"
+				data-testid="multi-run-caliber"
+				aria-label="比较口径核对"
+			>
+				<thead>
+					<tr className="border-b border-(--color-border-subtle) text-left uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
+						<th className="px-2 py-2 font-medium">Run</th>
+						{CALIBER_AXES.map((axis) => (
+							<th key={axis} className="px-2 py-2 font-medium">
+								{CALIBER_AXIS_LABELS[axis]}
+							</th>
+						))}
+						<th className="px-2 py-2 font-medium">结论</th>
+					</tr>
+				</thead>
+				<tbody>
+					{facts.map((fact) => {
+						const reasons = conclusionByRun.get(fact.runId);
+						const comparable = members.includes(fact.runId);
+						const conclusion = reasons ? `未并入叠加：${reasons.join("；")}` : "并入叠加";
+						return (
+							<tr
+								key={fact.runId}
+								data-run-id={fact.runId}
+								data-caliber-comparable={comparable}
+								data-caliber-conclusion={conclusion}
+								className="border-b border-(--color-border-subtle) last:border-b-0"
+							>
+								<td className="max-w-48 truncate px-2 py-2 font-data text-(--color-foreground)">{fact.runId}</td>
+								{CALIBER_AXES.map((axis) => (
+									<td
+										key={axis}
+										className={`max-w-48 truncate px-2 py-2 font-data ${
+											fact.values[axis] === null
+												? "text-(--color-foreground-tertiary)"
+												: "text-(--color-foreground-secondary)"
+										}`}
+										// 对称未记录轴不是缺席证据：屏显「未记录」，title 说明核对语义
+										title={fact.values[axis] === null ? "该 run 的报告未记录此轴" : (fact.values[axis] ?? undefined)}
+									>
+										{fact.values[axis] ?? "未记录"}
+									</td>
+								))}
+								<td className="px-2 py-2 text-(--color-foreground)">{conclusion}</td>
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
+			<p data-testid="multi-run-caliber-disclosure" className="mt-2 text-[11px] text-(--color-foreground-tertiary)">
+				{unverifiedAxes.length > 0
+					? `未核对轴（成员双方均未记录，不阻断合并但不构成核对）：${unverifiedAxes
+							.map((axis) => CALIBER_AXIS_LABELS[axis])
+							.join("、")}。`
+					: "五个口径轴均已按各 run 已发布 report 核对。"}
+			</p>
+		</div>
+	);
+}
+
 export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly BacktestRun[] }) {
 	const { resources, refetchAll } = useRunResources(runs);
 	const [hiddenRuns, setHiddenRuns] = useState<ReadonlySet<string>>(new Set());
-	// 色板绑定勾选序：先按全量选中集着色再过滤显隐，隐藏不重排剩余序列的颜色
+	// 口径核对与分组：锚点为首个已发布 report 的 run；不兼容/不可核对的 run 分开解释
+	const partition = useMemo(
+		() => partitionByComparability(resources.map((item) => ({ run: item.run, reportOutcome: reportOutcome(item) }))),
+		[resources],
+	);
+	const memberResources = useMemo(
+		() => resources.filter((item) => partition.members.includes(item.run.runId)),
+		[resources, partition.members],
+	);
+	// 色板绑定勾选序：先按全量成员着色再过滤显隐，隐藏不重排剩余序列的颜色
 	// 先过滤可见集再喂 multiRunSeries（并集时间轴与断口只由可见 run 决定——
 	// 隐藏的 run 对可见序列与 CSV/PNG 导出零影响），色槽携带原始勾选序索引
 	const series = useMemo(
@@ -102,9 +208,9 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 			multiRunSeries(
 				resources
 					.map((item, index) => ({ runId: item.run.runId, nav: item.nav, slot: index }))
-					.filter((run) => !hiddenRuns.has(run.runId)),
+					.filter((item) => partition.members.includes(item.runId) && !hiddenRuns.has(item.runId)),
 			),
-		[resources, hiddenRuns],
+		[resources, partition.members, hiddenRuns],
 	);
 	const reports = useMemo(
 		() =>
@@ -124,9 +230,11 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 			),
 		[resources, reports],
 	);
-	const navLoading = resources.some((item) => item.navLoading);
+	// nav 门与 series 同集：只看可并入成员——被口径排除的 run 其 nav 读取
+	// 失败不得连坐撤掉可比成员的叠加图（排除原因已在口径表分开解释）
+	const navLoading = memberResources.some((item) => item.navLoading);
 	// nav 与 report 失败分开处置：净值图只依赖 nav，report 失败不连坐撤图（CR）
-	const navFetchError = resources.find((item) => item.fetchError?.kind === "nav")?.fetchError ?? null;
+	const navFetchError = memberResources.find((item) => item.fetchError?.kind === "nav")?.fetchError ?? null;
 	const reportFetchError = resources.find((item) => item.fetchError?.kind === "report")?.fetchError ?? null;
 	// PNG/CSV 导出 footer 内嵌 run 身份：跟随可见序列并携带色槽位（#N）——
 	// 隐藏产生的空槽下，仅凭顺序会误读曲线归属（导出物无 DOM 图例）
@@ -134,23 +242,33 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 		() =>
 			resources
 				.map((item, index) => ({ item, slot: index + 1 }))
-				.filter(({ item, slot }) => slot <= MAX_COMPARE_RUNS && !hiddenRuns.has(item.run.runId))
+				.filter(
+					({ item, slot }) =>
+						slot <= MAX_COMPARE_RUNS && partition.members.includes(item.run.runId) && !hiddenRuns.has(item.run.runId),
+				)
 				.map(({ item, slot }) => `${item.run.runId}#${slot}`),
-		[resources, hiddenRuns],
+		[resources, partition.members, hiddenRuns],
 	);
 	const identity = useMemo(
 		() => ({
 			dataSourceName: `运行产物（各 run nav.parquet，nav₀ 归一，#N 为色槽位）：${visibleRunLabels.join(" · ")}；${resources
-				.filter((item, index) => index < MAX_COMPARE_RUNS && !hiddenRuns.has(item.run.runId))
+				.filter(
+					(item, index) =>
+						index < MAX_COMPARE_RUNS && partition.members.includes(item.run.runId) && !hiddenRuns.has(item.run.runId),
+				)
 				.map((item) =>
 					backtestExportContext(item.run.runId, `${item.run.strategyId}@${item.run.strategyVersion}`, item.report),
 				)
-				.join("；")}`,
+				.join("；")}；口径核对：${
+				partition.unverifiedAxes.length > 0
+					? `一致（未记录轴：${partition.unverifiedAxes.map((axis) => CALIBER_AXIS_LABELS[axis]).join("、")}）`
+					: "五轴一致"
+			}`,
 			snapshotId: null,
 			knowledgeCutoff: null,
 			publicationCutoff: null,
 		}),
-		[visibleRunLabels, resources, hiddenRuns],
+		[visibleRunLabels, resources, partition, hiddenRuns],
 	);
 
 	return (
@@ -158,75 +276,118 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 			<p className="text-xs text-(--color-risk-warning-fg)">
 				受限历史研究对比 · 严格历史可得性未认证；固定池不能推定为历史全市场，完成状态不授予信号或 Paper 资格。
 			</p>
-			<ChartLegend
-				ariaLabel="净值叠加序列显隐"
-				testId="multi-run-legend"
-				items={resources.map((item, index) => ({
-					id: item.run.runId,
-					label: item.run.runId,
-					color: runColor(index),
-					visible: !hiddenRuns.has(item.run.runId),
-				}))}
-				onToggle={(runId) =>
-					setHiddenRuns((previous) => {
-						const next = new Set(previous);
-						if (next.has(runId)) {
-							next.delete(runId);
-						} else {
-							// 守卫只数仍在选中集里的隐藏 run：目录刷新后消失的 id 不占位；
-							// 至少保留一条序列——全部隐藏后图表失去对比锚点。
-							const presentHidden = [...next].filter((id) => resources.some((item) => item.run.runId === id));
-							if (presentHidden.length >= resources.length - 1) return previous;
-							next.add(runId);
-						}
-						return next;
-					})
-				}
-			/>
-			{navFetchError ? (
-				<div
-					role="alert"
-					data-state="fetch-error"
-					className="flex flex-col items-start gap-2 rounded-(--radius-md) border border-(--color-risk-critical-fg) bg-(--color-surface-1) p-4 text-xs"
-				>
-					<p className="font-medium text-(--color-foreground)">净值证据读取失败：{navFetchError.cause.message}</p>
-					<p className="text-(--color-foreground-secondary)">
-						获取失败不会折算为「未发布」或空净值；404 才是未落盘/未发布的业务态。
-					</p>
-					<Button type="button" size="sm" variant="outline" onClick={refetchAll}>
-						重试读取所选 run 证据
+			<section aria-label="比较口径核对" className="min-w-0">
+				<div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+					<h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
+						口径核对（资产池 · 币种 · 时间样本 · 收益定义 · 费用）
+					</h3>
+					<Button
+						type="button"
+						size="xs"
+						variant="outline"
+						onClick={() => downloadTextBlob(toComparisonCsv(rows, partition), "backtest-compare.csv")}
+					>
+						导出对比 CSV
 					</Button>
 				</div>
-			) : navLoading ? (
+				<CaliberTable
+					facts={partition.facts}
+					members={partition.members}
+					excluded={partition.excluded}
+					unverifiedAxes={partition.unverifiedAxes}
+				/>
+			</section>
+			{partition.members.length === 0 ? (
 				<div
-					className="flex h-64 items-center justify-center rounded-(--radius-md) border border-(--color-border-subtle) text-xs text-(--color-foreground-tertiary)"
-					data-state="loading"
+					data-testid="multi-run-caliber-empty"
+					className="flex h-48 flex-col items-center justify-center gap-2 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-4 text-center text-xs text-(--color-foreground-secondary)"
 				>
-					正在读取所选 run 的净值证据…
+					<p>所选 run 中没有已发布 report 的 run，口径无法核对，不产生叠加图。</p>
+					<p className="text-(--color-foreground-tertiary)">可在口径核对表中查看逐 run 原因；移出后重新选择。</p>
 				</div>
-			) : series.every((spec) => spec.bars.length === 0) ? (
-				// 可见 run 均未落盘 nav（404 业务态）：结构化空态而非空白画布。
-				// 结论基于未过滤的选中集区分两种情形——隐藏的 run 可能仍有数据。
+			) : partition.members.length === 1 ? (
 				<div
-					className="flex h-64 flex-col items-center justify-center gap-2 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-4 text-center text-xs text-(--color-foreground-secondary)"
-					data-state="nav-empty"
+					data-testid="multi-run-caliber-single"
+					className="flex h-48 flex-col items-center justify-center gap-2 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-4 text-center text-xs text-(--color-foreground-secondary)"
 				>
-					<p>
-						{resources.every((item) => item.nav.length === 0)
-							? "所选 run 均未落盘净值证据（无 nav.parquet）。"
-							: "当前可见 run 均未落盘净值证据；隐藏的 run 中仍有数据，点击图例恢复。"}
+					<p>可并入同一叠加的 run 只有一个，不构成对比。</p>
+					<p className="text-(--color-foreground-tertiary)">
+						其余 run 已按口径分开解释（见上表结论列）；移出不相容 run 或选择同口径运行。
 					</p>
-					<p className="text-(--color-foreground-tertiary)">指标差异表仍按各 run report 状态呈现。</p>
 				</div>
 			) : (
-				<ChartCockpit
-					chartId="backtest-multi-run-nav"
-					rangeId="backtest-multi-run-nav"
-					ariaLabel="多 run 归一化净值叠加"
-					height={320}
-					series={series}
-					identity={identity}
-				/>
+				<>
+					<ChartLegend
+						ariaLabel="净值叠加序列显隐"
+						testId="multi-run-legend"
+						items={memberResources.map((item) => ({
+							id: item.run.runId,
+							label: item.run.runId,
+							color: runColor(resources.indexOf(item)),
+							visible: !hiddenRuns.has(item.run.runId),
+						}))}
+						onToggle={(runId) =>
+							setHiddenRuns((previous) => {
+								const next = new Set(previous);
+								if (next.has(runId)) {
+									next.delete(runId);
+								} else {
+									// 守卫只数仍在成员集里的隐藏 run：目录刷新后消失的 id 不占位；
+									// 至少保留一条序列——全部隐藏后图表失去对比锚点。
+									const presentHidden = [...next].filter((id) => memberResources.some((item) => item.run.runId === id));
+									if (presentHidden.length >= memberResources.length - 1) return previous;
+									next.add(runId);
+								}
+								return next;
+							})
+						}
+					/>
+					{navFetchError ? (
+						<div
+							role="alert"
+							data-state="fetch-error"
+							className="flex flex-col items-start gap-2 rounded-(--radius-md) border border-(--color-risk-critical-fg) bg-(--color-surface-1) p-4 text-xs"
+						>
+							<p className="font-medium text-(--color-foreground)">净值证据读取失败：{navFetchError.cause.message}</p>
+							<p className="text-(--color-foreground-secondary)">
+								获取失败不会折算为「未发布」或空净值；404 才是未落盘/未发布的业务态。
+							</p>
+							<Button type="button" size="sm" variant="outline" onClick={refetchAll}>
+								重试读取所选 run 证据
+							</Button>
+						</div>
+					) : navLoading ? (
+						<div
+							className="flex h-64 items-center justify-center rounded-(--radius-md) border border-(--color-border-subtle) text-xs text-(--color-foreground-tertiary)"
+							data-state="loading"
+						>
+							正在读取所选 run 的净值证据…
+						</div>
+					) : series.every((spec) => spec.bars.length === 0) ? (
+						// 可见 run 均未落盘 nav（404 业务态）：结构化空态而非空白画布。
+						// 结论基于未过滤的成员集区分两种情形——隐藏的 run 可能仍有数据。
+						<div
+							className="flex h-64 flex-col items-center justify-center gap-2 rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1) p-4 text-center text-xs text-(--color-foreground-secondary)"
+							data-state="nav-empty"
+						>
+							<p>
+								{memberResources.every((item) => item.nav.length === 0)
+									? "所选 run 均未落盘净值证据（无 nav.parquet）。"
+									: "当前可见 run 均未落盘净值证据；隐藏的 run 中仍有数据，点击图例恢复。"}
+							</p>
+							<p className="text-(--color-foreground-tertiary)">指标差异表仍按各 run report 状态呈现。</p>
+						</div>
+					) : (
+						<ChartCockpit
+							chartId="backtest-multi-run-nav"
+							rangeId="backtest-multi-run-nav"
+							ariaLabel="多 run 归一化净值叠加"
+							height={320}
+							series={series}
+							identity={identity}
+						/>
+					)}
+				</>
 			)}
 			<div className="min-w-0 overflow-x-auto">
 				<table className="w-full min-w-3xl border-collapse text-xs" data-testid="multi-run-metrics">
@@ -289,7 +450,7 @@ export function BacktestMultiRunCompare({ runs }: { readonly runs: readonly Back
 			)}
 			<p className="text-[11px] text-(--color-foreground-tertiary)">
 				图内曲线按各 run 首日净值归一（跨初始资金可比）；表内为 run 原值，金额单位 CNY。未发布 report 的 run
-				指标不可得，如实标注。
+				指标不可得，如实标注。可比结果才并入叠加；不兼容结果按口径核对表分开解释，不改起点、不制造排名。
 			</p>
 		</div>
 	);

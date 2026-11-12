@@ -87,6 +87,7 @@ export interface BacktestFeeStatement {
 }
 
 export interface BacktestDividendStatement {
+	readonly currency: "CNY";
 	readonly policy: string;
 	readonly conversions: readonly {
 		readonly eventId: string;
@@ -154,7 +155,7 @@ export interface BacktestReport {
 	readonly rebalanceFreq: string;
 	readonly alphaStats: BacktestAlphaStats | null;
 	readonly tradeStats: BacktestTradeStats | null;
-	readonly usageContext: BacktestUsageContext;
+	readonly usageContext: BacktestUsageContext | null;
 	readonly strategyPromotion: Readonly<Record<string, unknown>> | null;
 	readonly pitPolicy: Readonly<Record<string, unknown>> | null;
 }

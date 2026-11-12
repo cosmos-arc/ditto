@@ -109,13 +109,17 @@ export function BacktestCompareOverlay({ onClose, open }: { readonly onClose: ()
 			{/* 不透明画布底（surface-0）：cockpit/表格/事实清单的弱色组合按页面侧
 			    同底（surface-app）审计，overlay 面上会跌穿 AA；这里显式落回同底。 */}
 			<div className="flex flex-col gap-3 rounded-(--radius-md) bg-(--color-surface-0) p-3">
+				{/* 事实清单值单元格是等宽数值字体（无 CJK 字形）：计数只留数值，
+				    口径说明改由下方正文行承担，避免等宽槽内 CJK 回退成异常字形 */}
 				<OverlayFactList
 					facts={[
-						["已选择", `${runIds.length} 个 run`],
+						["已选择 run 数", String(runIds.length)],
 						["Run identities", runIds.join(" · ") || "尚未选择"],
-						["对比口径", "nav₀ 归一净值叠加 + 已发布 report 指标"],
 					]}
 				/>
+				<p className="text-xs text-(--color-foreground-secondary)">
+					对比口径：先核对资产池 / 币种 / 时间样本 / 收益定义 / 费用；同口径才做 nav₀ 归一叠加。
+				</p>
 				<p className="text-xs text-(--color-foreground-tertiary)">{comparisonLifetime}</p>
 				{error && <p role="alert">{error}</p>}
 				<ul aria-label="对比集合" className="space-y-2">

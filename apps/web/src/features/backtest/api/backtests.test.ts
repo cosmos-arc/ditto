@@ -191,13 +191,10 @@ describe("backtest API view-model boundaries", () => {
 		expect(report.usageContext).toMatchObject({ inputInstrumentIds: [510300], limitations: ["仅固定样本池"] });
 		expect(report.strategyPromotion).toEqual(provenance);
 		expect(report.pitPolicy).toEqual({ policy: "knowledge_date_fail_closed" });
+		// 旧报告未记录 usage context：映射为 null（展示层各自回落 legacy 说明），
+		// 不以 legacy 常量冒充已记录事实
 		const legacy = mapBacktestReport(mockBacktestReport);
-		expect(legacy.usageContext).toMatchObject({
-			intendedUse: "unclassified",
-			historicalAvailability: "not_certified",
-			samplePool: "unknown",
-		});
-		expect(legacy.usageContext.limitations.length).toBeGreaterThan(0);
+		expect(legacy.usageContext).toBeNull();
 	});
 
 	it("maps an incomplete report to explicit empty periods and unavailable statistics", () => {

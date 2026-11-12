@@ -5,6 +5,8 @@ import { OverlayFactList, PageActionOverlay } from "@/components/domain/page-act
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { Button } from "@/components/ui/button";
 import { useBacktestAudit, useBacktestRun, useBacktestTrades } from "../hooks";
+import { downloadTextBlob } from "../lib/download";
+import { toTradesCsv } from "../lib/trades-csv";
 import type { BacktestAuditRecord, BacktestTradeRecord } from "../types";
 
 interface BacktestTradesProps {
@@ -52,13 +54,24 @@ export function BacktestTrades({ jobId }: BacktestTradesProps) {
 
 	return (
 		<section className="overflow-hidden rounded-(--radius-md) border border-(--color-border-subtle) bg-(--color-surface-1)">
-			<div className="grid grid-cols-[minmax(12rem,1.2fr)_6rem_minmax(12rem,1.4fr)_7rem_8rem_7rem] border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2 text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
-				<span>Instrument</span>
-				<span>Direction</span>
-				<span>Entry → Exit</span>
-				<span>Quantity</span>
-				<span className="text-right">PnL</span>
-				<span className="text-right">证据</span>
+			<div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--color-border-subtle) bg-(--color-surface-strip) px-3 py-2">
+				<div className="grid w-full grid-cols-[minmax(12rem,1.2fr)_6rem_minmax(12rem,1.4fr)_7rem_8rem_7rem] items-center text-xs uppercase tracking-[0.08em] text-(--color-foreground-tertiary)">
+					<span>Instrument</span>
+					<span>Direction</span>
+					<span>Entry → Exit</span>
+					<span className="text-right">Quantity</span>
+					<span className="text-right">PnL</span>
+					<span className="text-right">证据</span>
+				</div>
+				<Button
+					type="button"
+					size="xs"
+					variant="outline"
+					disabled={trades.length === 0}
+					onClick={() => downloadTextBlob(toTradesCsv(jobId, trades), `${jobId}-trades.csv`)}
+				>
+					导出成交 CSV
+				</Button>
 			</div>
 			{trades.length === 0 ? (
 				<p className="p-4 text-xs text-(--color-foreground-tertiary)">当前运行没有已平仓交易。</p>
@@ -88,12 +101,12 @@ export function BacktestTrades({ jobId }: BacktestTradesProps) {
 									{trade.exitDate} @ {trade.exitPrice.toFixed(2)}
 								</p>
 							</div>
-							<span className="font-data">{trade.quantity.toLocaleString("en-US")}</span>
+							<span className="text-right font-data tabular-nums">{trade.quantity.toLocaleString("en-US")}</span>
 							<span
-								className={`text-right font-data ${trade.pnl >= 0 ? "text-(--color-system-healthy)" : "text-(--color-system-down)"}`}
+								className={`text-right font-data tabular-nums ${trade.pnl >= 0 ? "text-(--color-system-healthy)" : "text-(--color-system-down)"}`}
 							>
 								{trade.pnl >= 0 ? "+" : ""}
-								{trade.pnl.toLocaleString("en-US")}
+								{trade.pnl.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
 							</span>
 							<span className="text-right">
 								<button
@@ -164,7 +177,10 @@ function TradeEvidenceDrawer({
 					["Entry", `${trade.entryDate} @ ${trade.entryPrice.toFixed(4)}`],
 					["Exit", `${trade.exitDate} @ ${trade.exitPrice.toFixed(4)}`],
 					["Quantity", trade.quantity.toLocaleString("en-US")],
-					["PnL", `${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toLocaleString("en-US")}`],
+					[
+						"PnL",
+						`${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`,
+					],
 					["as_of", asOf || "未报告"],
 				]}
 			/>

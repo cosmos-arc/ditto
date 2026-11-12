@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import { readFile } from "node:fs/promises";
 import { expect, type Page, test } from "@playwright/test";
 
 /**
@@ -80,6 +81,43 @@ test.describe
 			for (const runId of [RUN_A, RUN_B]) {
 				await expect(table.locator(`tr[data-run-id='${runId}']`)).toHaveAttribute("data-report-published", "true");
 				await expect(table.locator(`tr[data-run-id='${runId}']`)).toContainText(/%/);
+			}
+
+			// 比较前口径核对：五轴表格 + 逐 run 结论；fixture 两 run 同口径均并入叠加
+			const caliber = dialog.getByTestId("multi-run-caliber");
+			await expect(caliber).toBeVisible();
+			for (const runId of [RUN_A, RUN_B]) {
+				await expect(caliber.locator(`tr[data-run-id='${runId}']`)).toHaveAttribute(
+					"data-caliber-comparable",
+					"true",
+				);
+				await expect(caliber.locator(`tr[data-run-id='${runId}']`)).toContainText("并入叠加");
+			}
+			// 对称未记录轴披露为未核对，而不是假装可比
+			const disclosure = dialog.getByTestId("multi-run-caliber-disclosure");
+			await expect(disclosure).toContainText(/未核对轴/);
+
+			// 一致导出：对比 CSV 与表内展示串同值（键盘可达）
+			const exportButton = dialog.getByRole("button", { name: "导出对比 CSV" });
+			await exportButton.focus();
+			const downloaded = page.waitForEvent("download");
+			await page.keyboard.press("Enter");
+			const download = await downloaded;
+			expect(download.suggestedFilename()).toBe("backtest-compare.csv");
+			const csvPath = await download.path();
+			if (!csvPath) throw new Error("comparison CSV download missing");
+			const csv = await readFile(csvPath, "utf8");
+			// 身份注释行携带集合成员（顺序跟随会话选择序，不预设排序）
+			const comparisonLine = csv.split("\n")[0] ?? "";
+			expect(comparisonLine).toContain("# comparison=");
+			expect(comparisonLine).toContain(RUN_A);
+			expect(comparisonLine).toContain(RUN_B);
+			// 口径列与结论列同表格文本；指标单元格与差异表同值
+			expect(csv).toContain("并入叠加");
+			for (const runId of [RUN_A, RUN_B]) {
+				const displayed = await table.locator(`tr[data-run-id='${runId}']`).innerText();
+				const annualized = displayed.match(/-?\d+\.\d+%/g)?.[0];
+				if (annualized) expect(csv).toContain(annualized);
 			}
 
 			const accessibility = await new AxeBuilder({ page }).analyze();

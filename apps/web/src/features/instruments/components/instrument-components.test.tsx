@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { createElement, type ReactNode } from "react";
@@ -128,6 +128,25 @@ describe("InstrumentChartView", () => {
 		expect(props.asOf?.label).toContain("回测下钻 sys-fx-nav-001");
 	});
 
+	it("下钻状态条提供返回源运行的链接：成交定位标的与日期后可以返回", async () => {
+		const view = render(
+			<InstrumentChartView
+				id="1000001"
+				drill={{ date: "2026-03-09", runId: "sys-fx-nav-001", asOf: "2026-03-27", direction: "sell" }}
+			/>,
+			{ wrapper: createWrapper() },
+		);
+		await screen.findByTestId("cockpit-stub");
+		const chip = await screen.findByTestId("drill-focus-1000001");
+		const back = within(chip).getByRole("link", { name: "返回回测 sys-fx-nav-001" });
+		expect(back).toHaveAttribute("href", "/research/backtests/sys-fx-nav-001");
+		// 无下钻上下文时不出现该入口（不虚构来源）
+		view.unmount();
+		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
+		await screen.findByTestId("cockpit-stub");
+		expect(screen.queryByRole("link", { name: /返回回测/ })).not.toBeInTheDocument();
+	});
+
 	it("以蜡烛形态喂给图表 shell 并展示 Primary Answer 关键数字", async () => {
 		render(<InstrumentChartView id="1000001" />, { wrapper: createWrapper() });
 		await screen.findByTestId("cockpit-stub");
@@ -183,7 +202,14 @@ describe("InstrumentChartView", () => {
 		expect(screen.getByTestId("cockpit-stub")).toBeInTheDocument();
 		if (gap) {
 			expect(screen.getByText(/当前没有可见价格/)).toBeInTheDocument();
-			expect(screen.getByText("缺失交易日 2026-03-10")).toBeInTheDocument();
+			// 长缺口收敛为摘要行：默认折叠（主图优先），展开后仍见完整逐日清单
+			const gaps = screen.getByTestId("chart-gaps-1000001");
+			expect(gaps).toHaveTextContent("缺失交易日 1 天（展开查看）");
+			// 折叠态：日期在 DOM 中但不可见（text.content 断言会穿透折叠，用可见性）
+			expect(within(gaps).getByText("2026-03-10")).not.toBeVisible();
+			const user = userEvent.setup();
+			await user.click(within(gaps).getByText("缺失交易日 1 天（展开查看）"));
+			expect(within(gaps).getByText("2026-03-10")).toBeVisible();
 		} else {
 			expect(screen.queryByText(/当前没有可见价格/)).not.toBeInTheDocument();
 			expect(screen.queryByTestId("chart-gaps-1000001")).not.toBeInTheDocument();

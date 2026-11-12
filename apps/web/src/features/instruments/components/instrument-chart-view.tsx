@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChartCockpit, type CockpitMarker, type CockpitOverlay } from "@/components/chart";
 import type { BarPeriod, CockpitBar } from "@/components/chart/cockpit/chart-data";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
@@ -94,6 +94,17 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 	// 观察日经 Date 往返校验：正则放行的假日期（如 2026-13-45）会让
 	// 日期算术抛 RangeError 炸掉整页，两层（route + view）同规则拒绝。
 	const anchoredEndDate = observeDate !== undefined && isValidIsoCalendarDate(observeDate) ? observeDate : null;
+	// 下钻状态条挂载即滚入最近滚动祖先（block:"nearest"）：已完整可见时是
+	// no-op；跨界（任意边缘）时最小滚动到完整可见——落地瞬间不呈现半裁形态。
+	const drillBannerRef = useRef<HTMLDivElement | null>(null);
+	useEffect(() => {
+		if (!drill) return;
+		const element = drillBannerRef.current;
+		if (!element || typeof element.scrollIntoView !== "function") return;
+		element.scrollIntoView({ block: "nearest" });
+		const followUp = requestAnimationFrame(() => element.scrollIntoView({ block: "nearest" }));
+		return () => cancelAnimationFrame(followUp);
+	}, [drill]);
 	const [period, setPeriod] = useState<BarPeriod>("daily");
 	const [adjustment, setAdjustment] = useState<BarAdjustment>("none");
 	const [includeExperimental, setIncludeExperimental] = useState(false);
@@ -295,13 +306,21 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 						</label>
 					</div>
 					{/* 身份串（snapshot:...:sha256:...）不可在右缘切半：break-all
-					    安全换行，完整身份始终可见可下钻（视觉门 V2）。 */}
+					    安全换行，完整身份始终可见可下钻（视觉门 V2）。ISO 时间戳
+					    是不可拆 token：nowrap 让换行只发生在 token 之间，数值
+					    中间不断行。 */}
 					<div className="max-w-lg break-all text-right text-xs leading-5 text-(--color-foreground-tertiary)">
 						复权：{effectiveAdjustment} · experimental：{includeExperimental ? "开" : "关"}
 						<br />
-						{query.data
-							? `决策 ${query.data.as_of} · 可得截止 ${query.data.knowledge_cutoff} · 发布截止 ${query.data.publication_cutoff}`
-							: "读取图表来源中"}
+						{query.data ? (
+							<>
+								决策 <span className="whitespace-nowrap">{query.data.as_of}</span> · 可得截止{" "}
+								<span className="whitespace-nowrap">{query.data.knowledge_cutoff}</span> · 发布截止{" "}
+								<span className="whitespace-nowrap">{query.data.publication_cutoff}</span>
+							</>
+						) : (
+							"读取图表来源中"
+						)}
 						<br />
 						{query.data
 							? `来源 ${query.data.sources.join(", ")} · 快照 ${query.data.source_snapshot_ids.join(", ")} · 日历 ${query.data.calendar_snapshot_ids.join(", ")}`
@@ -311,9 +330,13 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 
 				{drill && (
 					<div
+						ref={drillBannerRef}
 						data-state="drill-focus"
 						data-testid={`drill-focus-${id}`}
-						className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-(--color-border-subtle) bg-(--color-interaction-hover-subtle-bg) px-3 py-2 text-xs"
+						// leading-5（20px 行盒）：CJK 字体（如 Noto Sans CJK）的
+						// 实际墨高 ≈1.45em ≈ 17.4px@12px，默认 13.33px 行盒在部分
+						// 渲染栈会把字形下半切在行盒外；行高由内容撑开，容器无固定高度。
+						className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-(--color-border-subtle) bg-(--color-interaction-hover-subtle-bg) px-3 py-2 text-xs leading-5"
 					>
 						<span className="font-medium text-(--color-foreground)">回测买卖点下钻</span>
 						<span className="font-data text-(--color-foreground-secondary)">
@@ -322,6 +345,16 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 						<span className="font-data text-(--color-foreground-tertiary)">run {drill.runId}</span>
 						<span className="font-data text-(--color-foreground-tertiary)">as_of {drill.asOf || "—"}</span>
 						<span className="text-(--color-foreground-muted)">决策线为源 run as_of；K 线按当前图表来源截止</span>
+						{/* 定位标的与日期后可返回源运行：跨域跳转合同的回程入口。
+						    runId 缺失（旧链接未携带来源）时不虚构返回目标。 */}
+						{drill.runId.trim() ? (
+							<a
+								href={`/research/backtests/${encodeURIComponent(drill.runId)}`}
+								className="font-medium text-(--color-accent) underline underline-offset-2 hover:text-(--brand-accent-hover) focus-visible:outline-2 focus-visible:outline-offset-2"
+							>
+								返回回测 {drill.runId}
+							</a>
+						) : null}
 					</div>
 				)}
 
@@ -435,20 +468,25 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 				{(stale || missingSessions.length > 0) && (
 					<div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 px-3 py-2.5 text-sm">
 						{stale && (
-							<span className="inline-flex items-center gap-1.5 text-xs text-(--color-foreground-tertiary)">
+							<span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-(--color-foreground-tertiary)">
 								<StaleIndicator isStale />
 								最新价格日 {query.data?.latest_price_date ?? "—"} ·{" "}
 								{query.data?.stale_reason === "missing_expected_session" ? "交易日价格缺失" : "当前没有可见价格"}
 							</span>
 						)}
 						{missingSessions.length > 0 && (
-							<span
-								className="tabular-nums text-xs text-(--color-foreground-muted)"
+							// 长缺口（数百日）收敛为摘要行：默认折叠，主图优先；
+							// 展开后仍是完整逐日清单，不删证据
+							<details
+								className="text-xs text-(--color-foreground-muted)"
 								data-testid={`chart-gaps-${id}`}
 								data-state="bars-partial"
 							>
-								缺失交易日 {missingSessions.join("、")}
-							</span>
+								<summary className="cursor-pointer list-none underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2">
+									缺失交易日 {missingSessions.length} 天（展开查看）
+								</summary>
+								<span className="tabular-nums break-words">{missingSessions.join("、")}</span>
+							</details>
 						)}
 					</div>
 				)}

@@ -203,3 +203,45 @@ test("strategy detail submits an exact ordinary version and recovers a lost resp
 	await expect(page.getByRole("button", { name: "提交回测", exact: true })).toBeFocused();
 	expect(submissions).toHaveLength(2);
 });
+
+test.describe("backtest catalog column alignment", () => {
+	// 表头与数据列的几何对齐是视觉合同：程序化断言（getBoundingClientRect 级），
+	// 逐列左缘差 ≤2px，跨三个视口；相邻列之间保持可见间隙。
+	const VIEWPORTS = [
+		{ width: 1512, height: 900 },
+		{ width: 1280, height: 800 },
+		{ width: 1024, height: 768 },
+	];
+
+	test("header cells sit above their data columns with visible column gaps", async ({ page }) => {
+		const browserErrors = captureBrowserErrors(page);
+		for (const viewport of VIEWPORTS) {
+			await page.setViewportSize(viewport);
+			await page.goto(`${webOrigin}/research/backtests`);
+			const firstRow = page.locator("button[aria-label^='选择回测']").first();
+			await expect(firstRow).toBeVisible();
+			const headerCells = page.getByTestId("runs-header-row").locator("div > *");
+			const rowCells = firstRow.locator("> *");
+			expect(await headerCells.count()).toBe(5);
+			expect(await rowCells.count()).toBe(5);
+			const headerBoxes = [];
+			const rowBoxes = [];
+			for (let index = 0; index < 5; index += 1) {
+				headerBoxes.push(await headerCells.nth(index).boundingBox());
+				rowBoxes.push(await rowCells.nth(index).boundingBox());
+			}
+			for (let index = 0; index < 5; index += 1) {
+				const header = headerBoxes[index];
+				const cell = rowBoxes[index];
+				expect(header, `header cell ${index}`).not.toBeNull();
+				expect(cell, `data cell ${index}`).not.toBeNull();
+				expect(Math.abs((header?.x ?? 0) - (cell?.x ?? 0)), `column ${index} left edge @${viewport.width}`).toBeLessThanOrEqual(2);
+			}
+			for (let index = 1; index < 5; index += 1) {
+				const gap = (rowBoxes[index]?.x ?? 0) - ((rowBoxes[index - 1]?.x ?? 0) + (rowBoxes[index - 1]?.width ?? 0));
+				expect(gap, `visible gap before column ${index} @${viewport.width}`).toBeGreaterThanOrEqual(8);
+			}
+		}
+		expect(browserErrors).toEqual([]);
+	});
+});
