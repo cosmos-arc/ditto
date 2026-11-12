@@ -19,6 +19,11 @@ const JUDGMENTS_KEY = ["research-judgments"] as const;
 // 列表读取的显式请求量：返回条数达到该值时如实披露可能存在截断。
 const JUDGMENTS_LIMIT = 20;
 
+// 与 universe-list-page 等正式表单同一字段样式词汇，避免裸原生控件默认宽度。
+const FIELD_CLASS =
+	"w-full rounded-(--radius-sm) border border-(--color-border-subtle) bg-(--color-surface-app) px-3 text-xs outline-none focus:border-(--color-border-strong)";
+const TEXTAREA_CLASS = `${FIELD_CLASS} resize-none py-2`;
+
 type Props = {
 	/** 会话比较集合（判断绑定的明确运行身份，选择序原样冻结）。 */
 	readonly runIds: readonly string[];
@@ -77,6 +82,7 @@ export function BacktestJudgmentSection({ runIds, runs }: Props) {
 					aria-label="判断结论"
 					data-testid="judgment-text"
 					rows={2}
+					className={TEXTAREA_CLASS}
 					value={judgmentText}
 					onChange={(event) => setJudgmentText(event.target.value)}
 					placeholder="这次比较的结论：为什么、下一步验证什么"
@@ -87,6 +93,7 @@ export function BacktestJudgmentSection({ runIds, runs }: Props) {
 				<select
 					aria-label="后续验证策略版本"
 					data-testid="judgment-strategy"
+					className={FIELD_CLASS}
 					value={strategyKey}
 					onChange={(event) => setStrategyKey(event.target.value)}
 				>
