@@ -295,13 +295,21 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 						</label>
 					</div>
 					{/* 身份串（snapshot:...:sha256:...）不可在右缘切半：break-all
-					    安全换行，完整身份始终可见可下钻（视觉门 V2）。 */}
+					    安全换行，完整身份始终可见可下钻（视觉门 V2）。ISO 时间戳
+					    是不可拆 token：nowrap 让换行只发生在 token 之间，数值
+					    中间不断行。 */}
 					<div className="max-w-lg break-all text-right text-xs leading-5 text-(--color-foreground-tertiary)">
 						复权：{effectiveAdjustment} · experimental：{includeExperimental ? "开" : "关"}
 						<br />
-						{query.data
-							? `决策 ${query.data.as_of} · 可得截止 ${query.data.knowledge_cutoff} · 发布截止 ${query.data.publication_cutoff}`
-							: "读取图表来源中"}
+						{query.data ? (
+							<>
+								决策 <span className="whitespace-nowrap">{query.data.as_of}</span> · 可得截止{" "}
+								<span className="whitespace-nowrap">{query.data.knowledge_cutoff}</span> · 发布截止{" "}
+								<span className="whitespace-nowrap">{query.data.publication_cutoff}</span>
+							</>
+						) : (
+							"读取图表来源中"
+						)}
 						<br />
 						{query.data
 							? `来源 ${query.data.sources.join(", ")} · 快照 ${query.data.source_snapshot_ids.join(", ")} · 日历 ${query.data.calendar_snapshot_ids.join(", ")}`
