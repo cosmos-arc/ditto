@@ -31,6 +31,9 @@ from ditto_strategy.selection.pipeline import SelectionPipeline
 from ditto_strategy.storage.sqlite.industry_rotation_store import (
     SQLiteIndustryRotationStore,
 )
+from ditto_strategy.storage.sqlite.selection_policy_store import (
+    SQLiteSelectionPolicyStore,
+)
 from ditto_strategy.storage.sqlite.selection_run_store import SQLiteSelectionRunStore
 from fastapi import FastAPI
 from packages.application.tests.integration.snapshot_readiness_support import (
@@ -60,14 +63,17 @@ async def test_policy_only_create_replays_and_refuses_client_facts(tmp_path):
         pool = SQLitePool(tmp_path / "runs.sqlite")
         runs = SQLiteSelectionRunStore(pool)
         rotations = SQLiteIndustryRotationStore(pool)
+        policies = SQLiteSelectionPolicyStore(pool)
         runs.init_schema()
         rotations.init_schema()
+        policies.init_schema()
         facade = SelectionWorkspaceFacade(
             RunIndustryAndSecuritySelection(
                 rotation_service=IndustryRotationService(),
                 selection_pipeline=SelectionPipeline(),
                 rotation_writer=rotations,
                 run_writer=runs,
+                policy_writer=policies,
             ),
             readiness=readiness,
             historical_universe=history,

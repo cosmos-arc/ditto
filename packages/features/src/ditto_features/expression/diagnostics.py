@@ -11,6 +11,7 @@ __all__ = [
     "ExpressionCompileError",
     "SourcePosition",
     "Span",
+    "compile_error_category",
     "format_compile_error",
     "make_compile_error",
     "merge_spans",
@@ -106,6 +107,17 @@ def _line_text(source: str, line_number: int) -> str:
     if line_number <= 0 or line_number > len(lines):
         return ""
     return lines[line_number - 1]
+
+
+def compile_error_category(error_code: str) -> str:
+    """
+    Return the single authoritative category label for one error code.
+
+    HTTP previews embed this label in each diagnostic payload so cross-stack
+    consumers display the compiler's own category instead of re-deriving (and
+    drifting from) it.
+    """
+    return _error_category(error_code)
 
 
 def _error_category(error_code: str) -> str:

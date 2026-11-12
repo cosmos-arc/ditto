@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 7d4d9f56463c77df1a21f4f693a633f15111ce02f5050747b84f8a58ca0e8d57
+ * Schema SHA-256: 418e1bbc385c0db23675c9772ade80f6c0277953c834de31cc48d2060035e79b
  * Generator: ditto-operation-response-contracts 4
  */
 
@@ -707,6 +707,26 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "get /api/v1/market/next-day-plans": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/market/next-day-plans/{plan_id}": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "get /api/v1/market/regime": {
     "200": ["application/json"],
     "400": ["application/json"],
@@ -818,6 +838,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/portfolio/comparison": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/portfolio/etf-allocations": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -1128,6 +1158,16 @@ export const operationResponseContracts = {
     "default": ["application/json"],
   },
   "get /api/v1/strategies": {
+    "200": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "get /api/v1/strategies/templates": {
     "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
@@ -1558,6 +1598,16 @@ export const operationResponseContracts = {
     "500": ["application/json"],
     "default": ["application/json"],
   },
+  "post /api/v1/market/next-day-plans": {
+    "201": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
   "post /api/v1/paper/accounts": {
     "201": ["application/json"],
     "400": ["application/json"],
@@ -1770,6 +1820,16 @@ export const operationResponseContracts = {
   },
   "post /api/v1/selections/runs/{run_id}/research-cases": {
     "201": ["application/json"],
+    "400": ["application/json"],
+    "403": ["application/json"],
+    "404": ["application/json"],
+    "409": ["application/json"],
+    "422": ["application/json"],
+    "500": ["application/json"],
+    "default": ["application/json"],
+  },
+  "post /api/v1/selections/runs/{run_id}/strategy-template-drafts": {
+    "200": ["application/json"],
     "400": ["application/json"],
     "403": ["application/json"],
     "404": ["application/json"],
@@ -2361,6 +2421,18 @@ export const operationRequestContracts = {
       "query": ["as_of", "knowledge_cutoff", "publication_cutoff", "source_snapshot_id"],
     },
   },
+  "get /api/v1/market/next-day-plans": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "query": ["limit", "observation_date"],
+    },
+  },
+  "get /api/v1/market/next-day-plans/{plan_id}": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["plan_id"],
+    },
+  },
   "get /api/v1/market/regime": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
@@ -2432,6 +2504,11 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["as_of", "knowledge_cutoff", "manual_account_id", "model_portfolio_id", "paper_account_id", "paper_session_id", "publication_cutoff", "source_snapshot_ids", "strategy_id", "valuation_snapshot_id"],
+    },
+  },
+  "get /api/v1/portfolio/etf-allocations": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
     },
   },
   "get /api/v1/portfolio/etf-allocations/{allocation_id}/versions": {
@@ -2620,6 +2697,11 @@ export const operationRequestContracts = {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "query": ["limit", "offset"],
+    },
+  },
+  "get /api/v1/strategies/templates": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
     },
   },
   "get /api/v1/strategies/{strategy_id}": {
@@ -2857,6 +2939,11 @@ export const operationRequestContracts = {
       "header": ["X-Ditto-API-Contract-Version"],
     },
   },
+  "post /api/v1/market/next-day-plans": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+    },
+  },
   "post /api/v1/paper/accounts": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
@@ -2979,6 +3066,12 @@ export const operationRequestContracts = {
     },
   },
   "post /api/v1/selections/runs/{run_id}/research-cases": {
+    parameters: {
+      "header": ["X-Ditto-API-Contract-Version"],
+      "path": ["run_id"],
+    },
+  },
+  "post /api/v1/selections/runs/{run_id}/strategy-template-drafts": {
     parameters: {
       "header": ["X-Ditto-API-Contract-Version"],
       "path": ["run_id"],

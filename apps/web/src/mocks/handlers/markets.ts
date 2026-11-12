@@ -70,4 +70,5 @@ export const marketsHandlers: RequestHandler[] = [
 			},
 		});
 	}),
+	http.get("/api/v1/market/next-day-plans", () => HttpResponse.json({ data: [] })),
 ];

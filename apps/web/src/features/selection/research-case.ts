@@ -11,6 +11,17 @@ function sameIdSequence(left: readonly number[], right: readonly number[]): bool
 }
 
 /**
+ * 同一时刻的不同 ISO 表示视为相等：创建收据的运行时间带上海时区偏移
+ * （UI 提交本地时间被传输层解释），而 ResearchCase 按合同规范化为 UTC——
+ * 字符串逐字比较会把同一时刻误判为 lineage 漂移。
+ */
+function sameInstant(left: string, right: string): boolean {
+	const leftInstant = Date.parse(left);
+	const rightInstant = Date.parse(right);
+	return leftInstant === rightInstant && !Number.isNaN(leftInstant) && !Number.isNaN(rightInstant);
+}
+
+/**
  * 校验与后端 ResearchCase 合同一致：因果序只要求 publication ≤ knowledge。
  * live 日频车道（issue 583）的决策定在最近完整交易日收盘、以当下知识做
  * 出——knowledge 晚于 as_of 合法，不能再按旧重放车道拒绝。
@@ -30,9 +41,9 @@ export function toResearchCaseView(value: ResearchCase, run: SelectionRun, submi
 		value.asset_kind !== run.asset_kind ||
 		value.universe_snapshot_id !== run.universe_snapshot_id ||
 		value.industry_rotation_snapshot_id !== run.industry_rotation_snapshot_id ||
-		value.as_of !== run.as_of ||
-		value.knowledge_cutoff !== run.knowledge_cutoff ||
-		value.publication_cutoff !== run.publication_cutoff ||
+		!sameInstant(value.as_of, run.as_of) ||
+		!sameInstant(value.knowledge_cutoff, run.knowledge_cutoff) ||
+		!sameInstant(value.publication_cutoff, run.publication_cutoff) ||
 		!sameSnapshotSet(value.source_snapshot_ids, run.source_snapshot_ids) ||
 		!sameSnapshotSet(value.missing_inputs, run.missing_inputs) ||
 		value.selection_status !== run.status ||

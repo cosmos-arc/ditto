@@ -168,6 +168,36 @@ class StrategySpecValidateRequest(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+# ---------------------------------------------------------------------------
+# Research template catalog (template-first strategy authoring)
+# ---------------------------------------------------------------------------
+
+
+class StrategyTemplateParamConstraintResponse(BaseModel):
+    """One template parameter constraint for business-form validation."""
+
+    name: str
+    dtype: str
+    min_value: float | None = None
+    max_value: float | None = None
+    step: float | None = None
+    allowed_values: list[str] = []
+
+
+class StrategyTemplateCatalogEntryResponse(BaseModel):
+    """One committed research template with runnable defaults."""
+
+    template_id: str
+    display_name: str
+    asset_class: str
+    description: str
+    universe: str
+    benchmark: str
+    default_frequency: str
+    required_datasets: list[str]
+    param_constraints: list[StrategyTemplateParamConstraintResponse]
+
+
 class StrategySpecValidationResponse(BaseModel):
     """Canonical hash + validity + change-detection result for a candidate spec."""
 

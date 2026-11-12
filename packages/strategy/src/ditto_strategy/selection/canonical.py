@@ -13,6 +13,7 @@ __all__ = [
     "canonical_run_hash",
     "canonical_run_payload",
     "canonical_spec_hash",
+    "canonical_spec_payload",
 ]
 
 _SCHEMA_VERSION = 1
@@ -308,6 +309,11 @@ def _canonical_hash(payload: object) -> str:
 def canonical_spec_hash(value: _SelectionSpec) -> str:
     """Hash the exact stock- or ETF-specific selection policy."""
     return _canonical_hash(_spec_payload(value))
+
+
+def canonical_spec_payload(value: _SelectionSpec) -> dict[str, object]:
+    """Return the canonical policy payload keyed by ``canonical_spec_hash``."""
+    return _spec_payload(value)
 
 
 def _instrument_payload(value: _InstrumentInput) -> dict[str, object]:

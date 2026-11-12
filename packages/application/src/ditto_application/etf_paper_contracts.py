@@ -43,6 +43,9 @@ class ETFPaperHandoffFacts:
     signal_ledger_hash: str
     next_trading_day: str
     unavailable_reasons: dict[int, tuple[str, ...]] = field(default_factory=dict)
+    # Business tickers of the reference candidates so refusal messages can
+    # name the restricted tools to readers instead of leaking internal ids.
+    tickers: dict[int, str] = field(default_factory=dict)
 
 
 class ETFPaperHandoffFactsPort(Protocol):

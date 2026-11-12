@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { StatusBadge } from "@/components/status";
 import { CatalogLayout, Panel, PanelBody, PanelHeader } from "@/features/shell";
@@ -143,7 +144,14 @@ function TemporalIdentity({ value }: { readonly value: ResearchCaseDetail }) {
 }
 
 /** 单条研究用例详情：重开交接时的目标、日期、来源与候选选择。 */
-export function ResearchCaseDetailPage({ caseId }: { readonly caseId: string }) {
+export function ResearchCaseDetailPage({
+	caseId,
+	strategyHandoffSlot,
+}: {
+	readonly caseId: string;
+	/** 「形成策略版本」工作面：由 workflow 层注入（组合策略创建能力）。 */
+	readonly strategyHandoffSlot?: (value: ResearchCaseDetail) => ReactNode;
+}) {
 	const detail = useQuery({
 		queryKey: researchCaseKeys.detail(caseId),
 		queryFn: () => fetchResearchCaseDetail(caseId),
@@ -288,6 +296,8 @@ export function ResearchCaseDetailPage({ caseId }: { readonly caseId: string }) 
 							</table>
 						)}
 					</section>
+
+					{strategyHandoffSlot?.(value)}
 				</main>
 
 				<aside className="min-w-0 space-y-3" data-info-level="l2" data-info-unit="research-case-inspector">

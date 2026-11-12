@@ -439,10 +439,55 @@ def to_bar_list(df: pl.DataFrame) -> list[Bar]:
     return result
 
 
+class NextDayPlanCandidateNoteResponse(BaseModel):
+    """One candidate identity with the reason it stayed on tomorrow's list."""
+
+    model_config = ConfigDict(extra="forbid", from_attributes=True)
+
+    instrument_id: int = Field(ge=1)
+    reason: str = Field(min_length=1)
+
+
+class NextDayPlanResponse(BaseModel):
+    """One immutable post-market record: reasons and the next-session plan."""
+
+    model_config = ConfigDict(extra="forbid", from_attributes=True)
+
+    plan_id: str = Field(min_length=1)
+    observation_date: date
+    candidate_notes: tuple[NextDayPlanCandidateNoteResponse, ...] = Field(min_length=1)
+    next_day_plan: str = Field(min_length=1)
+    created_at: datetime
+    schema_version: int
+
+
+class NextDayPlanSummaryResponse(BaseModel):
+    """Compact plan summary for the reopen list."""
+
+    model_config = ConfigDict(extra="forbid", from_attributes=True)
+
+    plan_id: str = Field(min_length=1)
+    observation_date: date
+    created_at: datetime
+    candidate_count: int = Field(ge=1)
+    next_day_plan: str = Field(min_length=1)
+
+
+class CreateNextDayPlanBody(BaseModel):
+    """User record for one post-market observation date."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    observation_date: date
+    candidate_notes: tuple[NextDayPlanCandidateNoteResponse, ...] = Field(min_length=1)
+    next_day_plan: str = Field(min_length=1)
+
+
 __all__ = [
     "Adjustment",
     "Bar",
     "BarsQuery",
+    "CreateNextDayPlanBody",
     "EtfNavPoint",
     "EtfNavQuery",
     "EtfNavResponse",
@@ -453,6 +498,9 @@ __all__ = [
     "MarketContextImpactResponse",
     "MarketContextMetricResponse",
     "MarketContextResponse",
+    "NextDayPlanCandidateNoteResponse",
+    "NextDayPlanResponse",
+    "NextDayPlanSummaryResponse",
     "RegimeDiagnosticsResponse",
     "RegimeIndicatorResponse",
     "RegimeObservationResponse",

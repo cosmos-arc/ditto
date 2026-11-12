@@ -1,6 +1,6 @@
 /**
  * DO NOT EDIT: generated from contracts/openapi/v1.json.
- * Schema SHA-256: 7d4d9f56463c77df1a21f4f693a633f15111ce02f5050747b84f8a58ca0e8d57
+ * Schema SHA-256: 418e1bbc385c0db23675c9772ade80f6c0277953c834de31cc48d2060035e79b
  * Generator: openapi-typescript 7.13.0
  */
 
@@ -2316,6 +2316,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/market/next-day-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Next Day Plans
+         * @description Reopen saved post-market plans by their original observation date.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["market_list_next_day_plans"];
+        put?: never;
+        /**
+         * Record Next Day Plan
+         * @description Append one immutable post-market record of candidate reasons and plan.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["market_record_next_day_plan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/market/next-day-plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Next Day Plan
+         * @description Reopen one exact plan; a fixed record never moves under a later date.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["market_get_next_day_plan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/market/regime": {
         parameters: {
             query?: never;
@@ -2709,6 +2759,28 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         get: operations["portfolio_get_comparison"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolio/etf-allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Etf Allocations
+         * @description Reopen saved ETF research allocations by business identity.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["portfolio_list_etf_allocations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3624,6 +3696,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/selections/runs/{run_id}/strategy-template-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose Strategy Template Draft
+         * @description Propose a saveable strategy draft from one exact run and template.
+         *
+         *     The proposal itself is side-effect free; persistence happens through the
+         *     strategy create command with the returned spec_json.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        post: operations["selections_propose_strategy_template_draft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/selections/runs:assembled": {
         parameters: {
             query?: never;
@@ -3735,6 +3832,28 @@ export interface paths {
          *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
          */
         post: operations["strategies_create_strategy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/strategies/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Strategy Templates
+         * @description List the committed research templates strategy authoring may start from.
+         *
+         *     Capability maturity: `initial-focus`. Primary near-term product scope under architecture review.
+         */
+        get: operations["strategies_list_templates"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5023,6 +5142,18 @@ export interface components {
              */
             read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
+        /** APIResponse[NextDayPlanResponse] */
+        APIResponse_NextDayPlanResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["NextDayPlanResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
+        };
         /** APIResponse[PaperAccountCatalogResponse] */
         APIResponse_PaperAccountCatalogResponse_: {
             /** @description 响应数据 */
@@ -5363,6 +5494,18 @@ export interface components {
         APIResponse_StrategySpecValidationResponse_: {
             /** @description 响应数据 */
             data: components["schemas"]["StrategySpecValidationResponse"];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
+        };
+        /** APIResponse[StrategyTemplateDraftProposalResponse] */
+        APIResponse_StrategyTemplateDraftProposalResponse_: {
+            /** @description 响应数据 */
+            data: components["schemas"]["StrategyTemplateDraftProposalResponse"];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
             /**
@@ -5968,6 +6111,21 @@ export interface components {
              */
             read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
         };
+        /** APIResponse[list[StrategyTemplateCatalogEntryResponse]] */
+        APIResponse_list_StrategyTemplateCatalogEntryResponse__: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["StrategyTemplateCatalogEntryResponse"][];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
+        };
         /** APIResponse[list[StrategyVersionResponse]] */
         APIResponse_list_StrategyVersionResponse__: {
             /**
@@ -6067,6 +6225,21 @@ export interface components {
              * @description 响应数据
              */
             data: string[];
+            /** @description 分页信息(可选) */
+            pagination?: components["schemas"]["PaginationResponse"] | null;
+            /**
+             * Read Semantics
+             * @description 读取时间语义（#628）：latest_available=现存行无 PIT 过滤(受限研究) / pit_asof=as_of 可见版本(日粒度=上海日终) / frozen_snapshot=快照重放
+             */
+            read_semantics?: ("latest_available" | "pit_asof" | "frozen_snapshot") | null;
+        };
+        /** APIResponse[tuple[NextDayPlanSummaryResponse, ...]] */
+        APIResponse_tuple_NextDayPlanSummaryResponse__________: {
+            /**
+             * Data
+             * @description 响应数据
+             */
+            data: components["schemas"]["NextDayPlanSummaryResponse"][];
             /** @description 分页信息(可选) */
             pagination?: components["schemas"]["PaginationResponse"] | null;
             /**
@@ -8776,6 +8949,21 @@ export interface components {
              * Format: date-time
              */
             opened_at: string;
+        };
+        /**
+         * CreateNextDayPlanBody
+         * @description User record for one post-market observation date.
+         */
+        CreateNextDayPlanBody: {
+            /** Candidate Notes */
+            candidate_notes: components["schemas"]["NextDayPlanCandidateNoteResponse"][];
+            /** Next Day Plan */
+            next_day_plan: string;
+            /**
+             * Observation Date
+             * Format: date
+             */
+            observation_date: string;
         };
         /**
          * CreatePaperAccountBody
@@ -12005,6 +12193,30 @@ export interface components {
             reason: string;
         };
         /**
+         * HandoffConversionResponse
+         * @description One source field the template faithfully expresses.
+         */
+        HandoffConversionResponse: {
+            /** Detail */
+            detail: string;
+            /** Source */
+            source: string;
+        };
+        /**
+         * HandoffGapResponse
+         * @description One source condition the template cannot express, with explanation.
+         */
+        HandoffGapResponse: {
+            /** Detail */
+            detail: string;
+            /** Explanation */
+            explanation: string;
+            /** Reason Code */
+            reason_code: string;
+            /** Source */
+            source: string;
+        };
+        /**
          * HealthFeatures
          * @description Process-level capabilities reported by liveness.
          */
@@ -13663,6 +13875,62 @@ export interface components {
              * @description 交易日期 (YYYY-MM-DD)
              */
             trade_date: string;
+        };
+        /**
+         * NextDayPlanCandidateNoteResponse
+         * @description One candidate identity with the reason it stayed on tomorrow's list.
+         */
+        NextDayPlanCandidateNoteResponse: {
+            /** Instrument Id */
+            instrument_id: number;
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * NextDayPlanResponse
+         * @description One immutable post-market record: reasons and the next-session plan.
+         */
+        NextDayPlanResponse: {
+            /** Candidate Notes */
+            candidate_notes: components["schemas"]["NextDayPlanCandidateNoteResponse"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Next Day Plan */
+            next_day_plan: string;
+            /**
+             * Observation Date
+             * Format: date
+             */
+            observation_date: string;
+            /** Plan Id */
+            plan_id: string;
+            /** Schema Version */
+            schema_version: number;
+        };
+        /**
+         * NextDayPlanSummaryResponse
+         * @description Compact plan summary for the reopen list.
+         */
+        NextDayPlanSummaryResponse: {
+            /** Candidate Count */
+            candidate_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Next Day Plan */
+            next_day_plan: string;
+            /**
+             * Observation Date
+             * Format: date
+             */
+            observation_date: string;
+            /** Plan Id */
+            plan_id: string;
         };
         /**
          * NodeDescriptorResponse
@@ -16147,6 +16415,86 @@ export interface components {
             valid: boolean;
             /** Version */
             version: number;
+        };
+        /**
+         * StrategyTemplateCatalogEntryResponse
+         * @description One committed research template with runnable defaults.
+         */
+        StrategyTemplateCatalogEntryResponse: {
+            /** Asset Class */
+            asset_class: string;
+            /** Benchmark */
+            benchmark: string;
+            /** Default Frequency */
+            default_frequency: string;
+            /** Description */
+            description: string;
+            /** Display Name */
+            display_name: string;
+            /** Param Constraints */
+            param_constraints: components["schemas"]["StrategyTemplateParamConstraintResponse"][];
+            /** Required Datasets */
+            required_datasets: string[];
+            /** Template Id */
+            template_id: string;
+            /** Universe */
+            universe: string;
+        };
+        /**
+         * StrategyTemplateDraftProposalResponse
+         * @description Side-effect-free draft proposal plus conversion evidence and lineage.
+         */
+        StrategyTemplateDraftProposalResponse: {
+            /** Converted */
+            converted: components["schemas"]["HandoffConversionResponse"][];
+            /** Lineage */
+            lineage: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Spec Json */
+            spec_json: {
+                [key: string]: components["schemas"]["JsonValue-Output"];
+            };
+            /** Template Id */
+            template_id: string;
+            /** Unconverted */
+            unconverted: components["schemas"]["HandoffGapResponse"][];
+        };
+        /**
+         * StrategyTemplateHandoffBody
+         * @description One template choice bound to an exact saved run.
+         */
+        StrategyTemplateHandoffBody: {
+            /** Research Case Id */
+            research_case_id?: string | null;
+            /** Template Id */
+            template_id: string;
+            /**
+             * Universe Id
+             * @description 来源运行的名义池 ID(运行只持久化内容寻址快照时由调用方携带)
+             */
+            universe_id?: string | null;
+        };
+        /**
+         * StrategyTemplateParamConstraintResponse
+         * @description One template parameter constraint for business-form validation.
+         */
+        StrategyTemplateParamConstraintResponse: {
+            /**
+             * Allowed Values
+             * @default []
+             */
+            allowed_values: string[];
+            /** Dtype */
+            dtype: string;
+            /** Max Value */
+            max_value?: number | null;
+            /** Min Value */
+            min_value?: number | null;
+            /** Name */
+            name: string;
+            /** Step */
+            step?: number | null;
         };
         /**
          * StrategyVersionDetailResponse
@@ -26249,6 +26597,273 @@ export interface operations {
             };
         };
     };
+    market_list_next_day_plans: {
+        parameters: {
+            query?: {
+                observation_date?: string | null;
+                limit?: number;
+            };
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_tuple_NextDayPlanSummaryResponse__________"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    market_record_next_day_plan: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNextDayPlanBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_NextDayPlanResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    market_get_next_day_plan: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_NextDayPlanResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     market_get_regime: {
         parameters: {
             query: {
@@ -27824,6 +28439,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_PortfolioComparisonResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portfolio_list_etf_allocations: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_ETFAllocationVersionResponse__"];
                 };
             };
             /** @description Bad request */
@@ -31895,6 +32596,98 @@ export interface operations {
             };
         };
     };
+    selections_propose_strategy_template_draft: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StrategyTemplateHandoffBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_StrategyTemplateDraftProposalResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     selections_assemble_run: {
         parameters: {
             query?: never;
@@ -32284,6 +33077,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIResponse_StrategyResponse_"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request conflicts with current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request or domain validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Structured Ditto API error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    strategies_list_templates: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required. */
+                "X-Ditto-API-Contract-Version"?: "v1";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIResponse_list_StrategyTemplateCatalogEntryResponse__"];
                 };
             };
             /** @description Bad request */

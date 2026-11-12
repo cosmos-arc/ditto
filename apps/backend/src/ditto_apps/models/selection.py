@@ -6,6 +6,7 @@ from datetime import date, datetime
 from typing import Annotated, Literal, cast
 
 from ditto_kernel.identity import InstrumentId
+from ditto_platform.foundation.json_types import JsonValue
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from ditto_apps.models.technical_analysis import HttpDateTime
@@ -38,6 +39,8 @@ __all__ = [
     "SelectionRunResponse",
     "SelectionWorkspaceReceiptResponse",
     "StockSelectionSpecRequest",
+    "StrategyTemplateDraftProposalResponse",
+    "StrategyTemplateHandoffBody",
 ]
 
 _REQUEST_CONFIG = ConfigDict(strict=True, extra="forbid")
@@ -490,3 +493,53 @@ class SelectionRunDiffResponse(BaseModel):
     removed_candidate_ids: tuple[InstrumentId, ...]
     rank_changes: tuple[SelectionRankChangeResponse, ...]
     exclusion_changes: tuple[SelectionExclusionChangeResponse, ...]
+
+
+# ---------------------------------------------------------------------------
+# Strategy template handoff: SelectionRun -> strategy version draft
+# ---------------------------------------------------------------------------
+
+
+class StrategyTemplateHandoffBody(BaseModel):
+    """One template choice bound to an exact saved run."""
+
+    model_config = _REQUEST_CONFIG
+
+    template_id: str = Field(min_length=1)
+    research_case_id: str | None = None
+    universe_id: str | None = Field(
+        default=None,
+        description="来源运行的名义池 ID(运行只持久化内容寻址快照时由调用方携带)",
+    )
+
+
+class HandoffConversionResponse(BaseModel):
+    """One source field the template faithfully expresses."""
+
+    model_config = _RESPONSE_CONFIG
+
+    source: str
+    detail: str
+
+
+class HandoffGapResponse(BaseModel):
+    """One source condition the template cannot express, with explanation."""
+
+    model_config = _RESPONSE_CONFIG
+
+    source: str
+    reason_code: str
+    explanation: str
+    detail: str
+
+
+class StrategyTemplateDraftProposalResponse(BaseModel):
+    """Side-effect-free draft proposal plus conversion evidence and lineage."""
+
+    model_config = _RESPONSE_CONFIG
+
+    template_id: str
+    spec_json: dict[str, JsonValue]
+    converted: tuple[HandoffConversionResponse, ...]
+    unconverted: tuple[HandoffGapResponse, ...]
+    lineage: dict[str, JsonValue]

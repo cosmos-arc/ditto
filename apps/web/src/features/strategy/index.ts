@@ -1,3 +1,5 @@
+export { createStrategy } from "./api/strategy-lifecycle";
+export { useStrategyTemplates } from "./api/strategy-templates";
 export {
 	GovernanceActions,
 	type StrategyGovernanceActionsRenderer,
@@ -17,6 +19,7 @@ export { StrategyListPage } from "./components/strategy-list-page";
 export { StrategyOverview } from "./components/strategy-overview";
 export { StrategyPage } from "./components/strategy-page";
 export { ValidationPanel } from "./components/validation-panel";
+export { useCreateStrategy } from "./hooks/use-create-strategy";
 export { useNodeDescriptors } from "./hooks/use-node-descriptors";
 export { useStrategies } from "./hooks/use-strategies";
 export { useStrategy } from "./hooks/use-strategy";

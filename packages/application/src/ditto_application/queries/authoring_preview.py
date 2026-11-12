@@ -12,7 +12,10 @@ from ditto_features.derived_types import (
     MaterializationProfile,
 )
 from ditto_features.expression.compiler import ExpressionCompiler
-from ditto_features.expression.diagnostics import ExpressionCompileError
+from ditto_features.expression.diagnostics import (
+    ExpressionCompileError,
+    compile_error_category,
+)
 from ditto_kernel.exceptions import DittoError
 from ditto_strategy.alpha.node_registry import NodeRegistry, default_node_registry
 from ditto_strategy.alpha.spec_codec import (
@@ -103,6 +106,7 @@ def _compile_diagnostic(exc: ExpressionCompileError) -> dict[str, object]:
     diagnostic = exc.diagnostic
     return {
         "code": diagnostic.error_code,
+        "category": compile_error_category(diagnostic.error_code),
         "message": diagnostic.message,
         "source_line": diagnostic.source_line,
         "span": asdict(diagnostic.span),

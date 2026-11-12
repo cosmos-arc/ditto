@@ -16,7 +16,7 @@
   "counts": {
     "DEFER/PLANNED": 1,
     "EQUIVALENT/IMPLEMENTED": 6,
-    "IMPLEMENT/IMPLEMENTED": 35
+    "IMPLEMENT/IMPLEMENTED": 36
   },
   "approval_required": {
     "status": "APPROVED",
@@ -1882,6 +1882,52 @@
             "title": "Idempotency-Key"
           }
         },
+        {
+          "name": "X-Ditto-API-Contract-Version",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "const": "v1",
+            "type": "string",
+            "description": "Optional fail-closed assertion that the client targets the v1 HTTP contract. Omit when no assertion is required.",
+            "title": "X-Ditto-Api-Contract-Version"
+          }
+        }
+      ],
+      "maturity": "initial-focus"
+    },
+    {
+      "operation_id": "strategies_list_templates",
+      "method": "GET",
+      "path": "/api/v1/strategies/templates",
+      "request_body_schema": null,
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/APIResponse_list_StrategyTemplateCatalogEntryResponse__"
+        },
+        "400": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "403": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "404": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "409": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "422": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "500": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        },
+        "default": {
+          "$ref": "#/components/schemas/ErrorResponse"
+        }
+      },
+      "parameters": [
         {
           "name": "X-Ditto-API-Contract-Version",
           "in": "header",
@@ -4404,6 +4450,38 @@
       "page_consumers": [
         "Strategy detail versions",
         "Review queue join"
+      ],
+      "controversy_topic": null
+    },
+    {
+      "operation_id": "strategies_list_templates",
+      "design_method": "GET",
+      "design_path": "/api/v1/strategies/templates",
+      "disposition": "IMPLEMENT",
+      "runtime_method": "GET",
+      "runtime_path": "/api/v1/strategies/templates",
+      "equivalent_operation_id": null,
+      "implementation_state": "IMPLEMENTED",
+      "closing_task": null,
+      "dod": [
+        17,
+        18
+      ],
+      "reason": "Runtime-only research template catalog for template-first strategy authoring; registered before the {strategy_id} path capture.",
+      "origins": [
+        "RUNTIME_ONLY"
+      ],
+      "contracts": {
+        "request_identity": "No parameters.",
+        "response_dto": "APIResponse[list[StrategyTemplateCatalogEntryResponse]]",
+        "error_codes": "None; read-only static catalog.",
+        "idempotency": "Read-only; not applicable.",
+        "revision_etag": "Static committed catalog; no ETag.",
+        "maturity": "initial-focus"
+      },
+      "page_consumers": [
+        "Strategy create sheet",
+        "Research case strategy handoff"
       ],
       "controversy_topic": null
     },

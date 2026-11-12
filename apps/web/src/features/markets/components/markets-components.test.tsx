@@ -121,7 +121,7 @@ describe("WatchlistPage", () => {
 		localStorage.setItem("ditto.market-watchlist.v1", "[9999999]");
 		render(<WatchlistPage />, { wrapper: wrapper() });
 		await expect(screen.findByText(/目录中未找到/)).resolves.toBeInTheDocument();
-		expect(screen.getByText(/9999999/)).toBeInTheDocument();
+		expect(screen.getAllByText(/9999999/).length).toBeGreaterThan(0);
 		await expect(screen.findByRole("button", { name: "移除 未知标的 9999999" })).resolves.toBeInTheDocument();
 	});
 

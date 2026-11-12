@@ -11,9 +11,16 @@ from ditto_strategy.industry_rotation.store import (
     IndustryRotationReader,
     IndustryRotationWriter,
 )
+from ditto_strategy.selection.policy_store import (
+    SelectionPolicyReader,
+    SelectionPolicyWriter,
+)
 from ditto_strategy.selection.store import SelectionRunReader, SelectionRunWriter
 from ditto_strategy.storage.sqlite.industry_rotation_store import (
     SQLiteIndustryRotationStore,
+)
+from ditto_strategy.storage.sqlite.selection_policy_store import (
+    SQLiteSelectionPolicyStore,
 )
 from ditto_strategy.storage.sqlite.selection_run_store import SQLiteSelectionRunStore
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
@@ -151,6 +158,32 @@ class StrategyStorageProvider(Provider):
         store = SQLiteSelectionRunStore(sqlite_pool)
         store.init_schema()
         return store
+
+    @provide
+    def selection_policy_store(
+        self,
+        sqlite_pool: SQLitePool,
+    ) -> SQLiteSelectionPolicyStore:
+        """提供 immutable SelectionSpec 条件快照存储."""
+        store = SQLiteSelectionPolicyStore(sqlite_pool)
+        store.init_schema()
+        return store
+
+    @provide
+    def selection_policy_reader(
+        self,
+        selection_policy_store: SQLiteSelectionPolicyStore,
+    ) -> SelectionPolicyReader:
+        """将 SQLite store 注册为 SelectionPolicyReader port."""
+        return selection_policy_store
+
+    @provide
+    def selection_policy_writer(
+        self,
+        selection_policy_store: SQLiteSelectionPolicyStore,
+    ) -> SelectionPolicyWriter:
+        """将 SQLite store 注册为 SelectionPolicyWriter port."""
+        return selection_policy_store
 
     @provide
     def industry_rotation_store(

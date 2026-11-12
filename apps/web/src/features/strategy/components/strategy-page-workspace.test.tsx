@@ -144,8 +144,9 @@ describe("StrategyPage governed workspace", () => {
 		expect(within(sheet).getByText("canonical_hash_consistent")).toBeInTheDocument();
 		expect(within(sheet).getByText("只读预览 · 不可发布")).toBeInTheDocument();
 		expect(requestBody).toMatchObject({ spec_json: { strategy_id: "seed_etf_industry_rotation" } });
+		// derived_id 固定按行号（author_expression_N）：编译结果可映射回编辑器行。
 		expect((requestBody as { expressions: unknown[] }).expressions).toContainEqual({
-			derived_id: "momentum_1m",
+			derived_id: "author_expression_1",
 			version: 1,
 			expression: "momentum_1m",
 		});

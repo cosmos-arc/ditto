@@ -23,6 +23,10 @@ from ditto_strategy.industry_rotation.store import (
     IndustryRotationWriter,
 )
 from ditto_strategy.selection.pipeline import SelectionPipeline
+from ditto_strategy.selection.policy_store import (
+    SelectionPolicyReader,
+    SelectionPolicyWriter,
+)
 from ditto_strategy.selection.store import SelectionRunReader, SelectionRunWriter
 
 from ditto_application.builders.data_provider import ServiceBackedDataProvider
@@ -41,6 +45,9 @@ from ditto_application.processes.selection.facade import SelectionWorkspaceFacad
 from ditto_application.processes.selection.run_industry_and_security_selection import (
     RunIndustryAndSecuritySelection,
 )
+from ditto_application.processes.strategy.template_handoff import (
+    ProposeStrategyTemplateDraft,
+)
 from ditto_application.queries.historical_universe import (
     HistoricalUniverseQuery,
     HistoricalUniverseSources,
@@ -57,6 +64,7 @@ from ditto_application.queries.selection_factor_catalog import (
 )
 from ditto_application.queries.selection_runs import SelectionRunQueryService
 from ditto_application.queries.snapshot_readiness import SnapshotReadinessQuery
+from ditto_application.queries.strategy_templates import StrategyTemplateCatalogQuery
 from ditto_application.research_case_contracts import (
     ResearchCaseFactory,
     ResearchCaseReader,
@@ -310,6 +318,7 @@ class AppSelectionProvider(Provider):
         selection_pipeline: SelectionPipeline,
         rotation_writer: IndustryRotationWriter,
         run_writer: SelectionRunWriter,
+        policy_writer: SelectionPolicyWriter,
     ) -> RunIndustryAndSecuritySelection:
         """Bind the cross-plane selection process to strategy ports."""
         return RunIndustryAndSecuritySelection(
@@ -317,6 +326,7 @@ class AppSelectionProvider(Provider):
             selection_pipeline=selection_pipeline,
             rotation_writer=rotation_writer,
             run_writer=run_writer,
+            policy_writer=policy_writer,
         )
 
     @provide
@@ -382,6 +392,25 @@ class AppSelectionProvider(Provider):
     ) -> SelectionRunQueryService:
         """Expose exact saved SelectionRun reads and comparisons."""
         return SelectionRunQueryService(reader)
+
+    @provide
+    def strategy_template_catalog_query(self) -> StrategyTemplateCatalogQuery:
+        """Serve the committed research templates for template-first authoring."""
+        return StrategyTemplateCatalogQuery()
+
+    @provide
+    def propose_strategy_template_draft(
+        self,
+        run_reader: SelectionRunReader,
+        policy_reader: SelectionPolicyReader,
+        case_reader: ResearchCaseReader,
+    ) -> ProposeStrategyTemplateDraft:
+        """Bind exact run/policy/case reads to the template handoff proposal."""
+        return ProposeStrategyTemplateDraft(
+            run_reader=run_reader,
+            policy_reader=policy_reader,
+            case_reader=case_reader,
+        )
 
     @provide
     def industry_rotation_query_service(

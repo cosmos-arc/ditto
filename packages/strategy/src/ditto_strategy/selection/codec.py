@@ -1,4 +1,4 @@
-"""Canonical persistence codec for immutable SelectionRun values."""
+"""Canonical persistence codecs for immutable selection values."""
 
 from __future__ import annotations
 
@@ -10,18 +10,31 @@ import orjson
 from ditto_kernel.identity import InstrumentId
 
 from ditto_strategy.errors import StrategySpecError
+from ditto_strategy.selection.canonical import canonical_spec_payload
 from ditto_strategy.selection.contracts import (
+    EtfSelectionSpec,
     SelectionAssetKind,
     SelectionCandidate,
+    SelectionConditionOperator,
     SelectionExclusion,
     SelectionExclusionReason,
+    SelectionFactorCondition,
     SelectionFactorContribution,
+    SelectionFactorWeight,
+    SelectionLimitState,
     SelectionRun,
     SelectionRunStatus,
+    StockSelectionSpec,
     canonical_run_payload,
+    canonical_spec_hash,
 )
 
-__all__ = ["decode_selection_run", "encode_selection_run"]
+__all__ = [
+    "decode_selection_policy",
+    "decode_selection_run",
+    "encode_selection_policy",
+    "encode_selection_run",
+]
 
 
 def encode_selection_run(value: SelectionRun) -> bytes:
@@ -201,3 +214,124 @@ def decode_selection_run(
             },
         )
     return run
+
+
+def encode_selection_policy(
+    value: StockSelectionSpec | EtfSelectionSpec,
+) -> bytes:
+    """Encode one validated selection policy as its canonical spec payload."""
+    return orjson.dumps(canonical_spec_payload(value), option=orjson.OPT_SORT_KEYS)
+
+
+def _policy_spec(
+    payload: Mapping[str, object],
+) -> StockSelectionSpec | EtfSelectionSpec:
+    asset_kind = SelectionAssetKind(
+        _text(payload["asset_kind"], field_name="asset_kind")
+    )
+    factor_weights = tuple(
+        SelectionFactorWeight(
+            _text(
+                _mapping(item, field_name="factor_weights")["name"],
+                field_name="factor_weights.name",
+            ),
+            _number(
+                _mapping(item, field_name="factor_weights")["weight"],
+                field_name="factor_weights.weight",
+            ),
+        )
+        for item in _array(payload["factor_weights"], field_name="factor_weights")
+    )
+    filter_groups = tuple(
+        tuple(
+            SelectionFactorCondition(
+                _text(
+                    _mapping(condition, field_name="filter_groups")["factor_name"],
+                    field_name="filter_groups.factor_name",
+                ),
+                SelectionConditionOperator(
+                    _text(
+                        _mapping(condition, field_name="filter_groups")["operator"],
+                        field_name="filter_groups.operator",
+                    )
+                ),
+                _number(
+                    _mapping(condition, field_name="filter_groups")["value"],
+                    field_name="filter_groups.value",
+                ),
+            )
+            for condition in _array(group, field_name="filter_groups")
+        )
+        for group in _array(
+            payload.get("filter_groups", []),
+            field_name="filter_groups",
+        )
+    )
+    excluded_limit_states = tuple(
+        SelectionLimitState(_text(item, field_name="excluded_limit_states"))
+        for item in _array(
+            payload["excluded_limit_states"], field_name="excluded_limit_states"
+        )
+    )
+    if asset_kind is SelectionAssetKind.STOCK:
+        return StockSelectionSpec(
+            spec_id=_text(payload["spec_id"], field_name="spec_id"),
+            spec_version=_text(payload["spec_version"], field_name="spec_version"),
+            top_k=_integer(payload["top_k"], field_name="top_k"),
+            min_average_turnover=_number(
+                payload["min_average_turnover"], field_name="min_average_turnover"
+            ),
+            min_listing_days=_integer(
+                payload["min_listing_days"], field_name="min_listing_days"
+            ),
+            factor_weights=factor_weights,
+            excluded_limit_states=excluded_limit_states,
+            filter_groups=filter_groups,
+        )
+    max_tracking_error = payload.get("max_tracking_error")
+    return EtfSelectionSpec(
+        spec_id=_text(payload["spec_id"], field_name="spec_id"),
+        spec_version=_text(payload["spec_version"], field_name="spec_version"),
+        top_k=_integer(payload["top_k"], field_name="top_k"),
+        min_average_turnover=_number(
+            payload["min_average_turnover"], field_name="min_average_turnover"
+        ),
+        min_listing_days=_integer(
+            payload["min_listing_days"], field_name="min_listing_days"
+        ),
+        factor_weights=factor_weights,
+        excluded_limit_states=excluded_limit_states,
+        filter_groups=filter_groups,
+        max_tracking_error=(
+            None
+            if max_tracking_error is None
+            else _number(max_tracking_error, field_name="max_tracking_error")
+        ),
+    )
+
+
+def decode_selection_policy(
+    value: bytes | bytearray | memoryview | str,
+    *,
+    expected_spec_hash: str,
+) -> StockSelectionSpec | EtfSelectionSpec:
+    """Decode one policy snapshot and fail closed on detached identity."""
+    try:
+        payload = _mapping(orjson.loads(value), field_name="policy")
+        spec = _policy_spec(payload)
+    except StrategySpecError:
+        raise
+    except (KeyError, TypeError, ValueError, orjson.JSONDecodeError) as exc:
+        raise StrategySpecError(
+            "persisted selection policy payload is invalid",
+            details={"reason": "invalid_persisted_selection_policy"},
+        ) from exc
+    if canonical_spec_hash(spec) != expected_spec_hash:
+        raise StrategySpecError(
+            "persisted selection policy identity mismatch",
+            details={
+                "reason": "selection_policy_identity_mismatch",
+                "expected_spec_hash": expected_spec_hash,
+            },
+        )
+    return spec

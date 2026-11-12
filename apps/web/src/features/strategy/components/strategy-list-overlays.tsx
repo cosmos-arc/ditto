@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { StrategyDetail, StrategyListItem, StrategySpec } from "@/types/strategy";
+import { useStrategyTemplates } from "../api/strategy-templates";
 import { useCreateStrategy } from "../hooks";
 
 export type StrategyListOverlay = "create" | "clone" | "delete";
@@ -84,6 +85,7 @@ function StrategyDraftSheet({
 	readonly selected: StrategyListItem | null;
 }) {
 	const create = useCreateStrategy();
+	const templates = useStrategyTemplates();
 	const attempt = useRef<{ readonly payload: string; readonly key: string } | null>(null);
 	const clone = mode === "clone";
 	const source = clone ? detail : undefined;
@@ -109,9 +111,16 @@ function StrategyDraftSheet({
 			.split(",")
 			.map((tag) => tag.trim())
 			.filter(Boolean);
+		const entry = (templates.data ?? []).find((item) => item.template_id === template);
 		const spec = source
 			? { ...source.spec, strategyId, name, universe: universe || source.spec.universe }
-			: blankSpec({ assetClass, name, strategyId, template, universe });
+			: blankSpec({
+					assetClass: assetClass || entry?.asset_class || "etf",
+					name,
+					strategyId,
+					template,
+					universe: universe || entry?.universe || "",
+				});
 		const payload = JSON.stringify({ name, spec, strategyId, tags });
 		const previous = attempt.current;
 		const idempotencyKey = previous?.payload === payload ? previous.key : commandKey();
@@ -176,14 +185,45 @@ function StrategyDraftSheet({
 						</label>
 						<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary)">
 							策略模板
-							<input
+							<select
 								aria-label="策略模板"
 								name="template"
 								required
-								defaultValue={source?.spec.template ?? "custom"}
+								defaultValue={source?.spec.template ?? ""}
 								className={FIELD_CLASS}
-							/>
+								data-testid="strategy-template-select"
+								onChange={(event) => {
+									// 模板决定资产类别：选择模板时同步资产类型，避免手工错配。
+									const selected = (templates.data ?? []).find(
+										(entry) => entry.template_id === event.currentTarget.value,
+									);
+									if (!selected) return;
+									const form = event.currentTarget.form;
+									const assetClass = form?.elements.namedItem("assetClass");
+									if (assetClass instanceof HTMLSelectElement) {
+										assetClass.value = selected.asset_class;
+									}
+								}}
+							>
+								{clone ? null : <option value="">选择研究模板</option>}
+								{(templates.data ?? []).map((entry) => (
+									<option key={entry.template_id} value={entry.template_id}>
+										{entry.display_name} · {entry.template_id}
+									</option>
+								))}
+								{source && !templates.data?.some((entry) => entry.template_id === source.spec.template) ? (
+									<option value={source.spec.template}>{source.spec.template}（既有模板）</option>
+								) : null}
+							</select>
 						</label>
+						{templates.isError ? (
+							<p role="alert" className="text-xs text-(--color-led-danger)">
+								模板目录加载失败：{errorMessage(templates.error)}{" "}
+								<button type="button" className="underline" onClick={() => void templates.refetch()}>
+									重试
+								</button>
+							</p>
+						) : null}
 						<label className="flex flex-col gap-1 text-xs text-(--color-foreground-secondary)">
 							Universe
 							<input

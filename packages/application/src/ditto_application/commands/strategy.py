@@ -309,7 +309,14 @@ class CreateStrategyHandler:
             if replay is not None:
                 return replay
             msg = f"Strategy already exists: {command.strategy_id}"
-            raise AppCommandError(msg) from exc
+            raise AppCommandError(
+                msg,
+                details={
+                    "code": "STRATEGY_ALREADY_EXISTS",
+                    "reason": "strategy_already_exists",
+                    "strategy_id": command.strategy_id,
+                },
+            ) from exc
         return result
 
 
@@ -424,7 +431,15 @@ class UpdateStrategyHandler:
             msg = (
                 f"Strategy version already exists: {command.strategy_id} v{new_version}"
             )
-            raise AppCommandError(msg) from exc
+            raise AppCommandError(
+                msg,
+                details={
+                    "code": "STRATEGY_VERSION_ALREADY_EXISTS",
+                    "reason": "strategy_version_already_exists",
+                    "strategy_id": command.strategy_id,
+                    "version": new_version,
+                },
+            ) from exc
         return result
 
 

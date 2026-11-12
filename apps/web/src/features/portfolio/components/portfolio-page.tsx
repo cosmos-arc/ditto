@@ -20,6 +20,8 @@ import { SignalToOrderPipelineStrip } from "./signal-to-order-pipeline-strip";
 interface PortfolioPageProps {
 	readonly comparisonRunId?: string | undefined;
 	readonly mode?: PortfolioMode;
+	// 组合根注入的业务身份解析；ETF 复盘用它把目标/持仓显示为业务代码。
+	readonly resolveInstrument?: ((instrumentId: number) => Promise<{ readonly ticker: string } | null>) | undefined;
 }
 
 export type PortfolioMode = "comparison" | "manual" | "model" | "paper";
@@ -94,7 +96,7 @@ function AttributionPanel({ comparisonRunId }: PortfolioPageProps) {
 	);
 }
 
-export function PortfolioPage({ comparisonRunId, mode }: PortfolioPageProps = {}) {
+export function PortfolioPage({ comparisonRunId, mode, resolveInstrument }: PortfolioPageProps = {}) {
 	const liveMode = !shouldUsePrototypeMocks();
 	const search = new URLSearchParams(window.location.search);
 	const [etfReviewContext, setEtfReviewContext] = useState(() => ({
@@ -134,7 +136,13 @@ export function PortfolioPage({ comparisonRunId, mode }: PortfolioPageProps = {}
 		const etfAllocation = search.get("etfAllocation");
 		return (
 			<div className="flex flex-col gap-6">
-				{etfAllocation && <ETFAllocationReview allocationId={etfAllocation} onContextChange={setEtfReviewContext} />}
+				{etfAllocation && (
+					<ETFAllocationReview
+						allocationId={etfAllocation}
+						onContextChange={setEtfReviewContext}
+						resolveInstrument={resolveInstrument}
+					/>
+				)}
 				<HistoryComparisonPanel
 					key={`${etfReviewContext.versionId}:${etfReviewContext.account}`}
 					etfAllocationId={etfAllocation ?? undefined}

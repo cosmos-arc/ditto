@@ -34,6 +34,40 @@ describe("toResearchCaseView", () => {
 		expect(view.degraded).toBe(false);
 	});
 
+	it("accepts equivalent instants across UTC and offset run receipt formats", () => {
+		// 创建收据的运行时间带上海偏移，ResearchCase 规范化为 UTC：同一时刻
+		// 不能因传输格式不同被误判为 lineage 漂移（直接从新运行建用例的链路）。
+		const { value } = liveLaneCase();
+		const offsetRun: SelectionRun = {
+			...selectionRunFixtures[0],
+			as_of: "2026-11-10T15:00:00+08:00",
+			knowledge_cutoff: "2026-11-11T17:30:00+08:00",
+			publication_cutoff: "2026-11-11T17:00:00+08:00",
+		};
+
+		const view = toResearchCaseView(value, offsetRun, {
+			objective: value.objective,
+			candidate_instrument_ids: [...value.candidate_instrument_ids],
+		});
+
+		expect(view.caseId).toBe(value.case_id);
+	});
+
+	it("still rejects a genuinely different decision time regardless of format", () => {
+		const { value, run } = liveLaneCase();
+		const shifted: SelectionRun = {
+			...run,
+			as_of: "2026-11-10T15:00:00+08:01",
+		};
+
+		expect(() =>
+			toResearchCaseView(value, shifted, {
+				objective: value.objective,
+				candidate_instrument_ids: [],
+			}),
+		).toThrow(/lineage、schema 版本或提交范围与请求不一致/);
+	});
+
 	it("rejects a case whose publication cutoff violates the knowledge cutoff", () => {
 		const { value, run } = liveLaneCase();
 		const broken: ResearchCase = {
