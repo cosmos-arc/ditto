@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
 
+from ditto_application.contracts import StrategySpecInfo
 from ditto_application.exceptions import AppCommandError
 from ditto_application.research_judgment_contracts import (
     JudgmentClock,
@@ -13,7 +15,11 @@ from ditto_application.research_judgment_contracts import (
     ResearchJudgmentView,
 )
 
-__all__ = ["RecordResearchJudgment", "RecordResearchJudgmentRequest"]
+__all__ = [
+    "JudgmentStrategyVersionReader",
+    "RecordResearchJudgment",
+    "RecordResearchJudgmentRequest",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +32,16 @@ class RecordResearchJudgmentRequest:
     strategy_version: int | None = None
 
 
+class JudgmentStrategyVersionReader(Protocol):
+    """Narrow read port proving a follow-up strategy version exists."""
+
+    def get_spec(
+        self, strategy_id: str, version: int | None = None
+    ) -> StrategySpecInfo | None:
+        """Return one cataloged strategy version or ``None`` when absent."""
+        ...
+
+
 class RecordResearchJudgment:
     """Validate one judgment, stamp the server clock and append it."""
 
@@ -35,17 +51,19 @@ class RecordResearchJudgment:
         factory: ResearchJudgmentFactory,
         recorder: ResearchJudgmentRecorder,
         clock: JudgmentClock,
+        strategy_version_reader: JudgmentStrategyVersionReader,
     ) -> None:
         self._factory = factory
         self._recorder = recorder
         self._clock = clock
+        self._strategy_version_reader = strategy_version_reader
 
     def record(self, request: RecordResearchJudgmentRequest) -> ResearchJudgmentView:
         """Persist one immutable judgment and return its exact view."""
         run_ids = _run_ids(request.run_ids)
         judgment_text = _text(request.judgment, field_name="judgment")
-        strategy_id, strategy_version = _strategy_reference(
-            request.strategy_id, request.strategy_version
+        strategy_id, strategy_version = self._existing_strategy_reference(
+            *_strategy_reference(request.strategy_id, request.strategy_version)
         )
         view = self._factory.create(
             ResearchJudgmentMaterial(
@@ -57,6 +75,27 @@ class RecordResearchJudgment:
             )
         )
         return self._recorder.save(view)
+
+    def _existing_strategy_reference(
+        self, strategy_id: str | None, strategy_version: int | None
+    ) -> tuple[str | None, int | None]:
+        """Fail closed: a cited follow-up strategy version must exist."""
+        if strategy_id is None or strategy_version is None:
+            return None, None
+        if (
+            self._strategy_version_reader.get_spec(strategy_id, strategy_version)
+            is None
+        ):
+            raise AppCommandError(
+                f"Strategy version not found: {strategy_id} v{strategy_version}",
+                details={
+                    "code": "STRATEGY_VERSION_NOT_FOUND",
+                    "reason": "strategy_version_not_found",
+                    "strategy_id": strategy_id,
+                    "version": strategy_version,
+                },
+            )
+        return strategy_id, strategy_version
 
 
 def _run_ids(values: tuple[str, ...]) -> tuple[str, ...]:

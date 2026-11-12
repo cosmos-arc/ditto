@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 import pytest
+from ditto_application.contracts import StrategySpecInfo
 from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.research.record_research_judgment import (
     RecordResearchJudgment,
@@ -18,6 +19,12 @@ from ditto_application.research_judgment_contracts import (
 )
 
 _CREATED = datetime(2026, 11, 10, 15, 5, tzinfo=UTC)
+_STRATEGY_SPEC = StrategySpecInfo(
+    strategy_id="sys-fx-etf-rotation",
+    name="ETF 轮动",
+    spec_json={},
+    version=1,
+)
 
 
 @dataclass(frozen=True)
@@ -72,6 +79,21 @@ class _Recorder:
         return judgment
 
 
+class _StrategyVersionReader:
+    """Reader port stub exposing exactly one cataloged strategy version."""
+
+    def __init__(self, *specs: StrategySpecInfo) -> None:
+        self._specs = {(spec.strategy_id, spec.version): spec for spec in specs}
+        self.requested: list[tuple[str, int]] = []
+
+    def get_spec(
+        self, strategy_id: str, version: int | None = None
+    ) -> StrategySpecInfo | None:
+        assert version is not None
+        self.requested.append((strategy_id, version))
+        return self._specs.get((strategy_id, version))
+
+
 def _request() -> RecordResearchJudgmentRequest:
     return RecordResearchJudgmentRequest(
         run_ids=("sys-fx-nav-001", "sys-fx-nav-002"),
@@ -82,7 +104,10 @@ def _request() -> RecordResearchJudgmentRequest:
 def test_record_stamps_the_server_clock_and_persists_the_view() -> None:
     factory, recorder = _Factory(), _Recorder()
     process = RecordResearchJudgment(
-        factory=factory, recorder=recorder, clock=lambda: _CREATED
+        factory=factory,
+        recorder=recorder,
+        clock=lambda: _CREATED,
+        strategy_version_reader=_StrategyVersionReader(_STRATEGY_SPEC),
     )
 
     view = process.record(_request())
@@ -99,7 +124,12 @@ def test_record_stamps_the_server_clock_and_persists_the_view() -> None:
 def test_record_carries_the_optional_follow_up_strategy_reference() -> None:
     factory, recorder = _Factory(), _Recorder()
     process = RecordResearchJudgment(
-        factory=factory, recorder=recorder, clock=lambda: _CREATED
+        factory=factory,
+        recorder=recorder,
+        clock=lambda: _CREATED,
+        strategy_version_reader=_StrategyVersionReader(
+            replace(_STRATEGY_SPEC, version=2)
+        ),
     )
 
     view = process.record(
@@ -114,6 +144,33 @@ def test_record_carries_the_optional_follow_up_strategy_reference() -> None:
     assert view.strategy_id == "sys-fx-etf-rotation"
     assert view.strategy_version == 2
     assert recorder.saved == [view]
+
+
+def test_record_rejects_a_follow_up_strategy_version_that_does_not_exist() -> None:
+    factory, recorder = _Factory(), _Recorder()
+    reader = _StrategyVersionReader()  # 空目录：任何策略版本引用都不可解析
+    process = RecordResearchJudgment(
+        factory=factory,
+        recorder=recorder,
+        clock=lambda: _CREATED,
+        strategy_version_reader=reader,
+    )
+
+    with pytest.raises(AppCommandError, match="Strategy version not found") as exc_info:
+        process.record(
+            RecordResearchJudgmentRequest(
+                run_ids=("sys-fx-nav-001",),
+                judgment="转入不存在的策略版本验证",
+                strategy_id="ghost-strategy",
+                strategy_version=7,
+            )
+        )
+
+    assert exc_info.value.details["reason"] == "strategy_version_not_found"
+    assert reader.requested == [("ghost-strategy", 7)]
+    # Fail closed 发生在持久化之前：不落幽灵策略引用。
+    assert recorder.saved == []
+    assert factory.materials == []
 
 
 @pytest.mark.parametrize(
@@ -135,7 +192,10 @@ def test_record_rejects_invalid_user_input(
     mutation: Callable[[RecordResearchJudgmentRequest], RecordResearchJudgmentRequest],
 ) -> None:
     process = RecordResearchJudgment(
-        factory=_Factory(), recorder=_Recorder(), clock=lambda: _CREATED
+        factory=_Factory(),
+        recorder=_Recorder(),
+        clock=lambda: _CREATED,
+        strategy_version_reader=_StrategyVersionReader(_STRATEGY_SPEC),
     )
 
     with pytest.raises(AppCommandError):

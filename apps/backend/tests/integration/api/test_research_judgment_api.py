@@ -14,6 +14,7 @@ from ditto_application.processes.research.record_research_judgment import (
 from ditto_application.queries.research_judgments import (
     ResearchJudgmentQueryService,
 )
+from ditto_application.queries.strategy import StrategyQueryFacade
 from ditto_apps.api.routes.research_judgment_routes import router
 from ditto_apps.middleware import configure_exception_handlers
 from ditto_apps.registry.research_judgment import (
@@ -21,8 +22,50 @@ from ditto_apps.registry.research_judgment import (
     AnalysisResearchJudgmentStoreAdapter,
 )
 from ditto_platform.foundation import SQLiteClient, SQLitePool
+from ditto_strategy.governance.service import GovernanceService
+from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
+    StrategyCatalogService,
+)
+from ditto_strategy.storage.sqlite.strategy_governance_store import (
+    SQLiteStrategyGovernanceStore,
+)
+from ditto_strategy.storage.sqlite.strategy_spec_store import (
+    SQLiteStrategySpecReader,
+    SQLiteStrategySpecWriter,
+)
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
+_STRATEGY_ID = "sys-fx-etf-rotation"
+_PUBLISHED_VERSION = 1
+
+
+def _seed_published_strategy_version(pool: SQLitePool) -> None:
+    """Seed one real published strategy version behind the reader port."""
+    governance_store = SQLiteStrategyGovernanceStore(pool)
+    governance_store.init_schema()
+    SQLiteStrategySpecWriter(pool).init_schema()
+    if governance_store.get_version(_STRATEGY_ID, _PUBLISHED_VERSION) is not None:
+        return  # already seeded by an earlier app instance over the same file
+    governance = GovernanceService(governance_store)
+    governance.create_draft(
+        strategy_id=_STRATEGY_ID,
+        version=_PUBLISHED_VERSION,
+        spec_record=StrategySpecRecord(
+            strategy_id=_STRATEGY_ID,
+            name="ETF 轮动-判断验证入口",
+            spec_json={"strategy_id": _STRATEGY_ID, "params": {"slow_period": 20}},
+        ),
+        created_at="2026-11-09T00:00:00Z",
+    )
+    governance.publish_and_activate(
+        strategy_id=_STRATEGY_ID,
+        version=_PUBLISHED_VERSION,
+        actor="seed",
+        reason="test: judgment verification entry",
+        decided_at="2026-11-09T00:00:00Z",
+    )
 
 
 def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
@@ -30,6 +73,17 @@ def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
     client = SQLiteClient(pool)
     store = SQLiteResearchJudgmentStore(client)
     store.init_schema()
+    _seed_published_strategy_version(pool)
+    governance_store = SQLiteStrategyGovernanceStore(pool)
+    strategy_query = StrategyQueryFacade(
+        catalog_service=StrategyCatalogService(
+            reader=SQLiteStrategySpecReader(pool),
+            writer=SQLiteStrategySpecWriter(pool),
+            active_pointer_reader=governance_store,
+            version_state_reader=governance_store,
+        ),
+        version_state_reader=governance_store,
+    )
     recording_minutes = iter(range(5, 60))
 
     def _clock() -> datetime:
@@ -44,6 +98,7 @@ def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
                 factory=AnalysisResearchJudgmentFactory(),
                 recorder=AnalysisResearchJudgmentStoreAdapter(store),
                 clock=_clock,
+                strategy_version_reader=strategy_query,
             )
 
         @provide
@@ -147,17 +202,50 @@ def test_http_judgment_carries_the_follow_up_strategy_reference(
                 "/api/v1/research/judgments",
                 json={
                     **_body(),
-                    "strategy_id": "sys-fx-etf-rotation",
-                    "strategy_version": 2,
+                    "strategy_id": _STRATEGY_ID,
+                    "strategy_version": _PUBLISHED_VERSION,
                 },
             )
             assert created.status_code == 201, created.text
             data = created.json()["data"]
-            assert data["strategy_id"] == "sys-fx-etf-rotation"
-            assert data["strategy_version"] == 2
+            assert data["strategy_id"] == _STRATEGY_ID
+            assert data["strategy_version"] == _PUBLISHED_VERSION
             # The strategy reference changes the content identity.
             plain = web.post("/api/v1/research/judgments", json=_body())
             assert plain.status_code == 201
             assert plain.json()["data"]["judgment_id"] != data["judgment_id"]
+    finally:
+        pool.close_all()
+
+
+def test_http_judgment_rejects_ghost_strategy_references(tmp_path: Path) -> None:
+    """Ghost strategy/version references fail closed before persistence."""
+    app, pool = _app(tmp_path / "judgments.sqlite")
+    try:
+        with TestClient(app, raise_server_exceptions=False) as web:
+            ghost_strategy = web.post(
+                "/api/v1/research/judgments",
+                json={
+                    **_body(),
+                    "strategy_id": "ghost-strategy",
+                    "strategy_version": 7,
+                },
+            )
+            assert ghost_strategy.status_code == 422, ghost_strategy.text
+            assert ghost_strategy.json()["error_code"] == "STRATEGY_VERSION_NOT_FOUND"
+            ghost_version = web.post(
+                "/api/v1/research/judgments",
+                json={
+                    **_body(),
+                    "strategy_id": _STRATEGY_ID,
+                    "strategy_version": _PUBLISHED_VERSION + 5,
+                },
+            )
+            assert ghost_version.status_code == 422, ghost_version.text
+            assert ghost_version.json()["error_code"] == "STRATEGY_VERSION_NOT_FOUND"
+            # Nothing was persisted by the rejected records.
+            listed = web.get("/api/v1/research/judgments")
+            assert listed.status_code == 200
+            assert listed.json()["data"] == []
     finally:
         pool.close_all()

@@ -16,6 +16,8 @@ import type { BacktestRun } from "../types";
  */
 
 const JUDGMENTS_KEY = ["research-judgments"] as const;
+// 列表读取的显式请求量：返回条数达到该值时如实披露可能存在截断。
+const JUDGMENTS_LIMIT = 20;
 
 type Props = {
 	/** 会话比较集合（判断绑定的明确运行身份，选择序原样冻结）。 */
@@ -51,7 +53,10 @@ export function BacktestJudgmentSection({ runIds, runs }: Props) {
 			void queryClient.invalidateQueries({ queryKey: JUDGMENTS_KEY });
 		},
 	});
-	const judgments = useQuery({ queryKey: JUDGMENTS_KEY, queryFn: listResearchJudgments });
+	const judgments = useQuery({
+		queryKey: JUDGMENTS_KEY,
+		queryFn: () => listResearchJudgments(JUDGMENTS_LIMIT),
+	});
 	const canSave = runIds.length > 0 && judgmentText.trim().length > 0 && !save.isPending;
 	return (
 		<section
@@ -114,6 +119,11 @@ export function BacktestJudgmentSection({ runIds, runs }: Props) {
 				)}
 				{!judgments.isError && (judgments.data ?? []).length === 0 && (
 					<p className="text-xs text-(--color-foreground-tertiary)">还没有保存过的研究判断。</p>
+				)}
+				{(judgments.data ?? []).length >= JUDGMENTS_LIMIT && (
+					<p data-testid="judgment-list-truncated" className="text-xs text-(--color-foreground-tertiary)">
+						仅显示最近 {JUDGMENTS_LIMIT} 条
+					</p>
 				)}
 				{(judgments.data ?? []).map((item) => (
 					<JudgmentEntry key={item.judgmentId} summary={item} />

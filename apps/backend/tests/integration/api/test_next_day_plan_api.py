@@ -7,18 +7,41 @@ from pathlib import Path
 
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
-from ditto_analysis.storage.sqlite.research import SQLiteNextDayPlanStore
+from ditto_analysis.storage.sqlite.research import (
+    SQLiteNextDayPlanStore,
+    SQLiteResearchJudgmentStore,
+)
 from ditto_application.processes.markets.record_next_day_plan import RecordNextDayPlan
+from ditto_application.processes.research.record_research_judgment import (
+    RecordResearchJudgment,
+)
 from ditto_application.queries.next_day_plans import NextDayPlanQueryService
+from ditto_application.queries.research_judgments import (
+    ResearchJudgmentQueryService,
+)
 from ditto_apps.api.routes.market import router
+from ditto_apps.api.routes.research_judgment_routes import (
+    router as judgment_router,
+)
 from ditto_apps.middleware import configure_exception_handlers
 from ditto_apps.registry.next_day_plan import (
     AnalysisNextDayPlanFactory,
     AnalysisNextDayPlanStoreAdapter,
 )
+from ditto_apps.registry.research_judgment import (
+    AnalysisResearchJudgmentFactory,
+    AnalysisResearchJudgmentStoreAdapter,
+)
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
+
+class _NoStrategyVersions:
+    """Reader port stub: this test files no judgment strategy references."""
+
+    def get_spec(self, strategy_id: str, version: int | None = None) -> None:
+        return None
 
 
 def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
@@ -26,6 +49,8 @@ def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
     client = SQLiteClient(pool)
     store = SQLiteNextDayPlanStore(client)
     store.init_schema()
+    judgment_store = SQLiteResearchJudgmentStore(client)
+    judgment_store.init_schema()
     recording_minutes = iter(range(5, 60))
 
     def _clock() -> datetime:
@@ -40,16 +65,33 @@ def _app(path: Path) -> tuple[FastAPI, SQLitePool]:
                 factory=AnalysisNextDayPlanFactory(),
                 recorder=AnalysisNextDayPlanStoreAdapter(store),
                 clock=_clock,
+                judgment_reader=AnalysisResearchJudgmentStoreAdapter(judgment_store),
             )
 
         @provide
         def plan_query(self) -> NextDayPlanQueryService:
             return NextDayPlanQueryService(AnalysisNextDayPlanStoreAdapter(store))
 
+        @provide
+        def judgment_record_process(self) -> RecordResearchJudgment:
+            return RecordResearchJudgment(
+                factory=AnalysisResearchJudgmentFactory(),
+                recorder=AnalysisResearchJudgmentStoreAdapter(judgment_store),
+                clock=_clock,
+                strategy_version_reader=_NoStrategyVersions(),
+            )
+
+        @provide
+        def judgment_query(self) -> ResearchJudgmentQueryService:
+            return ResearchJudgmentQueryService(
+                AnalysisResearchJudgmentStoreAdapter(judgment_store)
+            )
+
     app = FastAPI()
     configure_exception_handlers(app)
     setup_dishka(container=make_async_container(TestProvider()), app=app)
     app.include_router(router, prefix="/api/v1")
+    app.include_router(judgment_router, prefix="/api/v1")
     return app, pool
 
 
@@ -61,6 +103,13 @@ def _body() -> dict[str, object]:
             {"instrument_id": 510888, "reason": "跟随大盘缩量"},
         ],
         "next_day_plan": "次日开盘观察 600779 放量情况",
+    }
+
+
+def _judgment_body() -> dict[str, object]:
+    return {
+        "run_ids": ["sys-fx-nav-001", "sys-fx-nav-002"],
+        "judgment": "同口径可比; 001 回撤更浅, 次日观察放量修复是否延续",
     }
 
 
@@ -149,9 +198,26 @@ def test_http_plan_record_accepts_and_echoes_a_source_judgment_reference(
     tmp_path: Path,
 ) -> None:
     app, pool = _app(tmp_path / "plans.sqlite")
-    judgment_id = "research-judgment:sha256:" + "a" * 64
     try:
         with TestClient(app, raise_server_exceptions=False) as web:
+            # A dangling (never-saved) judgment id fails closed at record time.
+            dangling = web.post(
+                "/api/v1/market/next-day-plans",
+                json={
+                    **_body(),
+                    "source_judgment_id": "research-judgment:sha256:" + "a" * 64,
+                },
+            )
+            assert dangling.status_code == 422, dangling.text
+            assert dangling.json()["error_code"] == "SOURCE_JUDGMENT_NOT_FOUND"
+            listed = web.get("/api/v1/market/next-day-plans")
+            assert listed.status_code == 200
+            assert listed.json()["data"] == []
+
+            # Save a real judgment first, then cite it as the plan source.
+            judgment = web.post("/api/v1/research/judgments", json=_judgment_body())
+            assert judgment.status_code == 201, judgment.text
+            judgment_id = judgment.json()["data"]["judgment_id"]
             created = web.post(
                 "/api/v1/market/next-day-plans",
                 json={**_body(), "source_judgment_id": judgment_id},

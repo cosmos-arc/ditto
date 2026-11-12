@@ -16,6 +16,10 @@ type Props = {
 
 const PLANS_KEY = ["next-day-plans"] as const;
 
+// 与服务端 DTO 同一格式合同（CreateNextDayPlanBody.source_judgment_id）：
+// 不满足该格式的 ?judgment= 参数视为无来源——不展示、不随保存提交。
+const SOURCE_JUDGMENT_PATTERN = /^research-judgment:sha256:[0-9a-f]{64}$/u;
+
 export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate, sourceJudgmentId = "" }: Props) {
 	const queryClient = useQueryClient();
 	const [selected, setSelected] = useState<number[]>([]);
@@ -24,6 +28,8 @@ export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate, so
 	// 锚点异步落定：只在用户尚未手填时回填默认观察日期（手填优先）。
 	const [observationDate, setObservationDate] = useState(defaultObservationDate ?? "");
 	const [dateTouched, setDateTouched] = useState(false);
+	// 非法来源参数按缺省处理：不虚构「来源」展示，也不提交注定被拒的载荷。
+	const validSourceJudgmentId = SOURCE_JUDGMENT_PATTERN.test(sourceJudgmentId.trim()) ? sourceJudgmentId.trim() : null;
 	useEffect(() => {
 		if (!dateTouched && defaultObservationDate) setObservationDate(defaultObservationDate);
 	}, [defaultObservationDate, dateTouched]);
@@ -41,7 +47,7 @@ export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate, so
 				})),
 				// 服务端拒绝 padded 文本：提交前 trim，保证一次重试即可成功。
 				nextDayPlan: planText.trim(),
-				...(sourceJudgmentId.trim() ? { sourceJudgmentId } : {}),
+				...(validSourceJudgmentId ? { sourceJudgmentId: validSourceJudgmentId } : {}),
 			}),
 		onSuccess: () => {
 			void queryClient.invalidateQueries({ queryKey: PLANS_KEY });
@@ -91,9 +97,9 @@ export function NextDayPlanPanel({ ids, resolveEntry, defaultObservationDate, so
 			{defaultObservationDate === null && (
 				<p className="text-(--color-foreground-tertiary)">最近完整交易日尚未落定；手填观察日期后可保存。</p>
 			)}
-			{sourceJudgmentId.trim() && (
+			{validSourceJudgmentId && (
 				<p data-testid="plan-source-judgment" className="break-all text-xs text-(--color-foreground-tertiary)">
-					来源研究判断 <span className="font-mono">{sourceJudgmentId}</span>
+					来源研究判断 <span className="font-mono">{validSourceJudgmentId}</span>
 					<span>（保存的计划将携带此来源）</span>
 				</p>
 			)}

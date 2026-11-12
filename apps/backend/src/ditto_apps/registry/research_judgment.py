@@ -9,11 +9,13 @@ from dishka import Provider, Scope, provide
 from ditto_analysis.research.judgments import ResearchJudgment
 from ditto_analysis.storage.sqlite.research import SQLiteResearchJudgmentStore
 from ditto_application.processes.research.record_research_judgment import (
+    JudgmentStrategyVersionReader,
     RecordResearchJudgment,
 )
 from ditto_application.queries.research_judgments import (
     ResearchJudgmentQueryService,
 )
+from ditto_application.queries.strategy import StrategyQueryFacade
 from ditto_application.research_judgment_contracts import (
     ResearchJudgmentFactory,
     ResearchJudgmentMaterial,
@@ -93,12 +95,23 @@ class ResearchJudgmentCompositionProvider(Provider):
         return ResearchJudgmentQueryService(reader)
 
     @provide
+    def judgment_strategy_version_reader(
+        self, strategy_query: StrategyQueryFacade
+    ) -> JudgmentStrategyVersionReader:
+        """Satisfy the process read port from the strategy query facade."""
+        return strategy_query
+
+    @provide
     def record_research_judgment(
-        self, factory: ResearchJudgmentFactory, recorder: ResearchJudgmentRecorder
+        self,
+        factory: ResearchJudgmentFactory,
+        recorder: ResearchJudgmentRecorder,
+        strategy_version_reader: JudgmentStrategyVersionReader,
     ) -> RecordResearchJudgment:
         """Provide the recording process with the server wall clock."""
         return RecordResearchJudgment(
             factory=factory,
             recorder=recorder,
             clock=lambda: datetime.now(UTC),
+            strategy_version_reader=strategy_version_reader,
         )

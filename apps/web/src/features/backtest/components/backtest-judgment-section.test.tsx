@@ -102,6 +102,8 @@ it("reopens saved judgments with run links, verification and plan hand-off entri
 	server.use(http.get("/api/v1/research/judgments", () => HttpResponse.json({ data: [savedJudgment] })));
 	renderSection();
 	const entry = await screen.findByTestId("research-judgment-entry");
+	// 未达到请求上限：不渲染截断披露。
+	expect(screen.queryByTestId("judgment-list-truncated")).toBeNull();
 	// 每个 run 身份链接到对应回测详情。
 	expect(entry.innerHTML).toContain('href="/research/backtests/sys-fx-nav-001"');
 	expect(entry.innerHTML).toContain('href="/research/backtests/sys-fx-nav-002"');
@@ -113,6 +115,26 @@ it("reopens saved judgments with run links, verification and plan hand-off entri
 	expect(entry.innerHTML).toContain(
 		`href="/markets/watchlist?judgment=${encodeURIComponent(savedJudgment.judgment_id)}"`,
 	);
+});
+
+it("discloses honest truncation when the saved list reaches the requested limit", async () => {
+	const requestedUrls: string[] = [];
+	const full = Array.from({ length: 20 }, (_, index) => ({
+		...savedJudgment,
+		judgment_id: `research-judgment:sha256:${String(index + 1).padStart(64, "0")}`,
+	}));
+	server.use(
+		http.get("/api/v1/research/judgments", ({ request }) => {
+			requestedUrls.push(request.url);
+			return HttpResponse.json({ data: full });
+		}),
+	);
+	renderSection();
+	const entry = await screen.findAllByTestId("research-judgment-entry");
+	expect(entry).toHaveLength(20);
+	// 返回条数达到请求上限时如实披露可能截断，且请求显式携带 limit=20。
+	expect(screen.getByTestId("judgment-list-truncated")).toHaveTextContent("仅显示最近 20 条");
+	expect(requestedUrls[0]).toContain("limit=20");
 });
 
 it("retries the saved-judgment list when the read fails", async () => {

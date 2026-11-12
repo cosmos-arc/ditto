@@ -55,8 +55,10 @@ export async function recordResearchJudgment(body: {
 	return toJudgment(result);
 }
 
-export async function listResearchJudgments(): Promise<ResearchJudgmentSummary[]> {
-	const result = await apiClient.get("/api/v1/research/judgments");
+export async function listResearchJudgments(limit = 20): Promise<ResearchJudgmentSummary[]> {
+	const result = await apiClient.get("/api/v1/research/judgments", {
+		params: { query: { limit } },
+	});
 	return result.map((item: SummaryDTO) => ({
 		judgmentId: item.judgment_id,
 		runIds: item.run_ids,

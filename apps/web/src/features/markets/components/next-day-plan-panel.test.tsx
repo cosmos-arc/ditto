@@ -278,6 +278,35 @@ it("saves with the source judgment from the research hand-off link", async () =>
 	expect(list).toHaveTextContent(judgmentId);
 });
 
+it("treats a malformed judgment query param as absent: no source line, no source key", async () => {
+	const user = userEvent.setup();
+	const posted: unknown[] = [];
+	server.use(
+		http.get("/api/v1/market/next-day-plans", () => HttpResponse.json({ data: [] })),
+		http.post("/api/v1/market/next-day-plans", async ({ request }) => {
+			posted.push(await request.json());
+			return HttpResponse.json({ data: storedPlan }, { status: 201 });
+		}),
+	);
+	// ?judgment=abc 不满足服务端 DTO 格式：按无来源处理（不虚构「来源」展示）。
+	render(
+		<NextDayPlanPanel
+			ids={[600779]}
+			resolveEntry={resolveEntry}
+			defaultObservationDate="2026-11-10"
+			sourceJudgmentId="abc"
+		/>,
+		{ wrapper: wrapper() },
+	);
+	expect(screen.queryByTestId("plan-source-judgment")).toBeNull();
+	await user.click(await screen.findByRole("checkbox", { name: /标的600779/ }));
+	await user.type(screen.getByLabelText("600779 候选理由"), "回踩");
+	await user.type(screen.getByLabelText("次日计划", { exact: true }), "计划");
+	await user.click(screen.getByRole("button", { name: "保存理由与次日计划" }));
+	await screen.findByText(/next-day-plan:sha256:first/);
+	expect("source_judgment_id" in (posted[0] as object)).toBe(false);
+});
+
 it("omits the source key when no judgment hand-off is present", async () => {
 	const user = userEvent.setup();
 	const posted: unknown[] = [];

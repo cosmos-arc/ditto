@@ -13,6 +13,7 @@ from ditto_application.next_day_plan_contracts import (
     NextDayPlanView,
     PlanClock,
 )
+from ditto_application.research_judgment_contracts import ResearchJudgmentReader
 
 __all__ = ["RecordNextDayPlan", "RecordNextDayPlanRequest"]
 
@@ -39,17 +40,21 @@ class RecordNextDayPlan:
         factory: NextDayPlanFactory,
         recorder: NextDayPlanRecorder,
         clock: PlanClock,
+        judgment_reader: ResearchJudgmentReader,
     ) -> None:
         self._factory = factory
         self._recorder = recorder
         self._clock = clock
+        self._judgment_reader = judgment_reader
 
     def record(self, request: RecordNextDayPlanRequest) -> NextDayPlanView:
         """Persist one immutable plan revision and return its exact view."""
         observation_date = _observation_date(request.observation_date)
         notes = _candidate_notes(request.candidate_notes)
         plan_text = _text(request.next_day_plan, field_name="next_day_plan")
-        source_judgment_id = _source_judgment_id(request.source_judgment_id)
+        source_judgment_id = self._existing_judgment_id(
+            _source_judgment_id(request.source_judgment_id)
+        )
         view = self._factory.create(
             NextDayPlanMaterial(
                 observation_date=observation_date,
@@ -60,6 +65,21 @@ class RecordNextDayPlan:
             )
         )
         return self._recorder.save(view)
+
+    def _existing_judgment_id(self, value: str | None) -> str | None:
+        """Fail closed: a cited source judgment must already be saved."""
+        if value is None:
+            return None
+        if self._judgment_reader.get(value) is None:
+            raise AppCommandError(
+                f"Source judgment has never been saved: {value}",
+                details={
+                    "code": "SOURCE_JUDGMENT_NOT_FOUND",
+                    "reason": "source_judgment_not_found",
+                    "source_judgment_id": value,
+                },
+            )
+        return value
 
 
 def _observation_date(value: str) -> str:
