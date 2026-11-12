@@ -155,3 +155,67 @@ test.describe
 function screenDrawer(page: Page) {
 	return page.locator("[role='dialog'], [data-state='open']").filter({ hasText: "成交证据下钻" }).first();
 }
+
+test.describe("drill banner integrity at capture state", () => {
+	// 视觉门回归锁：状态条行高由内容撑开（无固定高度/行内裁切），
+	// 且落地瞬间完整落在最近滚动祖先内（不呈现半裁形态）。
+	test("drill strip keeps full text height across viewports", async ({ browser }) => {
+		for (const [label, size] of [
+			["standard", { width: 1512, height: 900 }],
+			["compact", { width: 1366, height: 768 }],
+			["narrow", { width: 1024, height: 768 }],
+		] as const) {
+			const context = await browser.newContext({ viewport: size });
+			const page = await context.newPage();
+			try {
+				const browserErrors = captureBrowserErrors(page);
+				await page.goto(`${webOrigin}/research/backtests/${RUN_ID}`);
+				await page.getByRole("tab", { name: "成交" }).click();
+				await page.locator("[data-testid^='trade-evidence-']").first().click();
+				await page.locator("[data-testid^='drill-link-buy-']").first().click();
+				const banner = page.locator("[data-state='drill-focus']");
+				await banner.waitFor({ timeout: 20000 });
+				// 等 K 线宿主渲染：内容增高后的真实形态才是被裁风险形态
+				await page
+					.locator("[data-chart-interaction-contract^='instrument-candles-']")
+					.waitFor({ timeout: 20000 });
+
+				const state = await banner.evaluate((element) => {
+					const box = element.getBoundingClientRect();
+					let clippedBy = "";
+					let node: Element | null = element.parentElement;
+					while (node) {
+						const style = window.getComputedStyle(node);
+						const clips =
+							style.overflowY === "hidden" ||
+							style.overflow === "hidden" ||
+							/(auto|scroll)/.test(style.overflowY);
+						if (clips) {
+							const nodeBox = node.getBoundingClientRect();
+							if (box.top < nodeBox.top - 1 || box.bottom > nodeBox.bottom + 1) {
+								clippedBy = `${node.tagName}.${String(node.className).slice(0, 50)}`;
+								break;
+							}
+						}
+						node = node.parentElement;
+					}
+					const lineHeight = Number.parseFloat(window.getComputedStyle(element).lineHeight);
+					return {
+						rectH: box.height,
+						scrollH: element.scrollHeight,
+						clientH: element.clientHeight,
+						lineHeight,
+						clippedBy,
+					};
+				});
+				expect(state.rectH, `strip height @${label}`).toBeGreaterThanOrEqual(24);
+				expect(state.rectH, `content-driven height @${label}`).toBeGreaterThanOrEqual(state.lineHeight + 16);
+				expect(state.scrollH - state.clientH, `no inner clip @${label}`).toBeLessThanOrEqual(2);
+				expect(state.clippedBy, `fully inside clip boxes at capture @${label}`).toBe("");
+				expect(browserErrors).toEqual([]);
+			} finally {
+				await context.close();
+			}
+		}
+	});
+});

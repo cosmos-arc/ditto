@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChartCockpit, type CockpitMarker, type CockpitOverlay } from "@/components/chart";
 import type { BarPeriod, CockpitBar } from "@/components/chart/cockpit/chart-data";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
@@ -94,6 +94,17 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 	// 观察日经 Date 往返校验：正则放行的假日期（如 2026-13-45）会让
 	// 日期算术抛 RangeError 炸掉整页，两层（route + view）同规则拒绝。
 	const anchoredEndDate = observeDate !== undefined && isValidIsoCalendarDate(observeDate) ? observeDate : null;
+	// 下钻状态条挂载即滚入最近滚动祖先（block:"nearest"）：已完整可见时是
+	// no-op；跨界（任意边缘）时最小滚动到完整可见——落地瞬间不呈现半裁形态。
+	const drillBannerRef = useRef<HTMLDivElement | null>(null);
+	useEffect(() => {
+		if (!drill) return;
+		const element = drillBannerRef.current;
+		if (!element || typeof element.scrollIntoView !== "function") return;
+		element.scrollIntoView({ block: "nearest" });
+		const followUp = requestAnimationFrame(() => element.scrollIntoView({ block: "nearest" }));
+		return () => cancelAnimationFrame(followUp);
+	}, [drill]);
 	const [period, setPeriod] = useState<BarPeriod>("daily");
 	const [adjustment, setAdjustment] = useState<BarAdjustment>("none");
 	const [includeExperimental, setIncludeExperimental] = useState(false);
@@ -319,9 +330,13 @@ export function InstrumentChartView({ id, drill, observeDate }: InstrumentChartV
 
 				{drill && (
 					<div
+						ref={drillBannerRef}
 						data-state="drill-focus"
 						data-testid={`drill-focus-${id}`}
-						className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-(--color-border-subtle) bg-(--color-interaction-hover-subtle-bg) px-3 py-2 text-xs"
+						// leading-5（20px 行盒）：CJK 字体（如 Noto Sans CJK）的
+						// 实际墨高 ≈1.45em ≈ 17.4px@12px，默认 13.33px 行盒在部分
+						// 渲染栈会把字形下半切在行盒外；行高由内容撑开，容器无固定高度。
+						className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-(--color-border-subtle) bg-(--color-interaction-hover-subtle-bg) px-3 py-2 text-xs leading-5"
 					>
 						<span className="font-medium text-(--color-foreground)">回测买卖点下钻</span>
 						<span className="font-data text-(--color-foreground-secondary)">
