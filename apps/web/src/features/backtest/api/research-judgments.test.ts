@@ -15,7 +15,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("research judgment api client", () => {
 	it("records a judgment with strategy fields and validates the returned identity", async () => {
-		const fetchMock = vi.fn(async () =>
+		const fetchMock = vi.fn<typeof fetch>(async () =>
 			jsonResponse(
 				{
 					judgment_id: JUDGMENT_ID,
@@ -45,12 +45,12 @@ describe("research judgment api client", () => {
 			strategyVersion: 2,
 		});
 		const body = (await requestJson(capturedRequest(fetchMock.mock.calls))) as Record<string, unknown>;
-		expect(body.strategy_id).toBe("s1");
-		expect(body.strategy_version).toBe(2);
+		expect(body["strategy_id"]).toBe("s1");
+		expect(body["strategy_version"]).toBe(2);
 	});
 
 	it("omits strategy fields when unspecified and normalizes null strategy in summaries", async () => {
-		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+		const fetchMock = vi.fn<typeof fetch>(async (input: RequestInfo | URL) => {
 			const url = new URL(input instanceof Request ? input.url : String(input));
 			if (url.pathname === "/api/v1/research/judgments" && url.search === "") {
 				return jsonResponse(
